@@ -1,0 +1,45 @@
+{
+  "name": "nova-hr",
+  "version": "1.0.0",
+  "description": "Nova HR - Integrated HR Management System",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm run --parallel --filter \"web-*\" dev",
+    "dev:mobile": "pnpm --filter mobile-app dev",
+    "build": "pnpm run --recursive build",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm run --parallel --filter \"web-*\" build",
+    "build:mobile": "pnpm --filter mobile-app build",
+    "test": "pnpm run --recursive test",
+    "test:unit": "pnpm run --recursive test:unit",
+    "test:e2e": "pnpm run --recursive test:e2e",
+    "lint": "pnpm run --recursive lint",
+    "lint:fix": "pnpm run --recursive lint:fix",
+    "typecheck": "pnpm run --recursive typecheck",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "clean": "pnpm run --recursive clean && rm -rf node_modules",
+    "migrate:dev": "pnpm --filter api migrate:dev",
+    "migrate:deploy": "pnpm --filter api migrate:deploy",
+    "db:seed": "pnpm --filter api db:seed",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.3",
+    "tsx": "^4.16.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.6"
+}

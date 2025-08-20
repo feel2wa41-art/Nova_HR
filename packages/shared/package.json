@@ -1,0 +1,27 @@
+{
+  "name": "@nova-hr/shared",
+  "version": "1.0.0",
+  "description": "Shared types, schemas, and utilities for Nova HR",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./types": "./dist/types/index.js",
+    "./schemas": "./dist/schemas/index.js",
+    "./utils": "./dist/utils/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "date-fns": "^3.6.0"
+  },
+  "devDependencies": {
+    "@nova-hr/config": "workspace:*",
+    "typescript": "^5.5.3"
+  }
+}

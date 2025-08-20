@@ -1,0 +1,35 @@
+{
+  "name": "@nova-hr/auth",
+  "version": "1.0.0",
+  "description": "Authentication utilities and hooks for Nova HR",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./hooks": "./dist/hooks/index.js",
+    "./guards": "./dist/guards/index.js",
+    "./utils": "./dist/utils/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-router-dom": "^6.25.1",
+    "@tanstack/react-query": "^5.51.1",
+    "axios": "^1.7.2"
+  },
+  "devDependencies": {
+    "@nova-hr/config": "workspace:*",
+    "@nova-hr/shared": "workspace:*",
+    "@types/react": "^18.3.3",
+    "typescript": "^5.5.3"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-router-dom": ">=6.0.0"
+  }
+}

@@ -1,0 +1,532 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// AUTH & USER MANAGEMENT
+// ================================
+
+model auth_user {
+  id          String  @id @default(uuid())
+  email       String  @unique
+  password    String
+  name        String
+  title       String?
+  phone       String?
+  avatar_url  String?
+  status      String  @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED, PENDING
+  role        String  @default("EMPLOYEE") // SUPER_ADMIN, PROVIDER_ADMIN, CUSTOMER_ADMIN, HR_MANAGER, MANAGER, EMPLOYEE
+  tenant_id   String?
+  org_id      String?
+  last_login  DateTime?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  tenant           tenant?            @relation(fields: [tenant_id], references: [id], onDelete: SetNull)
+  org_unit         org_unit?          @relation("org_members", fields: [org_id], references: [id], onDelete: SetNull)
+  employee_profile employee_profile?
+  attendance       attendance[]
+  attendance_requests attendance_request[]
+  leave_requests   leave_request[]
+  approval_drafts  approval_draft[]
+  audit_logs       audit_log[]
+
+  @@map("auth_users")
+}
+
+model tenant {
+  id          String   @id @default(uuid())
+  name        String
+  domain      String   @unique
+  status      String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  plan        String   @default("BASIC") // BASIC, PREMIUM, ENTERPRISE
+  max_users   Int      @default(100)
+  settings    Json?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  users       auth_user[]
+  companies   company[]
+
+  @@map("tenants")
+}
+
+// ================================
+// COMPANY & ORGANIZATION
+// ================================
+
+model company {
+  id          String   @id @default(uuid())
+  tenant_id   String
+  name        String
+  biz_no      String?
+  ceo_name    String?
+  phone       String?
+  email       String?
+  address     String?
+  timezone    String   @default("Asia/Jakarta")
+  currency    String   @default("IDR")
+  logo_url    String?
+  settings    Json?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  tenant        tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  locations     company_location[]
+  org_units     org_unit[]
+  work_policies work_policy[]
+
+  @@map("companies")
+}
+
+model company_location {
+  id                    String   @id @default(uuid())
+  company_id            String
+  name                  String
+  code                  String?
+  address               String?
+  lat                   Float
+  lng                   Float
+  radius_m              Int      @default(200)
+  wifi_ssids            String[] @db.Text
+  ip_cidrs              String[] @db.Text
+  web_checkin_allowed   Boolean  @default(true)
+  face_required         Boolean  @default(false)
+  status                String   @default("ACTIVE")
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  // Relations
+  company           company            @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  employee_profiles employee_profile[]
+
+  @@map("company_locations")
+}
+
+model org_unit {
+  id          String   @id @default(uuid())
+  company_id  String
+  parent_id   String?
+  name        String
+  code        String?
+  description String?
+  order_index Int      @default(0)
+  status      String   @default("ACTIVE")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  company    company     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  parent     org_unit?   @relation("org_hierarchy", fields: [parent_id], references: [id])
+  children   org_unit[]  @relation("org_hierarchy")
+  members    auth_user[] @relation("org_members")
+
+  @@map("org_units")
+}
+
+model employee_profile {
+  id                  String    @id @default(uuid())
+  user_id             String    @unique
+  emp_no              String?   @unique
+  department          String?
+  hire_date           DateTime?
+  base_location_id    String?
+  address             String?
+  emergency_contact   String?
+  emergency_phone     String?
+  employment_type     String    @default("FULL_TIME") // FULL_TIME, PART_TIME, CONTRACT, INTERN
+  salary              Decimal?  @db.Decimal(15, 2)
+  bank_account        String?
+  tax_id              String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  // Relations
+  user          auth_user         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  base_location company_location? @relation(fields: [base_location_id], references: [id])
+
+  @@map("employee_profiles")
+}
+
+// ================================
+// ATTENDANCE MANAGEMENT
+// ================================
+
+model attendance {
+  id              String    @id @default(uuid())
+  user_id         String
+  date_key        DateTime  // 근무일 기준 (시프트 고려)
+  check_in_at     DateTime?
+  check_in_loc    Json?     // GeoLocation
+  check_out_at    DateTime?
+  check_out_loc   Json?     // GeoLocation
+  status          String    @default("NORMAL") // NORMAL, LATE, EARLY_LEAVE, ABSENT, REMOTE, OFFSITE, HOLIDAY, LEAVE
+  work_minutes    Int       @default(0)
+  break_minutes   Int       @default(0)
+  overtime_minutes Int      @default(0)
+  notes           String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  // Relations
+  user auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, date_key])
+  @@map("attendance")
+}
+
+model attendance_request {
+  id           String    @id @default(uuid())
+  user_id      String
+  request_type String    // CHECK_IN, CHECK_OUT, ADJUST
+  target_at    DateTime  // 적용할 날짜/시간
+  reason_code  String?
+  reason_text  String?
+  attach_urls  String[]  @db.Text
+  geo_snapshot Json?     // GeoSnapshot with device info
+  status       String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  decided_by   String?
+  decided_at   DateTime?
+  comments     String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  // Relations
+  user auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("attendance_requests")
+}
+
+model work_policy {
+  id              String   @id @default(uuid())
+  company_id      String
+  name            String
+  description     String?
+  work_days       Int[]    @db.SmallInt // [1,2,3,4,5] for Mon-Fri
+  start_time      String   // "09:00"
+  end_time        String   // "18:00"
+  lunch_start     String?  // "12:00"
+  lunch_end       String?  // "13:00"
+  late_threshold  Int      @default(15) // minutes
+  early_threshold Int      @default(15) // minutes
+  rounding_mode   String   @default("NONE") // NONE, UP_5, UP_10, UP_15
+  backdate_days   Int      @default(7)
+  geofence_strict Boolean  @default(true)
+  face_required   Boolean  @default(false)
+  web_checkin     Boolean  @default(true)
+  is_default      Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  company company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("work_policies")
+}
+
+// ================================
+// LEAVE MANAGEMENT
+// ================================
+
+model leave_type {
+  id              String   @id @default(uuid())
+  company_id      String?  // null for system-wide types
+  name            String
+  code            String
+  description     String?
+  max_days_year   Int?     // null for unlimited
+  carry_forward   Boolean  @default(false)
+  requires_approval Boolean @default(true)
+  deduct_weekends Boolean  @default(false)
+  color_hex       String   @default("#3b82f6")
+  is_paid         Boolean  @default(true)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  leave_requests leave_request[]
+
+  @@unique([code, company_id])
+  @@map("leave_types")
+}
+
+model leave_balance {
+  id          String   @id @default(uuid())
+  user_id     String
+  leave_type  String   // ANNUAL, SICK, etc.
+  year        Int
+  allocated   Decimal  @db.Decimal(5, 2)
+  used        Decimal  @db.Decimal(5, 2) @default(0)
+  pending     Decimal  @db.Decimal(5, 2) @default(0)
+  carried     Decimal  @db.Decimal(5, 2) @default(0)
+  expires_at  DateTime?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([user_id, leave_type, year])
+  @@map("leave_balances")
+}
+
+model leave_request {
+  id             String    @id @default(uuid())
+  user_id        String
+  leave_type_id  String
+  start_date     DateTime
+  end_date       DateTime
+  days_count     Decimal   @db.Decimal(5, 2)
+  reason         String?
+  emergency      Boolean   @default(false)
+  attach_urls    String[]  @db.Text
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  decided_by     String?
+  decided_at     DateTime?
+  comments       String?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  // Relations
+  user       auth_user  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  leave_type leave_type @relation(fields: [leave_type_id], references: [id])
+
+  @@map("leave_requests")
+}
+
+// ================================
+// APPROVAL SYSTEM
+// ================================
+
+model approval_category {
+  id          String   @id @default(uuid())
+  company_id  String?  // null for system-wide categories
+  name        String
+  code        String
+  description String?
+  icon        String?
+  form_schema Json     // JSON Schema for dynamic form
+  is_active   Boolean  @default(true)
+  order_index Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  drafts approval_draft[]
+  routes approval_route_template[]
+
+  @@unique([code, company_id])
+  @@map("approval_categories")
+}
+
+model approval_route_template {
+  id          String   @id @default(uuid())
+  company_id  String?  // null for system-wide templates
+  category_id String?
+  name        String
+  description String?
+  conditions  Json?    // Auto-routing conditions (amount, dept, etc.)
+  is_default  Boolean  @default(false)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  category approval_category?               @relation(fields: [category_id], references: [id])
+  stages   approval_route_stage_template[]
+
+  @@map("approval_route_templates")
+}
+
+model approval_route_stage_template {
+  id          String  @id @default(uuid())
+  template_id String
+  type        String  // CONSENT, APPROVAL, CC
+  mode        String? // SEQUENTIAL, PARALLEL (for APPROVAL type)
+  rule        String? // ALL, ANY (for CONSENT type)
+  order_index Int
+  name        String?
+
+  // Relations
+  template  approval_route_template           @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  approvers approval_route_approver_template[]
+
+  @@map("approval_route_stage_templates")
+}
+
+model approval_route_approver_template {
+  id           String  @id @default(uuid())
+  stage_id     String
+  user_id      String?
+  role         String? // Role-based approver (MANAGER, HR_MANAGER, etc.)
+  order_index  Int
+  is_required  Boolean @default(true)
+
+  // Relations
+  stage approval_route_stage_template @relation(fields: [stage_id], references: [id], onDelete: Cascade)
+
+  @@map("approval_route_approver_templates")
+}
+
+model approval_draft {
+  id          String    @id @default(uuid())
+  user_id     String
+  category_id String
+  title       String
+  content     Json      // Form data based on category schema
+  status      String    @default("DRAFT") // DRAFT, SUBMITTED, IN_PROGRESS, APPROVED, REJECTED, CANCELLED
+  submitted_at DateTime?
+  completed_at DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  // Relations
+  user     auth_user          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  category approval_category  @relation(fields: [category_id], references: [id])
+  route    approval_route?
+  actions  approval_action[]
+  attachments file_attachment[]
+
+  @@map("approval_drafts")
+}
+
+model approval_route {
+  id       String @id @default(uuid())
+  draft_id String @unique
+
+  // Relations
+  draft  approval_draft       @relation(fields: [draft_id], references: [id], onDelete: Cascade)
+  stages approval_route_stage[]
+
+  @@map("approval_routes")
+}
+
+model approval_route_stage {
+  id          String  @id @default(uuid())
+  route_id    String
+  type        String  // CONSENT, APPROVAL, CC
+  mode        String? // SEQUENTIAL, PARALLEL
+  rule        String? // ALL, ANY
+  order_index Int
+  name        String?
+  status      String  @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, SKIPPED
+
+  // Relations
+  route     approval_route          @relation(fields: [route_id], references: [id], onDelete: Cascade)
+  approvers approval_route_approver[]
+
+  @@map("approval_route_stages")
+}
+
+model approval_route_approver {
+  id          String    @id @default(uuid())
+  stage_id    String
+  user_id     String
+  order_index Int
+  status      String    @default("PENDING") // PENDING, APPROVED, REJECTED, DELEGATED
+  acted_at    DateTime?
+  comments    String?
+
+  // Relations
+  stage approval_route_stage @relation(fields: [stage_id], references: [id], onDelete: Cascade)
+
+  @@map("approval_route_approvers")
+}
+
+model approval_action {
+  id        String   @id @default(uuid())
+  draft_id  String
+  user_id   String
+  action    String   // SUBMIT, APPROVE, REJECT, COMMENT, DELEGATE, RECALL
+  comments  String?
+  metadata  Json?
+  created_at DateTime @default(now())
+
+  // Relations
+  draft approval_draft @relation(fields: [draft_id], references: [id], onDelete: Cascade)
+
+  @@map("approval_actions")
+}
+
+// ================================
+// FILE MANAGEMENT
+// ================================
+
+model file_attachment {
+  id           String   @id @default(uuid())
+  draft_id     String?
+  filename     String
+  original_name String
+  mime_type    String
+  size_bytes   Int
+  storage_path String
+  public_url   String?
+  uploaded_by  String
+  created_at   DateTime @default(now())
+
+  // Relations
+  draft approval_draft? @relation(fields: [draft_id], references: [id], onDelete: Cascade)
+
+  @@map("file_attachments")
+}
+
+// ================================
+// SYSTEM MANAGEMENT
+// ================================
+
+model codebook {
+  id          String   @id @default(uuid())
+  company_id  String?  // null for system-wide codes
+  group_code  String   // ATTEND_REASON, LEAVE_TYPE, etc.
+  code        String
+  name        String
+  description String?
+  order_index Int      @default(0)
+  is_active   Boolean  @default(true)
+  metadata    Json?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([group_code, code, company_id])
+  @@map("codebook")
+}
+
+model settings {
+  id          String   @id @default(uuid())
+  company_id  String?  // null for system-wide settings
+  category    String   // ATTENDANCE, LEAVE, APPROVAL, NOTIFICATION, etc.
+  key         String
+  value       Json
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([category, key, company_id])
+  @@map("settings")
+}
+
+model audit_log {
+  id          String   @id @default(uuid())
+  user_id     String?
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
+  resource    String   // USER, ATTENDANCE, APPROVAL, etc.
+  resource_id String?
+  old_values  Json?
+  new_values  Json?
+  metadata    Json?    // IP, user agent, etc.
+  created_at  DateTime @default(now())
+
+  // Relations
+  user auth_user? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}

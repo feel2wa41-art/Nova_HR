@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "Nova HR",
+    "slug": "nova-hr-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tankdev.nova-hr",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "이 앱은 출퇴근 체크인을 위해 위치 정보를 사용합니다.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "이 앱은 출퇴근 체크인을 위해 위치 정보를 사용합니다.",
+        "NSCameraUsageDescription": "출퇴근 시 얼굴 인증을 위해 카메라를 사용합니다.",
+        "NSPhotoLibraryUsageDescription": "증빙 자료 첨부를 위해 사진 라이브러리에 접근합니다."
+      }
+    },
+    "android": {
+      "package": "com.tankdev.novahrmoble",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "이 앱은 출퇴근 체크인을 위해 위치 정보를 사용합니다."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "출퇴근 시 얼굴 인증을 위해 카메라를 사용합니다."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "증빙 자료 첨부를 위해 사진 라이브러리에 접근합니다."
+        }
+      ]
+    ],
+    "scheme": "nova-hr",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}
