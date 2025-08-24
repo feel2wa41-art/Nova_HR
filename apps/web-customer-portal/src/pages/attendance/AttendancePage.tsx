@@ -4,50 +4,55 @@ import {
   Card, 
   Button, 
   Space, 
-  message, 
   Alert, 
   Spin,
   Tag,
   Divider,
   Row,
   Col,
-  Statistic
+  Statistic,
+  Modal,
+  Dropdown,
+  Form,
+  Input,
+  Select,
+  App
 } from 'antd';
 import { 
   ClockCircleOutlined, 
   EnvironmentOutlined, 
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  DownOutlined,
+  HomeOutlined,
+  CarOutlined,
+  ToolOutlined
 } from '@ant-design/icons';
 import { validateAttendanceLocation, formatDistance, type Location } from '../../utils/locationUtils';
 import type { AttendanceLocationResult } from '../../utils/locationUtils';
+import { 
+  attendanceApi, 
+  companyApi, 
+  type AttendanceRecord, 
+  type CompanyLocation 
+} from '../../lib/api';
 
 const { Title, Text } = Typography;
-
-// Mock 회사 위치 데이터 (실제로는 API에서 가져옴)
-const mockCompanyLocations: Location[] = [
-  {
-    id: '1',
-    name: 'Jakarta Head Office',
-    latitude: -6.2441,
-    longitude: 106.7833,
-    radius: 200,
-  },
-  {
-    id: '2',
-    name: 'Bandung Branch',
-    latitude: -6.9175,
-    longitude: 107.6191,
-    radius: 150,
-  },
-];
+const { TextArea } = Input;
 
 export const AttendancePage = () => {
+  const { message } = App.useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [locationResult, setLocationResult] = useState<AttendanceLocationResult | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [simulatedLocation, setSimulatedLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [companyLocations, setCompanyLocations] = useState<Location[]>([]);
+  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [exceptionModalVisible, setExceptionModalVisible] = useState(false);
+  const [exceptionType, setExceptionType] = useState<string>('');
+  const [form] = Form.useForm();
 
   // 실시간 시계
   useEffect(() => {
@@ -58,15 +63,63 @@ export const AttendancePage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 컴포넌트 마운트 시 위치 확인
+  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
-    checkLocation();
+    loadInitialData();
   }, []);
+
+  const loadInitialData = async () => {
+    await Promise.all([
+      loadCompanyLocations(),
+      loadTodayAttendance()
+    ]);
+    await checkLocation();
+  };
+
+  const loadCompanyLocations = async () => {
+    try {
+      const locations = await companyApi.getLocations();
+      const convertedLocations: Location[] = locations.map(loc => ({
+        id: loc.id,
+        name: loc.name,
+        latitude: loc.lat,
+        longitude: loc.lng,
+        radius: loc.radius_m
+      }));
+      setCompanyLocations(convertedLocations);
+      setApiError(null);
+    } catch (error) {
+      console.error('Failed to load company locations:', error);
+      setApiError('회사 위치 정보를 불러올 수 없습니다. 오프라인 모드로 실행됩니다.');
+      
+      // Fallback to demo data
+      setCompanyLocations([
+        {
+          id: '1',
+          name: '서울 본사',
+          latitude: 37.5665,
+          longitude: 126.9780,
+          radius: 200,
+        }
+      ]);
+    }
+  };
+
+  const loadTodayAttendance = async () => {
+    try {
+      const attendance = await attendanceApi.getTodayAttendance();
+      setTodayAttendance(attendance);
+      setApiError(null);
+    } catch (error) {
+      console.error('Failed to load today attendance:', error);
+      setApiError('오늘 출퇴근 기록을 불러올 수 없습니다.');
+    }
+  };
 
   const checkLocation = async () => {
     setIsLoading(true);
     try {
-      const result = await validateAttendanceLocation(mockCompanyLocations, simulatedLocation || undefined);
+      const result = await validateAttendanceLocation(companyLocations, simulatedLocation || undefined);
       setLocationResult(result);
     } catch (error) {
       message.error('위치 확인 중 오류가 발생했습니다');
@@ -77,7 +130,12 @@ export const AttendancePage = () => {
 
   // 테스트용 위치 시뮬레이션
   const simulateOfficeLocation = () => {
-    const officeLocation = mockCompanyLocations[0];
+    if (companyLocations.length === 0) {
+      message.error('회사 위치 정보가 없습니다');
+      return;
+    }
+    
+    const officeLocation = companyLocations[0];
     setSimulatedLocation({
       lat: officeLocation.latitude,
       lng: officeLocation.longitude
@@ -91,10 +149,10 @@ export const AttendancePage = () => {
   };
 
   const simulateOutsideLocation = () => {
-    // 회사에서 멀리 떨어진 위치 (자카르타 시내 다른 곳)
+    // 회사에서 멀리 떨어진 위치 (서울 시내 다른 곳)
     setSimulatedLocation({
-      lat: -6.1754,
-      lng: 106.8272
+      lat: 37.5797,
+      lng: 126.9774
     });
     message.info('회사 외부 위치로 시뮬레이션됩니다');
     
@@ -104,21 +162,98 @@ export const AttendancePage = () => {
   };
 
   const handleCheckIn = async () => {
-    if (!locationResult?.isValid) {
-      message.warning('출근 가능한 위치에 있지 않습니다');
+    if (!locationResult?.currentLocation) {
+      message.error('현재 위치를 확인할 수 없습니다');
       return;
     }
 
-    setIsLoading(true);
+    const { currentLocation } = locationResult;
+
+    if (!locationResult.isWithinRange) {
+      Modal.confirm({
+        title: '지오펜스 범위 밖',
+        content: `회사 지정 위치에서 ${formatDistance(locationResult.nearestOffice?.distance || 0)} 떨어져 있습니다. 소급 신청을 하시겠습니까?`,
+        okText: '소급 신청',
+        cancelText: '취소',
+        onOk: async () => {
+          try {
+            await attendanceApi.createAttendanceRequest({
+              requestType: 'CHECK_IN',
+              targetAt: new Date().toISOString(),
+              reasonText: '지오펜스 범위 밖에서 출근',
+              geoSnapshot: {
+                latitude: currentLocation.lat,
+                longitude: currentLocation.lng,
+                accuracy: currentLocation.accuracy,
+                timestamp: new Date().toISOString()
+              }
+            });
+            message.success('소급 신청이 제출되었습니다');
+          } catch (error) {
+            console.error('Attendance request failed:', error);
+            message.error('소급 신청 중 오류가 발생했습니다');
+          }
+        }
+      });
+      return;
+    }
+
     try {
-      // 실제로는 API 호출
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      message.success(`${locationResult.location?.name}에서 출근 체크 완료!`);
-    } catch (error) {
-      message.error('출근 체크에 실패했습니다');
+      setIsLoading(true);
+      const response = await attendanceApi.checkIn({
+        latitude: currentLocation.lat,
+        longitude: currentLocation.lng,
+        accuracy: currentLocation.accuracy
+      });
+
+      if (response.success) {
+        message.success('출근 처리가 완료되었습니다!');
+        await loadTodayAttendance();
+      }
+    } catch (error: any) {
+      console.error('Check-in failed:', error);
+      const errorMessage = error.response?.data?.message || '출근 처리 중 오류가 발생했습니다';
+      message.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCheckOut = async () => {
+    if (!locationResult?.currentLocation) {
+      message.error('현재 위치를 확인할 수 없습니다');
+      return;
+    }
+
+    const { currentLocation } = locationResult;
+
+    Modal.confirm({
+      title: '퇴근 처리',
+      content: '퇴근 처리하시겠습니까?',
+      okText: '퇴근하기',
+      cancelText: '취소',
+      onOk: async () => {
+        try {
+          setIsLoading(true);
+          const response = await attendanceApi.checkOut({
+            latitude: currentLocation.lat,
+            longitude: currentLocation.lng,
+            accuracy: currentLocation.accuracy
+          });
+
+          if (response.success) {
+            message.success(`퇴근 처리가 완료되었습니다! ${response.workHours ? `(근무시간: ${response.workHours})` : ''}`);
+            await loadTodayAttendance();
+          }
+        } catch (error: any) {
+          console.error('Check-out failed:', error);
+          const errorMessage = error.response?.data?.message || '퇴근 처리 중 오류가 발생했습니다';
+          message.error(errorMessage);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
   };
 
   const getLocationStatusColor = () => {
@@ -130,6 +265,84 @@ export const AttendancePage = () => {
     if (!locationResult) return <EnvironmentOutlined />;
     return locationResult.isValid ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />;
   };
+
+  const handleException = (type: string) => {
+    setExceptionType(type);
+    setExceptionModalVisible(true);
+    form.resetFields();
+  };
+
+  const handleExceptionSubmit = async (values: any) => {
+    try {
+      setIsLoading(true);
+      
+      switch (exceptionType) {
+        case 'remote':
+          await attendanceApi.registerRemoteWork({
+            date: new Date().toISOString().split('T')[0],
+            reason: values.reason,
+            location: values.location,
+          });
+          message.success('재택근무가 등록되었습니다');
+          break;
+          
+        case 'offsite':
+          await attendanceApi.registerOffsiteWork({
+            date: new Date().toISOString().split('T')[0],
+            reason: values.reason,
+            location: values.location,
+            client: values.client,
+          });
+          message.success('외근이 등록되었습니다');
+          break;
+          
+        case 'early':
+          await attendanceApi.registerEarlyCheckout({
+            reason: values.reason,
+            expectedTime: values.expectedTime,
+          });
+          message.success('조기 퇴근이 등록되었습니다');
+          break;
+      }
+      
+      setExceptionModalVisible(false);
+      await loadTodayAttendance();
+    } catch (error) {
+      message.error('등록 중 오류가 발생했습니다');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getExceptionMenuItems = () => [
+    {
+      key: 'remote',
+      label: (
+        <span>
+          <HomeOutlined /> 재택근무
+        </span>
+      ),
+      onClick: () => handleException('remote'),
+    },
+    {
+      key: 'offsite',
+      label: (
+        <span>
+          <CarOutlined /> 외근
+        </span>
+      ),
+      onClick: () => handleException('offsite'),
+    },
+    {
+      key: 'early',
+      label: (
+        <span>
+          <ToolOutlined /> 조기 퇴근
+        </span>
+      ),
+      onClick: () => handleException('early'),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -293,37 +506,124 @@ export const AttendancePage = () => {
         )}
       </Card>
 
-      {/* 출퇴근 버튼 */}
+      {/* 오늘 출퇴근 현황 */}
       <Card>
-        <div className="text-center space-y-4">
-          <Title level={4}>출퇴근 체크</Title>
-          <Space size="large">
-            <Button
-              type="primary"
-              size="large"
-              icon={<CheckCircleOutlined />}
-              onClick={handleCheckIn}
-              disabled={!locationResult?.isValid}
-              loading={isLoading}
-              className="min-w-[120px]"
-            >
-              출근하기
-            </Button>
-            <Button
-              size="large"
-              icon={<CheckCircleOutlined />}
-              disabled={!locationResult?.isValid}
-              className="min-w-[120px]"
-            >
-              퇴근하기
-            </Button>
-          </Space>
+        <div className="space-y-4">
+          <Title level={4}>오늘 출퇴근 현황</Title>
           
-          {!locationResult?.isValid && (
-            <div className="text-sm text-gray-500 mt-4">
-              출퇴근 체크를 하려면 회사 위치 반경 내에 있어야 합니다
-            </div>
+          {apiError && (
+            <Alert
+              message={apiError}
+              type="warning"
+              showIcon
+              className="mb-4"
+            />
           )}
+
+          <Row gutter={24}>
+            <Col span={8}>
+              <Statistic
+                title="출근 시간"
+                value={todayAttendance?.check_in_at 
+                  ? new Date(todayAttendance.check_in_at).toLocaleTimeString('ko-KR')
+                  : '-'
+                }
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ 
+                  color: todayAttendance?.check_in_at ? '#52c41a' : '#d9d9d9' 
+                }}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title="퇴근 시간"
+                value={todayAttendance?.check_out_at 
+                  ? new Date(todayAttendance.check_out_at).toLocaleTimeString('ko-KR')
+                  : '-'
+                }
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ 
+                  color: todayAttendance?.check_out_at ? '#1890ff' : '#d9d9d9' 
+                }}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title="근무 시간"
+                value={todayAttendance?.work_minutes 
+                  ? `${Math.floor(todayAttendance.work_minutes / 60)}시간 ${todayAttendance.work_minutes % 60}분`
+                  : '-'
+                }
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ 
+                  color: todayAttendance?.work_minutes ? '#722ed1' : '#d9d9d9' 
+                }}
+              />
+            </Col>
+          </Row>
+
+          <Divider />
+
+          <div className="text-center space-y-4">
+            <Title level={5}>출퇴근 체크</Title>
+            <Space size="large">
+              {!todayAttendance?.check_in_at ? (
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<CheckCircleOutlined />}
+                  onClick={handleCheckIn}
+                  disabled={!locationResult?.currentLocation}
+                  loading={isLoading}
+                  className="min-w-[120px]"
+                >
+                  출근하기
+                </Button>
+              ) : !todayAttendance?.check_out_at ? (
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<CheckCircleOutlined />}
+                  onClick={handleCheckOut}
+                  disabled={!locationResult?.currentLocation}
+                  loading={isLoading}
+                  className="min-w-[120px]"
+                  danger
+                >
+                  퇴근하기
+                </Button>
+              ) : (
+                <Button
+                  size="large"
+                  disabled
+                  className="min-w-[120px]"
+                >
+                  근무 완료
+                </Button>
+              )}
+              
+              <Dropdown
+                menu={{ items: getExceptionMenuItems() }}
+                placement="bottom"
+              >
+                <Button size="large" className="min-w-[120px]">
+                  예외 등록 <DownOutlined />
+                </Button>
+              </Dropdown>
+            </Space>
+            
+            {!locationResult?.currentLocation && (
+              <div className="text-sm text-gray-500 mt-4">
+                현재 위치를 확인 중입니다...
+              </div>
+            )}
+            
+            {locationResult?.currentLocation && !locationResult.isWithinRange && (
+              <div className="text-sm text-orange-600 mt-4">
+                회사 위치 반경 밖입니다. 출근 시 소급 신청이 필요합니다.
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -342,6 +642,102 @@ export const AttendancePage = () => {
           showIcon
         />
       </Card>
+
+      {/* 예외처리 모달 */}
+      <Modal
+        title={
+          exceptionType === 'remote' ? '재택근무 등록' :
+          exceptionType === 'offsite' ? '외근 등록' :
+          exceptionType === 'early' ? '조기 퇴근 등록' : '예외 등록'
+        }
+        open={exceptionModalVisible}
+        onCancel={() => setExceptionModalVisible(false)}
+        footer={null}
+        width={500}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleExceptionSubmit}
+        >
+          {exceptionType === 'remote' && (
+            <>
+              <Form.Item
+                name="location"
+                label="재택근무 장소"
+                rules={[{ required: true, message: '재택근무 장소를 입력해주세요' }]}
+              >
+                <Input placeholder="예: 자택, 카페 등" />
+              </Form.Item>
+              <Form.Item
+                name="reason"
+                label="사유"
+                rules={[{ required: true, message: '재택근무 사유를 입력해주세요' }]}
+              >
+                <TextArea rows={3} placeholder="재택근무 사유를 입력해주세요" />
+              </Form.Item>
+            </>
+          )}
+
+          {exceptionType === 'offsite' && (
+            <>
+              <Form.Item
+                name="location"
+                label="외근 장소"
+                rules={[{ required: true, message: '외근 장소를 입력해주세요' }]}
+              >
+                <Input placeholder="예: 고객사, 협력업체 등" />
+              </Form.Item>
+              <Form.Item
+                name="client"
+                label="방문 대상"
+              >
+                <Input placeholder="예: ABC 회사, 김대표 등" />
+              </Form.Item>
+              <Form.Item
+                name="reason"
+                label="업무 내용"
+                rules={[{ required: true, message: '업무 내용을 입력해주세요' }]}
+              >
+                <TextArea rows={3} placeholder="외근 업무 내용을 입력해주세요" />
+              </Form.Item>
+            </>
+          )}
+
+          {exceptionType === 'early' && (
+            <>
+              <Form.Item
+                name="expectedTime"
+                label="예상 퇴근 시간"
+                rules={[{ required: true, message: '예상 퇴근 시간을 선택해주세요' }]}
+              >
+                <Select placeholder="예상 퇴근 시간을 선택해주세요">
+                  <Select.Option value="14:00">14:00</Select.Option>
+                  <Select.Option value="15:00">15:00</Select.Option>
+                  <Select.Option value="16:00">16:00</Select.Option>
+                  <Select.Option value="17:00">17:00</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                name="reason"
+                label="조기 퇴근 사유"
+                rules={[{ required: true, message: '조기 퇴근 사유를 입력해주세요' }]}
+              >
+                <TextArea rows={3} placeholder="조기 퇴근 사유를 입력해주세요" />
+              </Form.Item>
+            </>
+          )}
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button onClick={() => setExceptionModalVisible(false)}>
+              취소
+            </Button>
+            <Button type="primary" htmlType="submit" loading={isLoading}>
+              등록
+            </Button>
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 };

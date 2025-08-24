@@ -8,10 +8,10 @@ import {
   Input, 
   Select, 
   Modal, 
-  message,
   Tooltip,
   Avatar,
-  Typography 
+  Typography,
+  App
 } from 'antd';
 import { 
   TeamOutlined, 
@@ -25,6 +25,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { UserForm } from '../../components/admin/UserForm';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../../lib/api';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -41,62 +43,34 @@ interface User {
   lastLogin?: string;
 }
 
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: '홍길동',
-    email: 'employee@nova-hr.com',
-    role: 'EMPLOYEE',
-    title: '시니어 개발자',
-    phone: '+62 812-3456-7890',
-    status: 'ACTIVE',
-    createdAt: '2025-01-15T09:00:00.000Z',
-    lastLogin: '2025-08-19T08:30:00.000Z',
-  },
-  {
-    id: '2',
-    name: '김인사',
-    email: 'hr@nova-hr.com',
-    role: 'HR_MANAGER',
-    title: 'HR 매니저',
-    phone: '+62 812-3456-7891',
-    status: 'ACTIVE',
-    createdAt: '2025-01-10T09:00:00.000Z',
-    lastLogin: '2025-08-19T08:15:00.000Z',
-  },
-  {
-    id: '3',
-    name: '시스템 관리자',
-    email: 'admin@nova-hr.com',
-    role: 'SUPER_ADMIN',
-    title: 'IT 관리자',
-    phone: '+62 812-3456-7892',
-    status: 'ACTIVE',
-    createdAt: '2025-01-01T09:00:00.000Z',
-    lastLogin: '2025-08-19T09:00:00.000Z',
-  },
-  {
-    id: '4',
-    name: '이직원',
-    email: 'employee2@nova-hr.com',
-    role: 'EMPLOYEE',
-    title: '주니어 개발자',
-    phone: '+62 812-3456-7893',
-    status: 'INACTIVE',
-    createdAt: '2025-02-01T09:00:00.000Z',
-    lastLogin: '2025-08-10T17:30:00.000Z',
-  },
-];
-
 export const UserManagement = () => {
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>(mockUsers);
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(false);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+
+  // Fetch users from API
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await apiClient.get('/users');
+      return response.data.map((user: any) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        title: user.title,
+        phone: user.phone,
+        status: user.status,
+        createdAt: user.created_at,
+        lastLogin: user.last_login,
+      }));
+    },
+  });
 
   useEffect(() => {
     filterUsers();
@@ -161,6 +135,40 @@ export const UserManagement = () => {
     setIsModalOpen(true);
   };
 
+  // Delete user mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiClient.delete(`/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      message.success('사용자가 삭제되었습니다');
+    },
+    onError: () => {
+      message.error('사용자 삭제에 실패했습니다');
+    },
+  });
+
+  // Create/Update user mutation
+  const saveUserMutation = useMutation({
+    mutationFn: async ({ userData, isEdit }: { userData: any; isEdit: boolean }) => {
+      if (isEdit) {
+        return await apiClient.put(`/users/${selectedUser?.id}`, userData);
+      } else {
+        return await apiClient.post('/users', userData);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      message.success(selectedUser ? '사용자 정보가 업데이트되었습니다' : '새 사용자가 추가되었습니다');
+      setIsModalOpen(false);
+      setSelectedUser(null);
+    },
+    onError: () => {
+      message.error('사용자 정보 저장에 실패했습니다');
+    },
+  });
+
   const handleDelete = (user: User) => {
     Modal.confirm({
       title: '사용자 삭제',
@@ -168,54 +176,15 @@ export const UserManagement = () => {
       okText: '삭제',
       okType: 'danger',
       cancelText: '취소',
-      onOk: async () => {
-        setIsLoading(true);
-        try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          setUsers(prev => prev.filter(u => u.id !== user.id));
-          message.success('사용자가 삭제되었습니다');
-        } catch (error) {
-          message.error('사용자 삭제에 실패했습니다');
-        } finally {
-          setIsLoading(false);
-        }
-      },
+      onOk: () => deleteMutation.mutate(user.id),
     });
   };
 
   const handleModalOk = async (userData: any) => {
-    setIsLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (selectedUser) {
-        // Update existing user
-        setUsers(prev => prev.map(user => 
-          user.id === selectedUser.id ? { ...user, ...userData } : user
-        ));
-        message.success('사용자 정보가 업데이트되었습니다');
-      } else {
-        // Add new user
-        const newUser: User = {
-          id: Date.now().toString(),
-          ...userData,
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-        };
-        setUsers(prev => [...prev, newUser]);
-        message.success('새 사용자가 추가되었습니다');
-      }
-      
-      setIsModalOpen(false);
-      setSelectedUser(null);
-    } catch (error) {
-      message.error('사용자 정보 저장에 실패했습니다');
-    } finally {
-      setIsLoading(false);
-    }
+    saveUserMutation.mutate({ 
+      userData, 
+      isEdit: !!selectedUser 
+    });
   };
 
   const columns: ColumnsType<User> = [
@@ -368,7 +337,7 @@ export const UserManagement = () => {
           columns={columns}
           dataSource={filteredUsers}
           rowKey="id"
-          loading={isLoading}
+          loading={isLoading || deleteMutation.isPending}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -388,7 +357,7 @@ export const UserManagement = () => {
           setIsModalOpen(false);
           setSelectedUser(null);
         }}
-        loading={isLoading}
+        loading={saveUserMutation.isPending}
       />
     </div>
   );

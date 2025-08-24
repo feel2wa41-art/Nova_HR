@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Avatar, Dropdown, Typography, Divider } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Typography, Button, Badge } from 'antd';
 import type { MenuProps } from 'antd';
+import { useState, useEffect } from 'react';
 import {
   HomeOutlined,
   ClockCircleOutlined,
@@ -13,8 +14,17 @@ import {
   EnvironmentOutlined,
   BarChartOutlined,
   CrownOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  InboxOutlined,
+  SendOutlined,
+  FundProjectionScreenOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '../../lib/api';
+import NotificationCenter from '../notifications/NotificationCenter';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -22,7 +32,60 @@ const { Title } = Typography;
 export const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, isHRManager, hasPermission } = useAuth();
+  const { user, logout, isHRManager, hasPermission, isAuthenticated } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Get inbox count
+  const { data: inboxCount } = useQuery({
+    queryKey: ['inbox-count'],
+    queryFn: () => apiClient.get('/approval/inbox/count').then(res => res.data),
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Refetch every 10 seconds
+    staleTime: 0, // Always consider stale
+  });
+
+  // Get pending approvals count
+  const { data: pendingCount } = useQuery({
+    queryKey: ['pending-count'],
+    queryFn: () => apiClient.get('/approval/pending/count').then(res => res.data),
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Refetch every 10 seconds
+    staleTime: 0, // Always consider stale
+  });
+
+  // Get drafts count
+  const { data: draftsCount } = useQuery({
+    queryKey: ['drafts-count'],
+    queryFn: () => apiClient.get('/approval/drafts/count').then(res => res.data),
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Refetch every 10 seconds
+    staleTime: 0, // Always consider stale
+  });
+
+  // Get outbox count
+  const { data: outboxCount } = useQuery({
+    queryKey: ['outbox-count'],
+    queryFn: () => apiClient.get('/approval/outbox/count').then(res => res.data),
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Refetch every 10 seconds
+    staleTime: 0, // Always consider stale
+  });
+
+  // Get reference count
+  const { data: referenceCount } = useQuery({
+    queryKey: ['reference-count'],
+    queryFn: () => apiClient.get('/approval/reference/count').then(res => res.data),
+    enabled: isAuthenticated,
+    refetchInterval: 10000, // Refetch every 10 seconds
+    staleTime: 0, // Always consider stale
+  });
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Generate dynamic menu items based on user permissions
   const getMenuItems = (): MenuProps['items'] => {
@@ -33,9 +96,21 @@ export const MainLayout = () => {
         label: '대시보드',
       },
       {
-        key: '/attendance',
+        key: '/attendance-management',
         icon: <ClockCircleOutlined />,
-        label: '출퇴근',
+        label: '근태관리',
+        children: [
+          {
+            key: '/attendance',
+            icon: <ClockCircleOutlined />,
+            label: '출퇴근',
+          },
+          {
+            key: '/attitude',
+            icon: <FundProjectionScreenOutlined />,
+            label: '태도',
+          },
+        ],
       },
       {
         key: '/leave',
@@ -46,6 +121,57 @@ export const MainLayout = () => {
         key: '/approval',
         icon: <FileTextOutlined />,
         label: '전자결재',
+        children: [
+          {
+            key: '/approval/drafts',
+            label: (
+              <div className="flex items-center justify-between w-full">
+                <span>임시보관함</span>
+                <Badge count={draftsCount?.count || 0} size="small" />
+              </div>
+            ),
+          },
+          {
+            key: '/approval/pending',
+            icon: <ClockCircleOutlined />,
+            label: (
+              <div className="flex items-center justify-between w-full">
+                <span>결재 대기</span>
+                <Badge count={pendingCount?.count || 0} size="small" />
+              </div>
+            ),
+          },
+          {
+            key: '/approval/inbox',
+            icon: <InboxOutlined />,
+            label: (
+              <div className="flex items-center justify-between w-full">
+                <span>수신함</span>
+                <Badge count={inboxCount?.count || 0} size="small" />
+              </div>
+            ),
+          },
+          {
+            key: '/approval/outbox',
+            icon: <SendOutlined />,
+            label: (
+              <div className="flex items-center justify-between w-full">
+                <span>상신함</span>
+                <Badge count={outboxCount?.count || 0} size="small" />
+              </div>
+            ),
+          },
+          {
+            key: '/approval/reference',
+            icon: <FileTextOutlined />,
+            label: (
+              <div className="flex items-center justify-between w-full">
+                <span>참조문서</span>
+                <Badge count={referenceCount?.count || 0} size="small" />
+              </div>
+            ),
+          },
+        ],
       },
       {
         key: '/settings',
@@ -61,15 +187,15 @@ export const MainLayout = () => {
           type: 'divider',
         } as any,
         {
-          key: '/hr-management',
-          icon: <CrownOutlined />,
-          label: 'HR 관리',
-        },
-        {
           key: 'admin',
-          icon: <SettingOutlined />,
+          icon: <CrownOutlined />,
           label: '관리자',
           children: [
+            {
+              key: '/admin/approval-management',
+              icon: <FileTextOutlined />,
+              label: '전자결재 관리',
+            },
             {
               key: '/admin/users',
               icon: <TeamOutlined />,
@@ -79,6 +205,16 @@ export const MainLayout = () => {
               key: '/admin/company',
               icon: <EnvironmentOutlined />,
               label: '회사 설정',
+            },
+            {
+              key: '/admin/monitoring',
+              icon: <EyeOutlined />,
+              label: '실시간 모니터링',
+            },
+            {
+              key: '/admin/attitude-statistics',
+              icon: <BarChartOutlined />,
+              label: '태도 통계',
             },
           ],
         }
@@ -118,18 +254,35 @@ export const MainLayout = () => {
     }
   };
 
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Layout className='min-h-screen'>
       <Sider
         theme='light'
         width={280}
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
         className='border-r border-gray-200'
+        trigger={null}
       >
-        <div className='p-6'>
-          <Title level={3} className='!mb-0 text-primary-600'>
-            Nova HR
-          </Title>
-          <p className='text-sm text-gray-500 mt-1'>임직원 포털</p>
+        <div className={`p-6 ${collapsed ? 'px-3' : ''}`}>
+          {!collapsed ? (
+            <>
+              <Title level={3} className='!mb-0 text-primary-600'>
+                Nova HR
+              </Title>
+              <p className='text-sm text-gray-500 mt-1'>임직원 포털</p>
+            </>
+          ) : (
+            <Title level={4} className='!mb-0 text-primary-600 text-center'>
+              NH
+            </Title>
+          )}
         </div>
         <Menu
           mode='inline'
@@ -137,18 +290,26 @@ export const MainLayout = () => {
           items={getMenuItems()}
           onClick={handleMenuClick}
           className='border-r-0'
+          inlineCollapsed={collapsed}
         />
       </Sider>
       <Layout>
         <Header className='bg-white border-b border-gray-200 px-6 flex items-center justify-between'>
-          <div />
-          <Dropdown
-            menu={{
-              items: getUserMenuItems(),
-              onClick: handleUserMenuClick,
-            }}
-            placement='bottomRight'
-          >
+          <Button
+            type='text'
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            className='text-lg'
+          />
+          <div className='flex items-center gap-3'>
+            <NotificationCenter />
+            <Dropdown
+              menu={{
+                items: getUserMenuItems(),
+                onClick: handleUserMenuClick,
+              }}
+              placement='bottomRight'
+            >
             <div className='flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors'>
               <Avatar size='default' icon={<UserOutlined />} />
               <div className='text-left'>
@@ -159,7 +320,8 @@ export const MainLayout = () => {
                 </div>
               </div>
             </div>
-          </Dropdown>
+            </Dropdown>
+          </div>
         </Header>
         <Content className='p-6 bg-gray-50'>
           <Outlet />

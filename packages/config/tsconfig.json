@@ -25,14 +25,13 @@
       "@nova-hr/auth": ["../auth/src"]
     },
     "declaration": true,
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "outDir": "./dist"
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "**/*.js",
-    "**/*.jsx"
+    "*.js",
+    "*.jsx"
   ],
   "exclude": ["node_modules", "dist"]
 }

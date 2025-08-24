@@ -38,7 +38,14 @@ model auth_user {
   attendance_requests attendance_request[]
   leave_requests   leave_request[]
   approval_drafts  approval_draft[]
+  approval_route_approvers approval_route_approver[]
+  approval_actions approval_action[]
   audit_logs       audit_log[]
+  attitude_sessions attitude_session[]
+  notifications    notification[] @relation("user_notifications")
+  expense_requests expense_request[] @relation("user_expense_requests")
+  approved_expenses expense_request[] @relation("approved_expense_requests")
+  rejected_expenses expense_request[] @relation("rejected_expense_requests")
 
   @@map("auth_users")
 }
@@ -57,6 +64,8 @@ model tenant {
   // Relations
   users       auth_user[]
   companies   company[]
+  auto_approval_settings auto_approval_settings[]
+  approval_route_templates approval_route_template[]
 
   @@map("tenants")
 }
@@ -86,6 +95,7 @@ model company {
   locations     company_location[]
   org_units     org_unit[]
   work_policies work_policy[]
+  auto_approval_settings auto_approval_settings[]
 
   @@map("companies")
 }
@@ -176,11 +186,13 @@ model attendance {
   break_minutes   Int       @default(0)
   overtime_minutes Int      @default(0)
   notes           String?
+  approval_draft_id String?
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
 
   // Relations
   user auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  approval_draft approval_draft? @relation(fields: [approval_draft_id], references: [id])
 
   @@unique([user_id, date_key])
   @@map("attendance")
@@ -288,17 +300,22 @@ model leave_request {
   days_count     Decimal   @db.Decimal(5, 2)
   reason         String?
   emergency      Boolean   @default(false)
+  emergency_contact String?
+  duration       String?   // "FULL_DAY", "HALF_DAY_MORNING", "HALF_DAY_AFTERNOON", "HOURS"
   attach_urls    String[]  @db.Text
   status         String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
   decided_by     String?
   decided_at     DateTime?
+  submitted_at   DateTime?
   comments       String?
+  approval_draft_id String?
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
 
   // Relations
   user       auth_user  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   leave_type leave_type @relation(fields: [leave_type_id], references: [id])
+  approval_draft approval_draft? @relation(fields: [approval_draft_id], references: [id])
 
   @@map("leave_requests")
 }
@@ -308,21 +325,23 @@ model leave_request {
 // ================================
 
 model approval_category {
-  id          String   @id @default(uuid())
-  company_id  String?  // null for system-wide categories
-  name        String
-  code        String
-  description String?
-  icon        String?
-  form_schema Json     // JSON Schema for dynamic form
-  is_active   Boolean  @default(true)
-  order_index Int      @default(0)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id               String   @id @default(uuid())
+  company_id       String?  // null for system-wide categories
+  name             String
+  code             String
+  description      String?
+  icon             String?
+  form_schema      Json?    // JSON Schema for dynamic form (optional now)
+  template_content String?  // Rich text template content
+  is_active        Boolean  @default(true)
+  order_index      Int      @default(0)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 
   // Relations
   drafts approval_draft[]
-  routes approval_route_template[]
+  auto_approval_settings auto_approval_settings[]
+  approval_route_templates approval_route_template[]
 
   @@unique([code, company_id])
   @@map("approval_categories")
@@ -330,6 +349,7 @@ model approval_category {
 
 model approval_route_template {
   id          String   @id @default(uuid())
+  tenant_id   String
   company_id  String?  // null for system-wide templates
   category_id String?
   name        String
@@ -341,7 +361,8 @@ model approval_route_template {
   updated_at  DateTime @updatedAt
 
   // Relations
-  category approval_category?               @relation(fields: [category_id], references: [id])
+  tenant   tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  category approval_category? @relation(fields: [category_id], references: [id])
   stages   approval_route_stage_template[]
 
   @@map("approval_route_templates")
@@ -383,6 +404,7 @@ model approval_draft {
   category_id String
   title       String
   content     Json      // Form data based on category schema
+  description String?   // Main content/body text
   status      String    @default("DRAFT") // DRAFT, SUBMITTED, IN_PROGRESS, APPROVED, REJECTED, CANCELLED
   submitted_at DateTime?
   completed_at DateTime?
@@ -395,6 +417,8 @@ model approval_draft {
   route    approval_route?
   actions  approval_action[]
   attachments file_attachment[]
+  attendance_records attendance[]
+  leave_requests leave_request[]
 
   @@map("approval_drafts")
 }
@@ -438,6 +462,7 @@ model approval_route_approver {
 
   // Relations
   stage approval_route_stage @relation(fields: [stage_id], references: [id], onDelete: Cascade)
+  user  auth_user             @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("approval_route_approvers")
 }
@@ -453,6 +478,7 @@ model approval_action {
 
   // Relations
   draft approval_draft @relation(fields: [draft_id], references: [id], onDelete: Cascade)
+  user  auth_user      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("approval_actions")
 }
@@ -530,3 +556,233 @@ model audit_log {
 
   @@map("audit_logs")
 }
+
+// ================================
+// NOTIFICATION SYSTEM
+// ================================
+
+model notification {
+  id          String   @id @default(uuid())
+  user_id     String   // Recipient
+  title       String
+  message     String
+  type        String   // ATTENDANCE_EXCEPTION, APPROVAL, LEAVE_REQUEST, etc.
+  reference_type String? // ATTENDANCE_REQUEST, APPROVAL_DRAFT, etc.
+  reference_id   String? // Related entity ID
+  status      String   @default("UNREAD") // UNREAD, READ
+  priority    String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  metadata    Json?    // Additional data
+  created_at  DateTime @default(now())
+  read_at     DateTime?
+
+  // Relations
+  user auth_user @relation("user_notifications", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ================================
+// EXPENSE MANAGEMENT
+// ================================
+
+model expense_category {
+  id          String   @id @default(uuid())
+  company_id  String?  // null for system-wide categories
+  name        String
+  code        String
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  expenses expense_request[]
+
+  @@unique([code, company_id])
+  @@map("expense_categories")
+}
+
+model expense_request {
+  id             String   @id @default(uuid())
+  user_id        String
+  category_id    String
+  title          String
+  description    String?
+  amount         Decimal  @db.Decimal(10, 2)
+  currency       String   @default("KRW")
+  expense_date   DateTime @db.Date
+  receipt_urls   String[] @db.Text
+  status         String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, PAID
+  submitted_at   DateTime?
+  approved_at    DateTime?
+  approved_by    String?
+  rejected_at    DateTime?
+  rejected_by    String?
+  rejection_reason String?
+  paid_at        DateTime?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  // Relations
+  user     auth_user        @relation("user_expense_requests", fields: [user_id], references: [id], onDelete: Cascade)
+  category expense_category @relation(fields: [category_id], references: [id])
+  approver auth_user?       @relation("approved_expense_requests", fields: [approved_by], references: [id], onDelete: SetNull)
+  rejecter auth_user?       @relation("rejected_expense_requests", fields: [rejected_by], references: [id], onDelete: SetNull)
+
+  @@map("expense_requests")
+}
+
+// ================================
+// ATTITUDE MONITORING
+// ================================
+
+model attitude_session {
+  id              String   @id @default(uuid())
+  user_id         String
+  date            DateTime @db.Date
+  login_time      DateTime
+  logout_time     DateTime?
+  total_active_time Int?   // in seconds
+  total_idle_time   Int?   // in seconds
+  productivity_score Float? // 0-100
+  status          String   @default("ACTIVE") // ACTIVE, COMPLETED, ABNORMAL
+  last_agent_heartbeat DateTime?
+  agent_version   String?
+  agent_os        String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  user         auth_user              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  screenshots  attitude_screenshot[]
+  idle_periods attitude_idle_period[]
+  app_usage    attitude_app_usage[]
+  web_usage    attitude_web_usage[]
+
+  @@unique([user_id, date])
+  @@map("attitude_sessions")
+}
+
+model attitude_screenshot {
+  id           String   @id @default(uuid())
+  session_id   String
+  file_url     String
+  thumbnail_url String?
+  captured_at  DateTime
+  is_blurred   Boolean  @default(false) // for privacy
+  metadata     Json?    // window titles, active app, etc.
+  created_at   DateTime @default(now())
+
+  // Relations
+  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@map("attitude_screenshots")
+}
+
+model attitude_idle_period {
+  id         String   @id @default(uuid())
+  session_id String
+  start_time DateTime
+  end_time   DateTime?
+  duration   Int?     // in seconds
+  reason     String?  // INACTIVITY, LOCKED_SCREEN, etc.
+  created_at DateTime @default(now())
+
+  // Relations
+  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@map("attitude_idle_periods")
+}
+
+model attitude_app_usage {
+  id           String   @id @default(uuid())
+  session_id   String
+  app_name     String
+  app_category String   // PRODUCTIVITY, COMMUNICATION, ENTERTAINMENT, etc.
+  window_title String?
+  start_time   DateTime
+  end_time     DateTime?
+  duration     Int?     // in seconds
+  is_productive Boolean @default(true)
+  created_at   DateTime @default(now())
+
+  // Relations
+  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id, app_category])
+  @@map("attitude_app_usage")
+}
+
+model attitude_web_usage {
+  id           String   @id @default(uuid())
+  session_id   String
+  domain       String
+  url          String?
+  page_title   String?
+  category     String   // WORK, SOCIAL_MEDIA, SHOPPING, ENTERTAINMENT, NEWS, etc.
+  visit_count  Int      @default(1)
+  total_time   Int?     // in seconds
+  is_productive Boolean @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id, category])
+  @@map("attitude_web_usage")
+}
+
+model attitude_app_whitelist {
+  id          String   @id @default(uuid())
+  company_id  String?
+  app_name    String
+  category    String
+  is_productive Boolean @default(true)
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([app_name, company_id])
+  @@map("attitude_app_whitelist")
+}
+
+model attitude_web_whitelist {
+  id          String   @id @default(uuid())
+  company_id  String?
+  domain      String
+  category    String
+  is_productive Boolean @default(true)
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([domain, company_id])
+  @@map("attitude_web_whitelist")
+}
+
+// ================================
+// AUTO APPROVAL SYSTEM
+// ================================
+
+model auto_approval_settings {
+  id             String  @id @default(uuid())
+  tenant_id      String
+  company_id     String?
+  category_id    String?
+  enabled        Boolean @default(true)
+  conditions     Json    // Complex approval conditions
+  max_amount     Float?  // Maximum amount for auto approval
+  approver_type  String  @default("MANAGER") // MANAGER, HR, DEPARTMENT_HEAD, CUSTOM
+  fallback_users String[] // Fallback approvers if primary not available
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  // Relations
+  tenant   tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  company  company?           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  category approval_category? @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@map("auto_approval_settings")
+}
+

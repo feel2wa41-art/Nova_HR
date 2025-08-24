@@ -1,4 +1,4 @@
-import { Form, Input, Button, Card, Typography, message } from 'antd';
+import { Form, Input, Button, Card, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -14,22 +14,31 @@ interface LoginFormData {
 export const LoginPage = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, isLoading, isAuthenticated, logout } = useAuth();
+  const { message } = App.useApp();
 
-  // Redirect if already authenticated
+  // Clear any existing authentication state on login page
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
+  // Clear state when component mounts (only once)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      logout();
+    }
+  }, []);
+
   const handleSubmit = async (values: LoginFormData) => {
     try {
       await login(values.email, values.password);
-      message.success('로그인 성공!');
+      // Use setTimeout to prevent message handler blocking
+      setTimeout(() => message.success('로그인 성공!'), 0);
       navigate('/', { replace: true });
     } catch (error: any) {
-      message.error(error.message || '로그인에 실패했습니다');
+      setTimeout(() => message.error(error.message || '로그인에 실패했습니다'), 0);
     }
   };
 
@@ -44,12 +53,25 @@ export const LoginPage = () => {
         </div>
         
         <Card className='shadow-lg'>
+          <div className='mb-4 p-4 bg-blue-50 rounded-lg'>
+            <Text className='text-xs text-blue-600 font-medium block mb-2'>테스트 계정</Text>
+            <div className='text-xs space-y-1'>
+              <div><strong>직원:</strong> employee@nova-hr.com / admin123</div>
+              <div><strong>HR매니저:</strong> hr@nova-hr.com / admin123</div>
+              <div><strong>관리자:</strong> admin@nova-hr.com / admin123</div>
+            </div>
+          </div>
+          
           <Form
             form={form}
             name='login'
             layout='vertical'
             onFinish={handleSubmit}
             autoComplete='off'
+            initialValues={{
+              email: 'employee@nova-hr.com',
+              password: 'admin123'
+            }}
           >
             <Form.Item
               label='이메일'
@@ -63,6 +85,7 @@ export const LoginPage = () => {
                 prefix={<UserOutlined />}
                 placeholder='이메일 주소'
                 size='large'
+                autoComplete='email'
               />
             </Form.Item>
 
@@ -78,6 +101,7 @@ export const LoginPage = () => {
                 prefix={<LockOutlined />}
                 placeholder='비밀번호'
                 size='large'
+                autoComplete='current-password'
               />
             </Form.Item>
 

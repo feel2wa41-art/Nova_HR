@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { mockLogin } from '../lib/api';
+import { authApi } from '../lib/api';
 
 interface User {
   id: string;
@@ -18,6 +18,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   setLoading: (loading: boolean) => void;
+  initializeAuth: () => Promise<void>;
   hasRole: (role: string | string[]) => boolean;
   hasPermission: (permission: string) => boolean;
   isAdmin: () => boolean;
@@ -34,8 +35,8 @@ export const useAuth = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          // Use mock login for now (switch to real API later)
-          const response = await mockLogin(email, password);
+          // Use real API
+          const response = await authApi.login({ email, password });
           
           // Store tokens
           localStorage.setItem('nova_hr_token', response.accessToken);
@@ -62,6 +63,32 @@ export const useAuth = create<AuthState>()(
           isAuthenticated: false,
           isLoading: false,
         });
+      },
+
+      initializeAuth: async () => {
+        const token = localStorage.getItem('nova_hr_token');
+        if (token) {
+          try {
+            set({ isLoading: true });
+            const userProfile = await authApi.getProfile();
+            set({
+              user: userProfile,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } catch (error) {
+            // Token is invalid, clear everything
+            localStorage.removeItem('nova_hr_token');
+            localStorage.removeItem('nova_hr_refresh_token');
+            set({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          }
+        } else {
+          set({ isLoading: false });
+        }
       },
 
       setLoading: (loading: boolean) => {

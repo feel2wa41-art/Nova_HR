@@ -3,16 +3,12 @@ import { View, Alert, ScrollView, StyleSheet } from 'react-native';
 import { Text, Card, Button, ActivityIndicator, Chip, Divider } from 'react-native-paper';
 import * as Location from 'expo-location';
 import { Camera } from 'expo-camera';
+import { useRouter } from 'expo-router';
+import { attendanceService, AttendanceRecord } from '../services/attendance';
+import { companyService, CompanyLocation } from '../services/company';
+import { authService } from '../services/auth';
 
-interface CompanyLocation {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-}
-
-interface AttendanceRecord {
+interface AttendanceStatus {
   checkInAt?: string;
   checkOutAt?: string;
   status: 'ABSENT' | 'CHECKED_IN' | 'CHECKED_OUT';
@@ -23,24 +19,6 @@ interface AttendanceRecord {
     address?: string;
   };
 }
-
-// Mock company locations
-const mockCompanyLocations: CompanyLocation[] = [
-  {
-    id: '1',
-    name: 'Jakarta Office',
-    latitude: -6.1944,
-    longitude: 106.8229,
-    radius: 200,
-  },
-  {
-    id: '2',
-    name: 'Bandung Branch',
-    latitude: -6.9175,
-    longitude: 107.6191,
-    radius: 150,
-  },
-];
 
 // Calculate distance between two coordinates
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -65,14 +43,22 @@ export default function AttendanceScreen() {
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
   const [nearestOffice, setNearestOffice] = useState<{ office: CompanyLocation; distance: number } | null>(null);
   const [isWithinRange, setIsWithinRange] = useState(false);
-  const [todayRecord, setTodayRecord] = useState<AttendanceRecord>({
+  const [companyLocations, setCompanyLocations] = useState<CompanyLocation[]>([]);
+  const [todayRecord, setTodayRecord] = useState<AttendanceStatus>({
     status: 'ABSENT'
   });
+  const [apiError, setApiError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    requestPermissions();
-    loadTodayRecord();
+    initializeScreen();
   }, []);
+
+  const initializeScreen = async () => {
+    await requestPermissions();
+    await loadCompanyLocations();
+    await loadTodayRecord();
+  };
 
   const requestPermissions = async () => {
     try {
@@ -109,17 +95,42 @@ export default function AttendanceScreen() {
     }
   };
 
+  const loadCompanyLocations = async () => {
+    try {
+      const locations = await companyService.getCompanyLocations();
+      setCompanyLocations(locations);
+      setApiError(null);
+    } catch (error) {
+      console.error('Failed to load company locations:', error);
+      setApiError('회사 위치 정보를 불러올 수 없습니다. 오프라인 모드로 실행됩니다.');
+      
+      // Use fallback locations for demo
+      setCompanyLocations([
+        {
+          id: '1',
+          name: '서울 본사',
+          address: '서울특별시 강남구',
+          lat: 37.5665,
+          lng: 126.9780,
+          radius_m: 200,
+          is_active: true,
+          company_id: '1'
+        }
+      ]);
+    }
+  };
+
   const checkProximityToOffice = (location: Location.LocationObject) => {
     let nearestOfficeData = null;
     let minDistance = Infinity;
     let withinRange = false;
 
-    for (const office of mockCompanyLocations) {
+    for (const office of companyLocations) {
       const distance = calculateDistance(
         location.coords.latitude,
         location.coords.longitude,
-        office.latitude,
-        office.longitude
+        office.lat,
+        office.lng
       );
 
       if (distance < minDistance) {
@@ -127,7 +138,7 @@ export default function AttendanceScreen() {
         nearestOfficeData = { office, distance };
       }
 
-      if (distance <= office.radius) {
+      if (distance <= office.radius_m) {
         withinRange = true;
       }
     }
@@ -136,60 +147,120 @@ export default function AttendanceScreen() {
     setIsWithinRange(withinRange);
   };
 
-  const loadTodayRecord = () => {
-    // Load today's attendance record (mock implementation)
-    // In real app, this would fetch from API
-    setTodayRecord({
-      status: 'ABSENT'
-    });
+  const loadTodayRecord = async () => {
+    try {
+      const record = await attendanceService.getTodayAttendance();
+      
+      if (record) {
+        setTodayRecord({
+          checkInAt: record.check_in_at || undefined,
+          checkOutAt: record.check_out_at || undefined,
+          status: record.check_out_at ? 'CHECKED_OUT' : (record.check_in_at ? 'CHECKED_IN' : 'ABSENT'),
+          workMinutes: record.work_minutes || undefined,
+          location: record.check_in_loc ? {
+            lat: record.check_in_loc.latitude,
+            lng: record.check_in_loc.longitude,
+            address: record.check_in_loc.address
+          } : undefined
+        });
+      } else {
+        setTodayRecord({ status: 'ABSENT' });
+      }
+      setApiError(null);
+    } catch (error) {
+      console.error('Failed to load today record:', error);
+      setApiError('오늘 출퇴근 기록을 불러올 수 없습니다.');
+      setTodayRecord({ status: 'ABSENT' });
+    }
   };
 
   const handleCheckIn = async () => {
+    if (!currentLocation) {
+      Alert.alert('위치 오류', '현재 위치를 확인할 수 없습니다. 위치를 새로고침해주세요.');
+      return;
+    }
+
     if (!isWithinRange) {
       Alert.alert(
         '위치 오류',
-        `회사 위치에서 너무 멀리 떨어져 있습니다.\n가장 가까운 사무실(${nearestOffice?.office.name})까지 ${Math.round(nearestOffice?.distance || 0)}m`
+        `회사 위치에서 너무 멀리 떨어져 있습니다.\n가장 가까운 사무실(${nearestOffice?.office.name})까지 ${Math.round(nearestOffice?.distance || 0)}m\n\n소급 신청을 하시겠습니까?`,
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '소급 신청',
+            onPress: () => handleOutOfRangeCheckIn()
+          }
+        ]
       );
       return;
     }
 
-    if (cameraPermission !== 'granted') {
-      Alert.alert('카메라 권한 필요', '얼굴 인증을 위해 카메라 권한이 필요합니다.');
-      return;
-    }
+    await performCheckIn();
+  };
 
-    // In a real app, this would open camera for face authentication
-    Alert.alert(
-      '출근 처리',
-      '얼굴 인증 후 출근 처리됩니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        { 
-          text: '출근하기', 
-          onPress: () => {
-            setTodayRecord({
-              ...todayRecord,
-              status: 'CHECKED_IN',
-              checkInAt: new Date().toISOString(),
-              location: currentLocation ? {
-                lat: currentLocation.coords.latitude,
-                lng: currentLocation.coords.longitude,
-                address: nearestOffice?.office.name
-              } : undefined
-            });
-            Alert.alert('출근 완료', '출근 처리가 완료되었습니다!');
-          }
+  const performCheckIn = async () => {
+    if (!currentLocation) return;
+
+    try {
+      setIsLoading(true);
+      
+      const response = await attendanceService.checkIn({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+        accuracy: currentLocation.coords.accuracy || undefined,
+      });
+
+      if (response.success) {
+        await loadTodayRecord(); // Reload to get updated data
+        Alert.alert(
+          '출근 완료', 
+          `출근 처리가 완료되었습니다!\n${response.geofence ? `(${response.geofence.location}에서 ${response.geofence.distance}m)` : ''}`
+        );
+      }
+    } catch (error: any) {
+      console.error('Check-in failed:', error);
+      const message = error.response?.data?.message || '출근 처리 중 오류가 발생했습니다.';
+      Alert.alert('출근 실패', message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOutOfRangeCheckIn = async () => {
+    if (!currentLocation) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Create attendance request for out-of-range check-in
+      await attendanceService.createAttendanceRequest({
+        requestType: 'CHECK_IN',
+        targetAt: new Date().toISOString(),
+        reasonText: '지오펜스 범위 밖에서 출근',
+        geoSnapshot: {
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          accuracy: currentLocation.coords.accuracy || undefined,
+          timestamp: new Date().toISOString()
         }
-      ]
-    );
+      });
+
+      Alert.alert(
+        '소급 신청 완료',
+        '출퇴근 소급 신청이 제출되었습니다. 관리자 승인 후 처리됩니다.'
+      );
+    } catch (error: any) {
+      console.error('Attendance request failed:', error);
+      const message = error.response?.data?.message || '소급 신청 중 오류가 발생했습니다.';
+      Alert.alert('신청 실패', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCheckOut = async () => {
-    if (!isWithinRange) {
-      Alert.alert(
-        '위치 오류',
-        `회사 위치에서 너무 멀리 떨어져 있습니다.\n가장 가까운 사무실(${nearestOffice?.office.name})까지 ${Math.round(nearestOffice?.distance || 0)}m`
-      );
+    if (!currentLocation) {
+      Alert.alert('위치 오류', '현재 위치를 확인할 수 없습니다. 위치를 새로고침해주세요.');
       return;
     }
 
@@ -200,22 +271,38 @@ export default function AttendanceScreen() {
         { text: '취소', style: 'cancel' },
         { 
           text: '퇴근하기', 
-          onPress: () => {
-            const checkInTime = todayRecord.checkInAt ? new Date(todayRecord.checkInAt) : new Date();
-            const now = new Date();
-            const workMinutes = Math.floor((now.getTime() - checkInTime.getTime()) / (1000 * 60));
-            
-            setTodayRecord({
-              ...todayRecord,
-              status: 'CHECKED_OUT',
-              checkOutAt: now.toISOString(),
-              workMinutes
-            });
-            Alert.alert('퇴근 완료', '퇴근 처리가 완료되었습니다!');
-          }
+          onPress: () => performCheckOut()
         }
       ]
     );
+  };
+
+  const performCheckOut = async () => {
+    if (!currentLocation) return;
+
+    try {
+      setIsLoading(true);
+      
+      const response = await attendanceService.checkOut({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+        accuracy: currentLocation.coords.accuracy || undefined,
+      });
+
+      if (response.success) {
+        await loadTodayRecord(); // Reload to get updated data
+        Alert.alert(
+          '퇴근 완료', 
+          `퇴근 처리가 완료되었습니다!\n${response.workHours ? `오늘 근무시간: ${response.workHours}` : ''}`
+        );
+      }
+    } catch (error: any) {
+      console.error('Check-out failed:', error);
+      const message = error.response?.data?.message || '퇴근 처리 중 오류가 발생했습니다.';
+      Alert.alert('퇴근 실패', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatTime = (dateString: string) => {
@@ -242,6 +329,29 @@ export default function AttendanceScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      '로그아웃',
+      '로그아웃 하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '로그아웃',
+          onPress: async () => {
+            try {
+              await authService.logout();
+              router.replace('/login');
+            } catch (error) {
+              console.error('Logout failed:', error);
+              // Even if logout API fails, clear local data and redirect
+              router.replace('/login');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -259,6 +369,11 @@ export default function AttendanceScreen() {
                 weekday: 'long'
               })}
             </Text>
+            {apiError && (
+              <Text variant="bodySmall" style={[styles.centerText, styles.errorText, styles.marginTop]}>
+                ⚠️ {apiError}
+              </Text>
+            )}
             <View style={styles.chipContainer}>
               {getStatusChip()}
             </View>
@@ -406,6 +521,20 @@ export default function AttendanceScreen() {
             </View>
           </Card.Content>
         </Card>
+
+        {/* Logout */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Button
+              mode="outlined"
+              onPress={handleLogout}
+              style={styles.logoutButton}
+              textColor="#dc2626"
+            >
+              로그아웃
+            </Button>
+          </Card.Content>
+        </Card>
       </View>
     </ScrollView>
   );
@@ -500,5 +629,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  logoutButton: {
+    borderColor: '#dc2626',
   },
 });

@@ -7,21 +7,21 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@nova-hr/config': path.resolve(__dirname, '../../packages/config/src'),
-      '@nova-hr/ui': path.resolve(__dirname, '../../packages/ui/src'),
-      '@nova-hr/shared': path.resolve(__dirname, '../../packages/shared/src'),
-      '@nova-hr/auth': path.resolve(__dirname, '../../packages/auth/src'),
     },
   },
   server: {
-    port: 3001,
+    port: 3014,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3333',
         changeOrigin: true,
       },
     },
+    headers: {
+      'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: http://localhost:* ws://localhost:* https://fonts.googleapis.com https://fonts.gstatic.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:;",
+    },
   },
+  assetsInclude: ['**/*.bat', '**/*.exe'],
   build: {
     outDir: 'dist',
     sourcemap: true,

@@ -8,7 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { CompanyModule } from './modules/company/company.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
-import { LeaveModule } from './modules/leave/leave.module';
+// import { LeaveModule } from './modules/leave/leave.module';
 import { ApprovalModule } from './modules/approval/approval.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { NotificationModule } from './modules/notification/notification.module';
@@ -17,6 +17,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AttitudeModule } from './modules/attitude/attitude.module';
 
 @Module({
   imports: [
@@ -47,12 +48,13 @@ import { AppService } from './app.service';
     UsersModule,
     CompanyModule,
     AttendanceModule,
-    LeaveModule,
+    // LeaveModule,
     ApprovalModule,
     UploadModule,
     NotificationModule,
     ReportsModule,
     SettingsModule,
+    AttitudeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

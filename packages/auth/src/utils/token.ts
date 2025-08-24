@@ -1,1 +1,28 @@
-export const isTokenValid = (token: string): boolean => {\n  if (!token) return false;\n  \n  try {\n    const payload = JSON.parse(atob(token.split('.')[1]));\n    const now = Math.floor(Date.now() / 1000);\n    \n    // Check if token is expired (with 5 minute buffer)\n    return payload.exp > (now + 300);\n  } catch {\n    return false;\n  }\n};\n\nexport const getTokenPayload = (token: string): any => {\n  try {\n    return JSON.parse(atob(token.split('.')[1]));\n  } catch {\n    return null;\n  }\n};\n\nexport const getTokenExpiration = (token: string): Date | null => {\n  const payload = getTokenPayload(token);\n  if (!payload?.exp) return null;\n  \n  return new Date(payload.exp * 1000);\n};"
+export const isTokenValid = (token: string): boolean => {
+  if (!token) return false;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const now = Math.floor(Date.now() / 1000);
+    
+    // Check if token is expired (with 5 minute buffer)
+    return payload.exp > (now + 300);
+  } catch {
+    return false;
+  }
+};
+
+export const getTokenPayload = (token: string): any => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+};
+
+export const getTokenExpiration = (token: string): Date | null => {
+  const payload = getTokenPayload(token);
+  if (!payload?.exp) return null;
+  
+  return new Date(payload.exp * 1000);
+};

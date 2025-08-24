@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
@@ -12,14 +12,23 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
+  // Configure body parser for large payloads (screenshots)
+  const express = require('express');
+  app.use('/api/v1/attitude/screenshot', express.json({ limit: '10mb' }));
+  app.use('/api/v1/attitude/screenshot', express.urlencoded({ limit: '10mb', extended: true }));
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ limit: '2mb', extended: true }));
+
   // Security
   app.use(helmet());
   app.use(compression());
 
-  // CORS
+  // CORS - Allow all origins for development
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN')?.split(',') || '*',
+    origin: true,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   });
 
   // Global validation pipe
@@ -34,11 +43,11 @@ async function bootstrap() {
     })
   );
 
-  // API versioning
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: '1',
-  });
+  // API versioning - disabled since we use global prefix with version
+  // app.enableVersioning({
+  //   type: VersioningType.URI,
+  //   defaultVersion: '1',
+  // });
 
   // Global prefix
   const apiPrefix = configService.get('API_PREFIX', 'api/v1');
@@ -90,7 +99,7 @@ async function bootstrap() {
   await prismaService.enableShutdownHooks(app);
 
   // Start server
-  const port = configService.get('PORT', 3000);
+  const port = configService.get('PORT', 3333);
   await app.listen(port);
 
   console.log(`🚀 Nova HR API is running on: http://localhost:${port}/${apiPrefix}`);

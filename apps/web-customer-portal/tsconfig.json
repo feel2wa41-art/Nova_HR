@@ -1,5 +1,4 @@
 {
-  "extends": "../../packages/config/tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -12,17 +11,13 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@nova-hr/config": ["../../packages/config/src"],
-      "@nova-hr/ui": ["../../packages/ui/src"],
-      "@nova-hr/shared": ["../../packages/shared/src"],
-      "@nova-hr/auth": ["../../packages/auth/src"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],

@@ -1,1 +1,80 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';\nimport type { User } from '@nova-hr/shared';\nimport { getStoredToken, removeStoredToken } from '../utils/storage';\nimport { isTokenValid } from '../utils/token';\n\ninterface AuthContextType {\n  user: User | null;\n  isAuthenticated: boolean;\n  isLoading: boolean;\n  login: (user: User, token: string) => void;\n  logout: () => void;\n  updateUser: (user: Partial<User>) => void;\n}\n\nconst AuthContext = createContext<AuthContextType | undefined>(undefined);\n\ninterface AuthProviderProps {\n  children: React.ReactNode;\n}\n\nexport const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {\n  const [user, setUser] = useState<User | null>(null);\n  const [isLoading, setIsLoading] = useState(true);\n\n  useEffect(() => {\n    const initAuth = async () => {\n      const token = getStoredToken();\n      \n      if (token && isTokenValid(token)) {\n        // TODO: Validate token with server and get user info\n        // For now, just check if token exists and is valid\n        setIsLoading(false);\n      } else {\n        removeStoredToken();\n        setIsLoading(false);\n      }\n    };\n\n    initAuth();\n  }, []);\n\n  const login = (userData: User, token: string) => {\n    setUser(userData);\n    // Token storage is handled by the login hook\n  };\n\n  const logout = () => {\n    setUser(null);\n    removeStoredToken();\n  };\n\n  const updateUser = (userData: Partial<User>) => {\n    if (user) {\n      setUser({ ...user, ...userData });\n    }\n  };\n\n  const value: AuthContextType = {\n    user,\n    isAuthenticated: !!user,\n    isLoading,\n    login,\n    logout,\n    updateUser,\n  };\n\n  return (\n    <AuthContext.Provider value={value}>\n      {children}\n    </AuthContext.Provider>\n  );\n};\n\nexport const useAuthContext = () => {\n  const context = useContext(AuthContext);\n  if (context === undefined) {\n    throw new Error('useAuthContext must be used within an AuthProvider');\n  }\n  return context;\n};"
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { User } from '@nova-hr/shared';
+import { getStoredToken, removeStoredToken } from '../utils/storage';
+import { isTokenValid } from '../utils/token';
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (user: User, token: string) => void;
+  logout: () => void;
+  updateUser: (user: Partial<User>) => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = getStoredToken();
+      
+      if (token && isTokenValid(token)) {
+        // TODO: Validate token with server and get user info
+        // For now, just check if token exists and is valid
+        setIsLoading(false);
+      } else {
+        removeStoredToken();
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  const login = (userData: User, token: string) => {
+    setUser(userData);
+    // Token storage is handled by the login hook
+  };
+
+  const logout = () => {
+    setUser(null);
+    removeStoredToken();
+  };
+
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...userData });
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout,
+    updateUser,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuthContext = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuthContext must be used within an AuthProvider');
+  }
+  return context;
+};

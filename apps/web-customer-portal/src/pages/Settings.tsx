@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { Card, Row, Col, Typography, Tabs } from 'antd';
-import { SettingOutlined, UserOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { 
+  SettingOutlined, 
+  UserOutlined, 
+  ClockCircleOutlined,
+  BellOutlined,
+  PaletteOutlined,
+} from '@ant-design/icons';
 import { PersonalInfoSettings } from '../components/settings/PersonalInfoSettings';
 import { WorkTimeSettings } from '../components/settings/WorkTimeSettings';
+import { NotificationSettings } from '../components/settings/NotificationSettings';
+import { PersonalizationSettings } from '../components/settings/PersonalizationSettings';
 
 const { Title } = Typography;
 
@@ -30,6 +38,26 @@ export const Settings = () => {
       ),
       children: <WorkTimeSettings />,
     },
+    {
+      key: 'notifications',
+      label: (
+        <span>
+          <BellOutlined />
+          알림 설정
+        </span>
+      ),
+      children: <NotificationSettings />,
+    },
+    {
+      key: 'personalization',
+      label: (
+        <span>
+          <PaletteOutlined />
+          개인화
+        </span>
+      ),
+      children: <PersonalizationSettings />,
+    },
   ];
 
   return (
@@ -39,7 +67,7 @@ export const Settings = () => {
           <SettingOutlined className="mr-2" />
           설정
         </Title>
-        <p className="text-gray-600">개인 정보 및 근무 설정을 관리하세요</p>
+        <p className="text-gray-600">개인 정보, 알림, 개인화 설정을 관리하세요</p>
       </div>
 
       <Card>

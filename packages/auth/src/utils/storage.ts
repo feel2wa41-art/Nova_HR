@@ -1,1 +1,55 @@
-import { AUTH_CONFIG } from '@nova-hr/config';\n\nexport const getStoredToken = (): string | null => {\n  if (typeof window === 'undefined') return null;\n  return localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);\n};\n\nexport const setStoredToken = (token: string): void => {\n  if (typeof window === 'undefined') return;\n  localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);\n};\n\nexport const removeStoredToken = (): void => {\n  if (typeof window === 'undefined') return;\n  localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);\n  localStorage.removeItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);\n};\n\nexport const getStoredRefreshToken = (): string | null => {\n  if (typeof window === 'undefined') return null;\n  return localStorage.getItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);\n};\n\nexport const setStoredRefreshToken = (token: string): void => {\n  if (typeof window === 'undefined') return;\n  localStorage.setItem(AUTH_CONFIG.REFRESH_TOKEN_KEY, token);\n};"
+const TOKEN_KEY = 'nova_hr_token';
+const REFRESH_TOKEN_KEY = 'nova_hr_refresh_token';
+const USER_KEY = 'nova_hr_user';
+
+export const getStoredToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+export const setStoredToken = (token: string): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+export const removeStoredToken = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(TOKEN_KEY);
+};
+
+export const getStoredRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+export const setStoredRefreshToken = (token: string): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(REFRESH_TOKEN_KEY, token);
+};
+
+export const removeStoredRefreshToken = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+};
+
+export const getStoredUser = (): any | null => {
+  if (typeof window === 'undefined') return null;
+  const user = localStorage.getItem(USER_KEY);
+  return user ? JSON.parse(user) : null;
+};
+
+export const setStoredUser = (user: any): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+};
+
+export const removeStoredUser = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(USER_KEY);
+};
+
+export const clearAuthStorage = (): void => {
+  removeStoredToken();
+  removeStoredRefreshToken();
+  removeStoredUser();
+};

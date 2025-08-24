@@ -21,6 +21,7 @@ export const FaceAuthModal = ({
 }: FaceAuthModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const faceDetectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -60,15 +61,26 @@ export const FaceAuthModal = ({
         videoRef.current.srcObject = mediaStream;
         setStream(mediaStream);
         
-        videoRef.current.onloadedmetadata = () => {
-          setIsCameraReady(true);
-          setIsLoading(false);
-          
-          // Start face detection interval
-          const faceDetectionInterval = setInterval(detectFace, 1000);
-          
-          // Clean up interval when component unmounts
-          return () => clearInterval(faceDetectionInterval);
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            // Try to play video with error handling
+            if (videoRef.current) {
+              await videoRef.current.play();
+              setIsCameraReady(true);
+              setIsLoading(false);
+              
+              // Start face detection interval
+              if (faceDetectionIntervalRef.current) {
+                clearInterval(faceDetectionIntervalRef.current);
+              }
+              faceDetectionIntervalRef.current = setInterval(detectFace, 1000);
+            }
+          } catch (playError) {
+            console.warn('Video autoplay failed:', playError);
+            // Still mark as ready even if autoplay fails
+            setIsCameraReady(true);
+            setIsLoading(false);
+          }
         };
       }
     } catch (err) {
@@ -78,6 +90,18 @@ export const FaceAuthModal = ({
   };
 
   const stopCamera = () => {
+    // Clear face detection interval
+    if (faceDetectionIntervalRef.current) {
+      clearInterval(faceDetectionIntervalRef.current);
+      faceDetectionIntervalRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      // Pause video before stopping tracks
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+    }
+    
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
@@ -193,7 +217,6 @@ export const FaceAuthModal = ({
               <div className="relative border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
-                  autoPlay
                   playsInline
                   muted
                   className="w-96 h-72 object-cover bg-gray-100"
