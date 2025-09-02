@@ -1,6 +1,52 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.yarn/
+yarn.lock
+package-lock.json
+
+# Heavy library assets
+*.wasm
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.otf
+
+# Large media files
+*.mov
+*.mp4
+*.avi
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.gif
+*.tiff
+*.tif
+*.bmp
+*.ico
+*.icns
+
+# Large data files
+*.csv
+*.json.gz
+*.xml.gz
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+*.iso
+*.dmg
+
+# Development artifacts
+.webpack/
+.parcel-cache/
+.rollup.cache/
+.vite/
+.turbo/
+.rush/
 
 # Environment variables
 .env
@@ -60,6 +106,20 @@ expo-env.d.ts
 # AWS
 .aws/
 cdk.out/
+
+# Security files - NEVER commit these!
+*.pem
+*.key
+*.p12
+*.pfx
+.env.production
+*.crt
+*.csr
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+ssh_config
 
 # Temporary files
 *.tmp
