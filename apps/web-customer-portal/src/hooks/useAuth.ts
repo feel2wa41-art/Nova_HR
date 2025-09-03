@@ -8,6 +8,7 @@ interface User {
   name: string;
   role: string;
   title?: string;
+  avatar_url?: string;
   permissions?: string[];
 }
 

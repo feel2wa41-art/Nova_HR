@@ -110,7 +110,7 @@ export const getCurrentPosition = (simulatedLocation?: {lat: number, lng: number
         '실제GPS': '사용안함',
         '모드': '테스트모드'
       });
-      const mockPosition: GeolocationPosition = {
+      const mockPosition = {
         coords: {
           latitude: simulatedLocation.lat,
           longitude: simulatedLocation.lng,
@@ -121,7 +121,19 @@ export const getCurrentPosition = (simulatedLocation?: {lat: number, lng: number
           speed: null,
         },
         timestamp: Date.now(),
-      };
+        toJSON: () => ({
+          coords: {
+            latitude: simulatedLocation.lat,
+            longitude: simulatedLocation.lng,
+            accuracy: 10,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: Date.now(),
+        }),
+      } as GeolocationPosition;
       resolve(mockPosition);
       return;
     }
@@ -164,6 +176,12 @@ export interface AttendanceLocationResult {
   distance?: number;
   allNearbyLocations: Array<Location & { distance: number }>;
   message: string;
+  currentLocation?: {
+    lat: number;
+    lng: number;
+    accuracy: number;
+  };
+  isWithinRange?: boolean;
 }
 
 export const validateAttendanceLocation = async (
@@ -223,7 +241,13 @@ export const validateAttendanceLocation = async (
         location: nearestValidLocation,
         distance: nearestValidLocation.distance,
         allNearbyLocations: locationsWithDistance,
-        message: `${nearestValidLocation.name}에서 출근 체크가 가능합니다 (거리: ${formatDistance(nearestValidLocation.distance)})`
+        message: `${nearestValidLocation.name}에서 출근 체크가 가능합니다 (거리: ${formatDistance(nearestValidLocation.distance)})`,
+        currentLocation: {
+          lat: latitude,
+          lng: longitude,
+          accuracy: position.coords.accuracy || 10
+        },
+        isWithinRange: true
       };
     } else {
       // 가장 가까운 위치까지의 거리
@@ -235,7 +259,13 @@ export const validateAttendanceLocation = async (
       return {
         isValid: false,
         allNearbyLocations: locationsWithDistance,
-        message: `회사 위치에서 너무 멀리 떨어져 있습니다. ${nearest.name}까지 약 ${distanceToNearest}m 더 가까이 가주세요. (현재 거리: ${formatDistance(nearest.distance)})`
+        message: `회사 위치에서 너무 멀리 떨어져 있습니다. ${nearest.name}까지 약 ${distanceToNearest}m 더 가까이 가주세요. (현재 거리: ${formatDistance(nearest.distance)})`,
+        currentLocation: {
+          lat: latitude,
+          lng: longitude,
+          accuracy: position.coords.accuracy || 10
+        },
+        isWithinRange: false
       };
     }
   } catch (error) {
@@ -243,7 +273,8 @@ export const validateAttendanceLocation = async (
     return {
       isValid: false,
       allNearbyLocations: [],
-      message: '위치 정보를 가져올 수 없습니다. GPS가 켜져 있는지 확인해주세요.'
+      message: '위치 정보를 가져올 수 없습니다. GPS가 켜져 있는지 확인해주세요.',
+      isWithinRange: false
     };
   }
 };

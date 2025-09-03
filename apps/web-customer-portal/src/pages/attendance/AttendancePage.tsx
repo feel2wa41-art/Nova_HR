@@ -172,7 +172,7 @@ export const AttendancePage = () => {
     if (!locationResult.isWithinRange) {
       Modal.confirm({
         title: '지오펜스 범위 밖',
-        content: `회사 지정 위치에서 ${formatDistance(locationResult.nearestOffice?.distance || 0)} 떨어져 있습니다. 소급 신청을 하시겠습니까?`,
+        content: `회사 지정 위치에서 ${formatDistance(locationResult.distance || 0)} 떨어져 있습니다. 소급 신청을 하시겠습니까?`,
         okText: '소급 신청',
         cancelText: '취소',
         onOk: async () => {
@@ -486,7 +486,6 @@ export const AttendancePage = () => {
                       <div className="font-medium">{formatDistance(location.distance)}</div>
                       <Tag 
                         color={location.distance <= location.radius ? 'success' : 'default'}
-                        size="small"
                       >
                         {location.distance <= location.radius ? '범위 내' : '범위 외'}
                       </Tag>

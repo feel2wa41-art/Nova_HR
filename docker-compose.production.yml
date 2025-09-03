@@ -1,0 +1,143 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nova-hr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nova_hr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-NovaHR2024!SecurePass123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./apps/api/prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - nova-hr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nova_hr"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: nova-hr-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nova-hr-network
+    command: redis-server --appendonly yes
+
+  # NestJS API Server
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: nova-hr-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-NovaHR2024!SecurePass123}@postgres:5432/nova_hr?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-NovaHR_JWT_Secret_Key_2024_32Chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-NovaHR_Refresh_Secret_Key_2024}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - nova-hr-network
+    volumes:
+      - ./apps/api/uploads:/app/uploads
+
+  # MinIO for file storage
+  minio:
+    image: minio/minio:latest
+    container_name: nova-hr-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-nova_hr_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-NovaHR2024!MinIOPass}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - nova-hr-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Customer Portal (Static files served by Nginx)
+  customer-portal:
+    build:
+      context: .
+      dockerfile: apps/web-customer-portal/Dockerfile.production
+    container_name: nova-hr-customer-portal
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    networks:
+      - nova-hr-network
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  # HR Admin Portal
+  admin-portal:
+    build:
+      context: .
+      dockerfile: apps/web-customer-admin/Dockerfile.production
+    container_name: nova-hr-admin-portal
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    networks:
+      - nova-hr-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nova-hr-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/sites:/etc/nginx/sites-enabled:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+      - customer-portal
+      - admin-portal
+    networks:
+      - nova-hr-network
+
+networks:
+  nova-hr-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local

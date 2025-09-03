@@ -17,7 +17,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AttitudeModule } from './modules/attitude/attitude.module';
+// import { AttitudeModule } from './modules/attitude/attitude.module';
 
 @Module({
   imports: [
@@ -54,7 +54,7 @@ import { AttitudeModule } from './modules/attitude/attitude.module';
     NotificationModule,
     ReportsModule,
     SettingsModule,
-    AttitudeModule,
+    // AttitudeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

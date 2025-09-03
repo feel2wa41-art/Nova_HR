@@ -1,5 +1,4 @@
 import { Routes, Route } from 'react-router-dom';
-import { Layout } from 'antd';
 
 import { MainLayout } from './components/layouts/MainLayout';
 import { Dashboard } from './pages/Dashboard';
@@ -7,8 +6,6 @@ import { UsersPage } from './pages/users/UsersPage';
 import { AttendancePage } from './pages/attendance/AttendancePage';
 import { ApprovalPage } from './pages/approval/ApprovalPage';
 import { LoginPage } from './pages/auth/LoginPage';
-
-const { Content } = Layout;
 
 function App() {
   return (

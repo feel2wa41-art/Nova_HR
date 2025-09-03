@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "Nova HR",
+    "loading": "Nova HR Starting...",
+    "version": "Version"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "loginSuccess": "Login successful",
+    "loginFailed": "Login failed"
+  },
+  "attendance": {
+    "title": "Attendance",
+    "checkIn": "Check In",
+    "checkOut": "Check Out",
+    "today": "Today",
+    "history": "History",
+    "workingTime": "Working Time",
+    "checkedIn": "Checked in at",
+    "checkedOut": "Checked out at",
+    "notCheckedIn": "Not checked in yet",
+    "locationRequired": "Location access required for check-in"
+  },
+  "leave": {
+    "title": "Leave Management",
+    "request": "Request Leave",
+    "balance": "Leave Balance",
+    "annual": "Annual Leave",
+    "sick": "Sick Leave",
+    "personal": "Personal Leave",
+    "remaining": "Remaining",
+    "used": "Used",
+    "total": "Total"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "language": "Language",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "about": "About",
+    "changeLanguage": "Change Language",
+    "english": "English",
+    "korean": "Korean",
+    "languageChanged": "Language changed successfully"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "retry": "Retry",
+    "ok": "OK"
+  }
+}

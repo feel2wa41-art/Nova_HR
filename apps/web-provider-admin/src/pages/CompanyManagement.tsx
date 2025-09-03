@@ -123,7 +123,7 @@ const CompanyManagement: React.FC = () => {
     {
       title: '작업',
       key: 'actions',
-      render: (record: Company) => (
+      render: () => (
         <Space>
           <Tooltip title="상세보기">
             <Button 

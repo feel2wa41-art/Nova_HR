@@ -1,0 +1,11 @@
+body {
+  color: rgb(51, 65, 85);
+  background-color: white;
+}
+
+#root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}

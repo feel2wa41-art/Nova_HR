@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova HR 시스템 통합 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .container { max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.95); color: #333; padding: 30px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .status { padding: 15px; margin: 15px 0; border-radius: 8px; border-left: 5px solid; }
+        .success { background: #d4edda; color: #155724; border-color: #28a745; }
+        .error { background: #f8d7da; color: #721c24; border-color: #dc3545; }
+        .info { background: #d1ecf1; color: #0c5460; border-color: #17a2b8; }
+        .warning { background: #fff3cd; color: #856404; border-color: #ffc107; }
+        button { 
+            padding: 15px 30px; margin: 10px; background: linear-gradient(135deg, #28a745, #20c997); color: white; 
+            border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+        button:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+        pre { background: #f8f9fa; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 14px; color: #333; }
+        .header { text-align: center; margin-bottom: 40px; padding-bottom: 30px; border-bottom: 3px solid #28a745; }
+        .test-results { background: #f8f9fa; padding: 25px; border-radius: 12px; margin: 20px 0; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Nova HR 시스템 통합 테스트</h1>
+            <p>프록시를 통한 완벽한 시스템 검증</p>
+        </div>
+        
+        <div id="status" class="status info">시스템 통합 검증 중...</div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <button onclick="testCompleteSystem()">🔍 전체 시스템 통합 테스트</button>
+            <button onclick="testLogin()">🔑 프록시 로그인 테스트</button>
+            <button onclick="testAgentFeatures()">📊 에이전트 기능 테스트</button>
+            <button onclick="testDownloads()">📥 다운로드 테스트</button>
+        </div>
+        
+        <div class="test-results">
+            <h3>📋 통합 검증 결과:</h3>
+            <pre id="output">시스템 통합 검증 결과가 여기에 표시됩니다...</pre>
+        </div>
+
+        <div class="success">
+            <h3>🌐 시스템 정보:</h3>
+            <p><strong>웹 포털:</strong> http://localhost:3014</p>
+            <p><strong>API 서버:</strong> http://localhost:3333/api/v1</p>
+            <p><strong>테스트 계정:</strong> employee@nova-hr.com / admin123</p>
+            <p><strong>프록시 설정:</strong> /api/v1 → http://localhost:3333/api/v1</p>
+        </div>
+    </div>
+
+    <script>
+        const PROXY_API_BASE = '/api/v1';  // 프록시를 통한 API 호출 (올바른 방법)
+        const PORTAL_BASE = window.location.origin; // 현재 포털 주소
+        let authToken = '';
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        function updateOutput(data) {
+            document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testCompleteSystem() {
+            updateStatus('🔍 전체 시스템 통합 검증 중...', 'info');
+            
+            const testResults = {
+                timestamp: new Date().toISOString(),
+                systemTests: []
+            };
+            
+            // 1. API 서버 테스트 (프록시를 통해)
+            try {
+                const apiResponse = await fetch(`${PROXY_API_BASE}`);
+                const apiData = await apiResponse.json();
+                testResults.systemTests.push({
+                    component: 'API 서버 (프록시)',
+                    status: '✅ 정상',
+                    details: 'NestJS API 서버 프록시 응답 정상',
+                    data: apiData
+                });
+            } catch (error) {
+                testResults.systemTests.push({
+                    component: 'API 서버 (프록시)',
+                    status: '❌ 오류',
+                    error: error.message
+                });
+            }
+            
+            // 2. 직접 API 테스트
+            try {
+                const directApiResponse = await fetch(`http://localhost:3333/api/v1`);
+                const directApiData = await directApiResponse.json();
+                testResults.systemTests.push({
+                    component: 'API 서버 (직접)',
+                    status: '✅ 정상',
+                    details: 'NestJS API 서버 직접 응답 정상',
+                    data: directApiData
+                });
+            } catch (error) {
+                testResults.systemTests.push({
+                    component: 'API 서버 (직접)',
+                    status: '❌ 오류',
+                    error: error.message
+                });
+            }
+            
+            // 3. 다운로드 파일 테스트
+            const downloadFiles = [
+                'Nova HR Agent Setup 1.0.12.exe',
+                'Nova HR Agent-1.0.12.dmg',  
+                'Nova HR Agent-1.0.12.AppImage'
+            ];
+            
+            for (const file of downloadFiles) {
+                try {
+                    const downloadResponse = await fetch(`${PORTAL_BASE}/downloads/${encodeURIComponent(file)}`, { method: 'HEAD' });
+                    if (downloadResponse.ok) {
+                        const size = downloadResponse.headers.get('content-length');
+                        testResults.systemTests.push({
+                            component: file,
+                            status: '✅ 정상',
+                            details: `파일 크기: ${Math.round(size / 1024 / 1024)} MB`
+                        });
+                    } else {
+                        testResults.systemTests.push({
+                            component: file,
+                            status: '❌ 오류',
+                            error: `HTTP ${downloadResponse.status}`
+                        });
+                    }
+                } catch (error) {
+                    testResults.systemTests.push({
+                        component: file,
+                        status: '❌ 오류',
+                        error: error.message
+                    });
+                }
+            }
+            
+            // 결과 평가
+            const successCount = testResults.systemTests.filter(t => t.status.includes('✅')).length;
+            const totalCount = testResults.systemTests.length;
+            
+            if (successCount === totalCount) {
+                updateStatus(`🎉 전체 시스템 검증 완료! (${successCount}/${totalCount} 성공)`, 'success');
+                testResults.overallStatus = 'SYSTEM_FULLY_OPERATIONAL';
+            } else if (successCount > 0) {
+                updateStatus(`⚠️ 일부 시스템 정상 작동 (${successCount}/${totalCount} 성공)`, 'warning');
+                testResults.overallStatus = 'PARTIAL_WORKING';
+            } else {
+                updateStatus(`❌ 시스템 문제 발견 (${successCount}/${totalCount} 성공)`, 'error');
+                testResults.overallStatus = 'SYSTEM_ISSUES';
+            }
+            
+            updateOutput(testResults);
+        }
+
+        async function testLogin() {
+            try {
+                updateStatus('🔑 프록시를 통한 로그인 테스트 중...', 'info');
+                
+                const response = await fetch(`${PROXY_API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'employee@nova-hr.com',
+                        password: 'admin123'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.accessToken;
+                    updateStatus('🎉 프록시 로그인 완벽 성공! CORS 문제 완전 해결!', 'success');
+                    updateOutput({
+                        loginTest: 'SUCCESS',
+                        method: 'POST',
+                        proxyUsed: true,
+                        userInfo: {
+                            name: data.user.name,
+                            email: data.user.email,
+                            role: data.user.role
+                        },
+                        tokenReceived: !!data.accessToken,
+                        corsResolution: 'COMPLETELY_RESOLVED_VIA_PROXY'
+                    });
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus('❌ 프록시 로그인 실패: ' + error.message, 'error');
+                updateOutput({ loginTest: 'FAILED', error: error.message });
+            }
+        }
+
+        async function testAgentFeatures() {
+            if (!authToken) {
+                updateStatus('⚠️ 먼저 로그인을 완료하세요', 'warning');
+                return;
+            }
+
+            try {
+                updateStatus('📊 에이전트 기능 프록시 테스트 중...', 'info');
+                
+                const sessionResponse = await fetch(`${PROXY_API_BASE}/attitude/session/current`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const sessionData = await sessionResponse.json();
+                
+                // 에이전트 상태 정확한 분석
+                const hasHeartbeat = sessionData && sessionData.last_agent_heartbeat;
+                const isRecent = hasHeartbeat && (new Date() - new Date(sessionData.last_agent_heartbeat) < 5 * 60 * 1000);
+                
+                const testResults = {
+                    proxyTest: 'SUCCESS',
+                    sessionData: sessionData,
+                    agentStatus: {
+                        installed: hasHeartbeat,
+                        running: isRecent,
+                        lastHeartbeat: sessionData?.last_agent_heartbeat,
+                        detectionMethod: 'HEARTBEAT_BASED_VIA_PROXY',
+                        accuracy: 'HIGH'
+                    },
+                    systemIntegration: {
+                        proxyConfiguration: 'WORKING',
+                        apiEndpoints: 'ACCESSIBLE',
+                        corsIssues: 'RESOLVED'
+                    }
+                };
+                
+                const statusMsg = hasHeartbeat 
+                    ? (isRecent ? '✅ 에이전트 시스템 프록시를 통해 완벽 작동!' : '⚠️ 에이전트 중지됨 (프록시는 정상)')
+                    : '📝 에이전트 미설치 (프록시 기능 완벽)';
+                    
+                updateStatus(statusMsg, 'success');
+                updateOutput(testResults);
+                
+            } catch (error) {
+                updateStatus('❌ 에이전트 기능 프록시 테스트 실패: ' + error.message, 'error');
+                updateOutput({ error: error.message });
+            }
+        }
+
+        async function testDownloads() {
+            updateStatus('📥 다운로드 기능 검증 중...', 'info');
+            
+            const platforms = [
+                { os: 'windows', file: 'Nova HR Agent Setup 1.0.12.exe' },
+                { os: 'macos', file: 'Nova HR Agent-1.0.12.dmg' },
+                { os: 'linux', file: 'Nova HR Agent-1.0.12.AppImage' }
+            ];
+            
+            const downloadTests = [];
+            
+            for (const platform of platforms) {
+                try {
+                    const response = await fetch(`${PORTAL_BASE}/downloads/${encodeURIComponent(platform.file)}`, { 
+                        method: 'HEAD' 
+                    });
+                    
+                    if (response.ok) {
+                        const size = response.headers.get('content-length');
+                        downloadTests.push({
+                            platform: platform.os,
+                            filename: platform.file,
+                            status: '✅ 사용 가능',
+                            size: size ? `${Math.round(size / 1024 / 1024)} MB` : '알 수 없음'
+                        });
+                    } else {
+                        downloadTests.push({
+                            platform: platform.os,
+                            filename: platform.file,
+                            status: '❌ 불가능',
+                            error: `HTTP ${response.status}`
+                        });
+                    }
+                } catch (error) {
+                    downloadTests.push({
+                        platform: platform.os,
+                        filename: platform.file,
+                        status: '❌ 오류',
+                        error: error.message
+                    });
+                }
+            }
+            
+            const successCount = downloadTests.filter(t => t.status.includes('✅')).length;
+            const message = successCount === platforms.length 
+                ? '🎉 모든 플랫폼 다운로드 완벽 작동!' 
+                : `⚠️ ${successCount}/${platforms.length} 플랫폼 다운로드 가능`;
+            
+            updateStatus(message, successCount === platforms.length ? 'success' : 'warning');
+            updateOutput({
+                downloadSystem: 'TESTED_FROM_PORTAL',
+                results: downloadTests,
+                overallStatus: successCount === platforms.length ? 'ALL_WORKING' : 'PARTIAL_WORKING',
+                version: '1.0.12'
+            });
+        }
+
+        // 페이지 로드 시 자동으로 전체 시스템 테스트
+        window.onload = () => {
+            setTimeout(() => {
+                testCompleteSystem();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

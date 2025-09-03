@@ -131,7 +131,7 @@ export const LeaveRequestsList = ({ className }: LeaveRequestsListProps) => {
             {getStatusText(status)}
           </Tag>
           {record.emergency && (
-            <Tag color="red" size="small" className="ml-1">
+            <Tag color="red" className="ml-1">
               긴급
             </Tag>
           )}

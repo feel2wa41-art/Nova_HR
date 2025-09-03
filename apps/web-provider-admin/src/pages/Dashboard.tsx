@@ -5,10 +5,8 @@ import {
   BankOutlined,
   UserOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
   DollarOutlined
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
 
 const { Title } = Typography;
 

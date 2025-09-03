@@ -2,17 +2,21 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
+console.log('🔗 API Base URL:', API_BASE_URL);
+console.log('🌍 Environment:', import.meta.env.MODE);
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 15000, // Increased timeout for network latency
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
+// Add request logging
 apiClient.interceptors.request.use(
   (config) => {
+    console.log('📤 API Request:', `${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     const token = localStorage.getItem('nova_hr_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -20,14 +24,25 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('📤 Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for error handling
+// Combined response interceptor for logging and error handling
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('📥 API Response:', `${response.status} ${response.config.url}`);
+    return response;
+  },
   async (error) => {
+    console.error('📥 Response Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+
     const originalRequest = error.config;
     
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -190,6 +205,15 @@ export const attendanceApi = {
     
   getAttendanceRequests: (params: { page?: number; limit?: number }): Promise<any> =>
     apiClient.get('/attendance/requests', { params }).then(res => res.data),
+
+  registerRemoteWork: (data: any): Promise<any> =>
+    apiClient.post('/attendance/remote-work', data).then(res => res.data),
+
+  registerOffsiteWork: (data: any): Promise<any> =>
+    apiClient.post('/attendance/offsite-work', data).then(res => res.data),
+
+  registerEarlyCheckout: (data: any): Promise<any> =>
+    apiClient.post('/attendance/early-checkout', data).then(res => res.data),
 };
 
 // Company API
@@ -240,6 +264,9 @@ export interface ApprovalDraft {
   route?: ApprovalRoute;
   actions?: ApprovalAction[];
   attachments?: any[];
+  user?: User;
+  creator?: User;
+  description?: string;
 }
 
 export interface ApprovalRoute {
@@ -421,6 +448,36 @@ export const approvalApi = {
 
   getReferenceCount: (): Promise<{ count: number }> =>
     apiClient.get('/approval/reference/count').then(res => res.data),
+
+  // Route Templates
+  getUserApprovalRoutes: (): Promise<any[]> =>
+    apiClient.get('/approval/routes/user').then(res => res.data || []),
+
+  saveUserApprovalRoute: (data: any): Promise<any> =>
+    apiClient.post('/approval/routes/user', data).then(res => res.data),
+
+  getCompletedDocuments: (params?: { 
+    page?: number; 
+    limit?: number;
+    search?: string;
+    categoryId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApprovalListResponse> =>
+    apiClient.get('/approval/completed', { params }).then(res => res.data),
+
+  // Admin Route Templates
+  getAdminApprovalTemplates: (): Promise<any[]> =>
+    apiClient.get('/approval/admin/templates').then(res => res.data || []),
+
+  createRouteTemplate: (data: any): Promise<any> =>
+    apiClient.post('/approval/admin/templates', data).then(res => res.data),
+
+  updateRouteTemplate: (id: string, data: any): Promise<any> =>
+    apiClient.put(`/approval/admin/templates/${id}`, data).then(res => res.data),
+
+  deleteRouteTemplate: (id: string): Promise<{ success: boolean }> =>
+    apiClient.delete(`/approval/admin/templates/${id}`).then(res => res.data),
 };
 
 // User API
@@ -430,6 +487,7 @@ export interface User {
   email: string;
   title?: string;
   role: string;
+  avatar_url?: string;
   employee_profile?: {
     department: string;
     emp_no: string;
@@ -527,6 +585,9 @@ export const attitudeApi = {
     };
   }> =>
     apiClient.get('/attitude/agent/download-info').then(res => res.data),
+
+  getAgentStatus: (): Promise<any> =>
+    apiClient.get('/attitude/agent/status').then(res => res.data),
     
   // Screenshot upload
   uploadScreenshot: (data: ScreenshotUploadRequest): Promise<{ success: boolean; screenshot_id: string }> => {

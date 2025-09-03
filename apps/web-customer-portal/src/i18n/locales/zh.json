@@ -1,0 +1,85 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "edit": "编辑",
+    "delete": "删除",
+    "add": "添加",
+    "required": "必填",
+    "optional": "可选",
+    "duplicate": "复制"
+  },
+  "form": {
+    "fields": {
+      "currency": "货币/金额",
+      "bank_name": "银行名称",
+      "account_number": "账号"
+    },
+    "currency": {
+      "currencyCode": "货币代码",
+      "selectCurrency": "选择货币",
+      "CNY": "CNY (人民币)",
+      "KRW": "KRW (韩元)",
+      "USD": "USD (美元)",
+      "EUR": "EUR (欧元)",
+      "JPY": "JPY (日元)",
+      "GBP": "GBP (英镑)",
+      "IDR": "IDR (印尼盾盾)"
+    },
+    "bankName": {
+      "placeholder": "选择银行",
+      "autoFill": "自动填入主要银行"
+    },
+    "fieldName": "字段名",
+    "fieldNamePlaceholder": "例: leaveType",
+    "displayName": "显示名",
+    "displayNamePlaceholder": "例: 休假类型",
+    "fieldType": "字段类型",
+    "description": "描述",
+    "descriptionPlaceholder": "请输入字段描述",
+    "selectOptions": "选择选项 (每行一个)",
+    "selectOptionsPlaceholder": "选项1\n选项2\n选项3",
+    "bankList": "银行列表 (每行一个)",
+    "bankListPlaceholder": "中国工商银行\n中国农业银行\n中国银行\n中国建设银行",
+    "minValue": "最小值",
+    "maxValue": "最大值",
+    "minAmount": "最小金额",
+    "maxAmount": "最大金额",
+    "minLength": "最小长度",
+    "maxLength": "最大长度",
+    "deleteFieldConfirm": "确定要删除这个字段吗？",
+    "schemaBuilderTitle": "表单模式构建器",
+    "schemaBuilderDescription": "为电子审批配置动态表单字段。生成的模式将以JSON Schema格式保存。",
+    "formFieldConfig": "表单字段配置",
+    "schemaPreview": "模式预览",
+    "addField": "添加字段",
+    "noFieldsYet": "还没有字段。",
+    "clickAddField": "点击\"添加字段\"按钮来添加新字段。",
+    "generatedSchema": "生成的JSON Schema",
+    "defaultFieldTitle": "字段",
+    "copy": "(复制)",
+    "schemaOutputToConsole": "模式已输出到控制台。"
+  },
+  "menu": {
+    "dashboard": "仪表盘",
+    "attendance": "考勤管理",
+    "leave": "休假",
+    "approval": "审批",
+    "attitude": "工作态度",
+    "settings": "设置",
+    "hr": "HR管理",
+    "admin": "管理员",
+    "logout": "退出登录",
+    "profile": "个人设置",
+    "approvalManagement": "审批管理",
+    "attitudeStatistics": "态度统计",
+    "appWhitelist": "生产力白名单",
+    "userManagement": "用户管理",
+    "companySettings": "公司设置"
+  },
+  "language": {
+    "ko": "한국어",
+    "en": "English",
+    "zh": "中文"
+  }
+}

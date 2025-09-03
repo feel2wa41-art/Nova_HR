@@ -169,7 +169,7 @@ export const ApprovalSettingsModal = ({
     <div className="flex items-center gap-2 py-1">
       <TeamOutlined className="text-blue-500" />
       <span className="font-medium text-blue-800">{org.name}</span>
-      <Tag color="blue" size="small">Level {org.level}</Tag>
+      <Tag color="blue">Level {org.level}</Tag>
     </div>
   );
 
@@ -199,7 +199,7 @@ export const ApprovalSettingsModal = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium">{emp.name}</span>
-              <Tag color={getRoleColor(emp.role)} size="small">
+              <Tag color={getRoleColor(emp.role)}>
                 {emp.role === 'SUPER_ADMIN' ? '관리자' : emp.role === 'HR_MANAGER' ? 'HR' : '직원'}
               </Tag>
             </div>
@@ -207,7 +207,7 @@ export const ApprovalSettingsModal = ({
           </div>
         </div>
         {isSelected && (
-          <Tag color="blue" size="small">
+          <Tag color="blue">
             {selectedSteps.findIndex(step => step.approverId === emp.id) + 1}순위
           </Tag>
         )}

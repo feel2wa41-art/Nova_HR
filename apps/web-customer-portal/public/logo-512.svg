@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 새싹의 줄기 -->
+  <rect x="241" y="307" width="30" height="154" fill="#4CAF50" rx="15"/>
+  
+  <!-- 메인 잎 (큰 잎) -->
+  <ellipse cx="179" cy="230" rx="92" ry="128" fill="#66BB6A" transform="rotate(-20 179 230)"/>
+  
+  <!-- 작은 잎 -->
+  <ellipse cx="333" cy="256" rx="61" ry="92" fill="#4CAF50" transform="rotate(15 333 256)"/>
+  
+  <!-- 새싹의 하이라이트 -->
+  <ellipse cx="154" cy="194" rx="20" ry="40" fill="#81C784" opacity="0.8" transform="rotate(-20 154 194)"/>
+  <ellipse cx="348" cy="230" rx="15" ry="31" fill="#66BB6A" opacity="0.8" transform="rotate(15 348 230)"/>
+  
+  <!-- 추가 하이라이트 -->
+  <ellipse cx="164" cy="168" rx="8" ry="16" fill="#C8E6C9" opacity="0.6" transform="rotate(-20 164 168)"/>
+  
+  <!-- 뿌리 부분 -->
+  <ellipse cx="256" cy="451" rx="40" ry="20" fill="#8D6E63" opacity="0.6"/>
+  
+  <!-- Nova HR 텍스트 -->
+  <text x="256" y="115" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#2E7D32">Nova HR</text>
+</svg>

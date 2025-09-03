@@ -43,20 +43,7 @@ export interface GeoSnapshot extends GeoLocation {
   };
 }
 
-export interface CompanyLocation {
-  id: string;
-  companyId: string;
-  name: string;
-  code?: string;
-  address?: string;
-  lat: number;
-  lng: number;
-  radiusM: number;
-  wifiSsids: string[];
-  ipCidrs: string[];
-  webCheckinAllowed: boolean;
-  faceRequired: boolean;
-}
+// CompanyLocation is defined in company.ts
 
 export interface CheckInRequest {
   nowAt?: Date;

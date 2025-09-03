@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # NestJS API Server (uses external AWS RDS & Redis)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: nova-hr-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    networks:
+      - nova-hr-network
+    volumes:
+      - ./apps/api/uploads:/app/uploads
+
+  # MinIO for file storage
+  minio:
+    image: minio/minio:latest
+    container_name: nova-hr-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-nova_hr_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-NovaHR2024!MinIOPass_AWS}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - nova-hr-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Customer Portal (Static files served by Nginx)
+  customer-portal:
+    build:
+      context: .
+      dockerfile: apps/web-customer-portal/Dockerfile.production
+    container_name: nova-hr-customer-portal
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    networks:
+      - nova-hr-network
+
+  # HR Admin Portal
+  admin-portal:
+    build:
+      context: .
+      dockerfile: apps/web-customer-admin/Dockerfile.production
+    container_name: nova-hr-admin-portal
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    networks:
+      - nova-hr-network
+
+networks:
+  nova-hr-network:
+    driver: bridge
+
+volumes:
+  minio_data:
+    driver: local

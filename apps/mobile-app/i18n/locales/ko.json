@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "Nova HR",
+    "loading": "Nova HR 시작 중...",
+    "version": "버전"
+  },
+  "auth": {
+    "login": "로그인",
+    "logout": "로그아웃",
+    "email": "이메일",
+    "password": "비밀번호",
+    "rememberMe": "자동 로그인",
+    "loginSuccess": "로그인 성공",
+    "loginFailed": "로그인 실패"
+  },
+  "attendance": {
+    "title": "출퇴근",
+    "checkIn": "출근",
+    "checkOut": "퇴근",
+    "today": "오늘",
+    "history": "기록",
+    "workingTime": "근무시간",
+    "checkedIn": "출근 시간",
+    "checkedOut": "퇴근 시간",
+    "notCheckedIn": "아직 출근하지 않았습니다",
+    "locationRequired": "출근하려면 위치 권한이 필요합니다"
+  },
+  "leave": {
+    "title": "휴가 관리",
+    "request": "휴가 신청",
+    "balance": "휴가 잔여일",
+    "annual": "연차",
+    "sick": "병가",
+    "personal": "개인사유",
+    "remaining": "남은 일수",
+    "used": "사용 일수",
+    "total": "전체"
+  },
+  "settings": {
+    "title": "설정",
+    "profile": "프로필",
+    "language": "언어",
+    "notifications": "알림",
+    "privacy": "개인정보",
+    "about": "정보",
+    "changeLanguage": "언어 변경",
+    "english": "영어",
+    "korean": "한국어",
+    "languageChanged": "언어가 변경되었습니다"
+  },
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "confirm": "확인",
+    "delete": "삭제",
+    "edit": "수정",
+    "loading": "로딩중...",
+    "error": "오류",
+    "success": "성공",
+    "retry": "다시 시도",
+    "ok": "확인"
+  }
+}

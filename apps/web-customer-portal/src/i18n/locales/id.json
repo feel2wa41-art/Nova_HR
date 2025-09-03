@@ -1,0 +1,327 @@
+{
+  "dashboard": {
+    "title": "Dasbor",
+    "subtitle": "Periksa status hari ini",
+    "todayWorkHours": "Jam Kerja Hari Ini",
+    "remainingLeave": "Sisa Cuti",
+    "pendingApprovals": "Persetujuan Tertunda",
+    "completedTasks": "Tugas Selesai",
+    "monthlyAttendance": "Kehadiran Bulan Ini",
+    "hours": "jam",
+    "minutes": "menit",
+    "days": "hari",
+    "items": "item",
+    "workHoursValue": "8 jam 30 menit",
+    "welcomeBack": "Selamat datang kembali",
+    "quickActions": "Aksi Cepat",
+    "recentActivity": "Aktivitas Terbaru",
+    "processApproval": "Proses Persetujuan →",
+    "approvalStatus": "Status Persetujuan",
+    "lateApprovalRequests": "Permintaan Persetujuan Terlambat",
+    "leaveApplicationRequests": "Permintaan Pengajuan Cuti",
+    "pending": "menunggu",
+    "process": "Proses",
+    "applyLeave": "Ajukan Cuti",
+    "electronicApproval": "Persetujuan Elektronik",
+    "viewAttendanceStatus": "Lihat Status Kehadiran",
+    "checkInTime": "Check-in",
+    "lunchTime": "Waktu Makan Siang",
+    "meetingRoom": "Reservasi Ruang Rapat",
+    "attendance": {
+      "checkIn": "Check In",
+      "checkOut": "Check Out",
+      "viewHistory": "Lihat Riwayat"
+    },
+    "approvals": {
+      "viewAll": "Lihat Semua",
+      "lateRequests": "Permintaan Terlambat",
+      "leaveRequests": "Permintaan Cuti"
+    },
+    "stats": {
+      "todayAttendance": "Kehadiran Hari Ini",
+      "monthlyLeave": "Cuti Bulanan",
+      "weeklyHours": "Jam Mingguan",
+      "productivity": "Skor Produktivitas"
+    }
+  },
+  "common": {
+    "save": "Simpan",
+    "cancel": "Batal",
+    "edit": "Edit",
+    "delete": "Hapus",
+    "add": "Tambah",
+    "required": "Wajib",
+    "optional": "Opsional",
+    "duplicate": "Duplikat"
+  },
+  "form": {
+    "fields": {
+      "currency": "Mata Uang/Jumlah",
+      "bank_name": "Nama Bank",
+      "account_number": "Nomor Rekening"
+    },
+    "currency": {
+      "currencyCode": "Kode Mata Uang",
+      "selectCurrency": "Pilih Mata Uang",
+      "IDR": "IDR (Rupiah Indonesia)",
+      "KRW": "KRW (Won Korea)",
+      "USD": "USD (Dolar AS)",
+      "EUR": "EUR (Euro)",
+      "JPY": "JPY (Yen Jepang)",
+      "CNY": "CNY (Yuan Tiongkok)",
+      "GBP": "GBP (Pound Inggris)"
+    },
+    "bankName": {
+      "placeholder": "Pilih bank",
+      "autoFill": "Isi otomatis bank utama"
+    },
+    "fieldName": "Nama Field",
+    "fieldNamePlaceholder": "mis: leaveType",
+    "displayName": "Nama Tampilan",
+    "displayNamePlaceholder": "mis: Jenis Cuti",
+    "fieldType": "Tipe Field",
+    "description": "Deskripsi",
+    "descriptionPlaceholder": "Masukkan deskripsi field",
+    "selectOptions": "Opsi Pilihan (satu per baris)",
+    "selectOptionsPlaceholder": "Opsi1\nOpsi2\nOpsi3",
+    "bankList": "Daftar Bank (satu per baris)",
+    "bankListPlaceholder": "Bank Mandiri\nBank BCA\nBank BRI\nBank BNI",
+    "minValue": "Nilai Minimum",
+    "maxValue": "Nilai Maksimum",
+    "minAmount": "Jumlah Minimum",
+    "maxAmount": "Jumlah Maksimum",
+    "minLength": "Panjang Minimum",
+    "maxLength": "Panjang Maksimum",
+    "deleteFieldConfirm": "Yakin ingin menghapus field ini?",
+    "schemaBuilderTitle": "Pembuat Skema Form",
+    "schemaBuilderDescription": "Konfigurasi field form dinamis untuk persetujuan elektronik. Skema yang dihasilkan akan disimpan dalam format JSON Schema.",
+    "formFieldConfig": "Konfigurasi Field Form",
+    "schemaPreview": "Pratinjau Skema",
+    "addField": "Tambah Field",
+    "noFieldsYet": "Belum ada field.",
+    "clickAddField": "Klik tombol \"Tambah Field\" untuk menambah field baru.",
+    "generatedSchema": "JSON Schema yang Dihasilkan",
+    "defaultFieldTitle": "Field",
+    "copy": "(Salinan)",
+    "schemaOutputToConsole": "Skema telah ditampilkan di konsol."
+  },
+  "menu": {
+    "dashboard": "Dasbor",
+    "attendance": "Absensi",
+    "leave": "Cuti",
+    "approval": "Persetujuan",
+    "attitude": "Sikap Kerja",
+    "settings": "Pengaturan",
+    "hr": "Manajemen HR",
+    "admin": "Admin",
+    "logout": "Keluar",
+    "profile": "Pengaturan Profil",
+    "approvalManagement": "Manajemen Persetujuan",
+    "attitudeStatistics": "Statistik Sikap",
+    "appWhitelist": "Daftar Putih Aplikasi",
+    "userManagement": "Manajemen Pengguna",
+    "companySettings": "Pengaturan Perusahaan",
+    "leaveSettings": "Pengaturan Cuti",
+    "companyManagement": "Manajemen Perusahaan",
+    "globalUserManagement": "Manajemen Pengguna Global"
+  },
+  "language": {
+    "ko": "한국어",
+    "en": "English",
+    "id": "Bahasa Indonesia"
+  },
+  "approval": {
+    "title": "Persetujuan Elektronik",
+    "inbox": "Kotak Masuk",
+    "outbox": "Kotak Keluar",
+    "draft": "Draf",
+    "pending": "Tertunda",
+    "reference": "Referensi",
+    "create": "Buat Dokumen",
+    "dashboard": "Dasbor Persetujuan",
+    "statistics": "Statistik",
+    "categories": "Kategori",
+    "routes": "Rute Persetujuan",
+    "autoApproval": "Persetujuan Otomatis",
+    "status": {
+      "draft": "Draf",
+      "submitted": "Diajukan",
+      "approved": "Disetujui",
+      "rejected": "Ditolak",
+      "cancelled": "Dibatalkan"
+    },
+    "action": {
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "cancel": "Batalkan",
+      "submit": "Ajukan",
+      "saveDraft": "Simpan sebagai Draf"
+    }
+  },
+  "attendance": {
+    "title": "Manajemen Kehadiran",
+    "checkIn": "Check In",
+    "checkOut": "Check Out",
+    "today": "Status Hari Ini",
+    "history": "Riwayat Kehadiran",
+    "request": "Minta Koreksi",
+    "workingHours": "Jam Kerja",
+    "overtime": "Lembur",
+    "status": {
+      "normal": "Normal",
+      "late": "Terlambat",
+      "early": "Pulang Awal",
+      "absent": "Tidak Hadir",
+      "holiday": "Hari Libur",
+      "leave": "Sedang Cuti"
+    },
+    "message": {
+      "checkInSuccess": "Check-in berhasil",
+      "checkOutSuccess": "Check-out berhasil",
+      "alreadyCheckedIn": "Sudah check in",
+      "notCheckedIn": "Silakan check in terlebih dahulu"
+    }
+  },
+  "leave": {
+    "title": "Manajemen Cuti",
+    "application": "Pengajuan Cuti",
+    "history": "Riwayat Cuti",
+    "balance": "Sisa Cuti",
+    "calendar": "Kalender Cuti",
+    "type": {
+      "annual": "Cuti Tahunan",
+      "sick": "Cuti Sakit",
+      "personal": "Cuti Pribadi",
+      "family": "Cuti Keluarga",
+      "maternity": "Cuti Melahirkan",
+      "paternity": "Cuti Ayah"
+    },
+    "status": {
+      "pending": "Tertunda",
+      "approved": "Disetujui",
+      "rejected": "Ditolak",
+      "cancelled": "Dibatalkan"
+    },
+    "form": {
+      "startDate": "Tanggal Mulai",
+      "endDate": "Tanggal Selesai",
+      "reason": "Alasan",
+      "type": "Jenis Cuti",
+      "days": "Hari",
+      "approver": "Pemberi Persetujuan"
+    }
+  },
+  "attitude": {
+    "title": "Pemantauan Sikap",
+    "dashboard": "Dasbor Sikap",
+    "monitoring": "Pemantauan Langsung",
+    "screenshots": "Tangkapan Layar",
+    "appUsage": "Penggunaan Aplikasi",
+    "productivity": "Skor Produktivitas",
+    "activeTime": "Waktu Aktif",
+    "idleTime": "Waktu Menganggur",
+    "focusTime": "Waktu Fokus",
+    "breakTime": "Waktu Istirahat",
+    "score": {
+      "excellent": "Sangat Baik",
+      "good": "Baik",
+      "average": "Rata-rata",
+      "poor": "Kurang"
+    }
+  },
+  "settings": {
+    "title": "Pengaturan",
+    "description": "Kelola informasi pribadi, notifikasi, dan pengaturan personalisasi Anda",
+    "personal": "Informasi Pribadi",
+    "security": "Keamanan",
+    "notification": "Notifikasi",
+    "language": "Bahasa",
+    "theme": "Tema",
+    "personalization": "Personalisasi",
+    "privacy": "Privasi",
+    "account": "Akun",
+    "password": {
+      "change": "Ubah Kata Sandi",
+      "current": "Kata Sandi Saat Ini",
+      "new": "Kata Sandi Baru",
+      "confirm": "Konfirmasi Kata Sandi"
+    },
+    "theme": {
+      "light": "Terang",
+      "dark": "Gelap",
+      "system": "Sistem"
+    }
+  },
+  "hr": {
+    "title": "Manajemen SDM",
+    "description": "Kelola kehadiran, pemrosesan persetujuan, bagan organisasi, pengguna, informasi dan lokasi perusahaan. Atur izin menu secara intuitif melalui sistem izin terintegrasi yang baru.",
+    "employees": "Manajemen Karyawan",
+    "departments": "Manajemen Departemen",
+    "positions": "Manajemen Jabatan",
+    "policies": "Manajemen Kebijakan",
+    "reports": "Laporan",
+    "analytics": "Analitik",
+    "attendanceManagement": "Manajemen Kehadiran",
+    "approvalManagement": "Manajemen Persetujuan",
+    "organizationChart": "Bagan Organisasi",
+    "permissionManagement": "Manajemen Izin Terintegrasi"
+  },
+  "admin": {
+    "title": "Admin",
+    "users": "Manajemen Pengguna",
+    "company": "Pengaturan Perusahaan",
+    "system": "Pengaturan Sistem",
+    "logs": "Log Sistem",
+    "backup": "Cadangan",
+    "maintenance": "Pemeliharaan"
+  },
+  "user": {
+    "name": "Nama",
+    "email": "Email",
+    "phone": "Telepon",
+    "department": "Departemen",
+    "position": "Jabatan",
+    "employeeId": "ID Karyawan",
+    "joinDate": "Tanggal Bergabung",
+    "role": "Peran",
+    "status": "Status",
+    "profile": "Profil",
+    "avatar": "Foto Profil"
+  },
+  "messages": {
+    "saveSuccess": "Berhasil disimpan",
+    "saveFailed": "Gagal menyimpan",
+    "deleteConfirm": "Apakah Anda yakin ingin menghapus?",
+    "deleteSuccess": "Berhasil dihapus",
+    "deleteFailed": "Gagal menghapus",
+    "logoutConfirm": "Apakah Anda yakin ingin keluar?",
+    "languageChanged": "Bahasa telah diubah",
+    "loading": "Memuat...",
+    "error": "Terjadi kesalahan",
+    "networkError": "Kesalahan jaringan terjadi",
+    "sessionExpired": "Sesi telah berakhir"
+  },
+  "auth": {
+    "login": "Masuk",
+    "logout": "Keluar",
+    "register": "Daftar",
+    "forgotPassword": "Lupa Kata Sandi",
+    "resetPassword": "Reset Kata Sandi",
+    "email": "Email",
+    "password": "Kata Sandi",
+    "rememberMe": "Ingat Saya",
+    "loginSuccess": "Berhasil masuk!",
+    "loginFailed": "Gagal masuk",
+    "invalidCredentials": "Email atau kata sandi tidak valid",
+    "loginSubtitle": "Masuk ke portal karyawan",
+    "testAccount": "Akun Uji Coba",
+    "employee": "Karyawan",
+    "hrManager": "Manajer SDM",
+    "admin": "Admin",
+    "emailRequired": "Silakan masukkan email Anda",
+    "emailInvalid": "Format email tidak valid",
+    "emailPlaceholder": "Alamat email",
+    "passwordRequired": "Silakan masukkan kata sandi Anda",
+    "passwordMinLength": "Kata sandi harus minimal 6 karakter"
+  }
+}

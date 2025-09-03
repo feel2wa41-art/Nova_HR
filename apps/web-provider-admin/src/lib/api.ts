@@ -66,6 +66,7 @@ export interface Company {
   monthlyRevenue?: number;
   joinDate: string;
   lastActive?: string;
+  created_at: string;
   tenant?: {
     id: string;
     name: string;

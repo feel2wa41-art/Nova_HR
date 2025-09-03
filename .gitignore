@@ -103,6 +103,19 @@ expo-env.d.ts
 *.apk
 *.aab
 
+# Android build folders
+apps/mobile-app/android/caches/
+apps/mobile-app/android/daemon/
+apps/mobile-app/android/jdks/
+apps/mobile-app/android/native/
+apps/mobile-app/android/react-settings-plugin/bin/
+apps/mobile-app/android/wrapper/
+apps/mobile-app/android/workers/
+apps/mobile-app/android/kotlin-profile/
+apps/mobile-app/android/.gradle/
+apps/mobile-app/android/build/
+apps/mobile-app/android/app/build/
+
 # AWS
 .aws/
 cdk.out/

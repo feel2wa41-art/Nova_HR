@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, Tree, Avatar, Tag, Space, Tooltip, Input, Button, Modal, Form, Select, message, Divider, Table } from 'antd';
 import { UserOutlined, SearchOutlined, TeamOutlined, CrownOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DragOutlined } from '@ant-design/icons';
-import type { TreeDataNode, ColumnsType } from 'antd/es/table';
+import type { ColumnsType } from 'antd/es/table';
+import type { DataNode as TreeDataNode } from 'antd/es/tree';
 
 const { Search } = Input;
 
@@ -266,8 +267,8 @@ export const EnhancedOrganizationChart = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium text-blue-800">{org.name}</span>
-              <Tag color="blue" size="small">Level {org.level}</Tag>
-              {empCount > 0 && <Tag color="green" size="small">{empCount}명</Tag>}
+              <Tag color="blue">Level {org.level}</Tag>
+              {empCount > 0 && <Tag color="green">{empCount}명</Tag>}
             </div>
             {org.description && (
               <div className="text-sm text-gray-500">{org.description}</div>
@@ -346,7 +347,7 @@ export const EnhancedOrganizationChart = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium">{employee.name}</span>
-              <Tag color={getRoleColor(employee.role)} size="small">
+              <Tag color={getRoleColor(employee.role)}>
                 {getRoleLabel(employee.role)}
               </Tag>
             </div>
@@ -694,17 +695,17 @@ export const EnhancedOrganizationChart = () => {
         <Space wrap>
           <div className="flex items-center gap-2">
             <CrownOutlined className="text-purple-500" />
-            <Tag color="purple" size="small">시스템 관리자</Tag>
+            <Tag color="purple">시스템 관리자</Tag>
             <span className="text-sm text-gray-500">전체 시스템 관리 권한</span>
           </div>
           <div className="flex items-center gap-2">
             <TeamOutlined className="text-blue-500" />
-            <Tag color="blue" size="small">HR 관리자</Tag>
+            <Tag color="blue">HR 관리자</Tag>
             <span className="text-sm text-gray-500">인사 관리 권한</span>
           </div>
           <div className="flex items-center gap-2">
             <UserOutlined className="text-gray-500" />
-            <Tag size="small">직원</Tag>
+            <Tag>직원</Tag>
             <span className="text-sm text-gray-500">일반 사용자</span>
           </div>
         </Space>

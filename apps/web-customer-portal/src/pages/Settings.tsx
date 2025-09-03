@@ -5,7 +5,7 @@ import {
   UserOutlined, 
   ClockCircleOutlined,
   BellOutlined,
-  PaletteOutlined,
+  BgColorsOutlined,
 } from '@ant-design/icons';
 import { PersonalInfoSettings } from '../components/settings/PersonalInfoSettings';
 import { WorkTimeSettings } from '../components/settings/WorkTimeSettings';
@@ -52,7 +52,7 @@ export const Settings = () => {
       key: 'personalization',
       label: (
         <span>
-          <PaletteOutlined />
+          <BgColorsOutlined />
           개인화
         </span>
       ),

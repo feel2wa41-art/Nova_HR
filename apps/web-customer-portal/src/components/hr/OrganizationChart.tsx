@@ -23,6 +23,8 @@ interface Employee {
   title: string;
   organizationId: string;
   managerId?: string;
+  manager?: string; // for backward compatibility
+  department?: string;
   order: number;
   avatar?: string;
 }
@@ -179,15 +181,16 @@ export const OrganizationChart = () => {
     const employeeMap = new Map<string, Employee>();
     employees.forEach(emp => employeeMap.set(emp.id, emp));
 
-    const rootEmployees = employees.filter(emp => !emp.manager);
+    const rootEmployees = employees.filter(emp => !emp.managerId && !emp.manager);
     
     const buildNode = (employee: Employee): OrganizationNode => {
-      const children = employees.filter(emp => emp.manager === employee.id);
+      const children = employees.filter(emp => emp.managerId === employee.id || emp.manager === employee.id);
       
       return {
         key: employee.id,
         title: renderEmployeeNode(employee),
         employee: employee,
+        type: 'employee' as const,
         children: children.length > 0 ? children.map(buildNode) : undefined
       };
     };
@@ -242,7 +245,7 @@ export const OrganizationChart = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium">{employee.name}</span>
-              <Tag color={getRoleColor(employee.role)} size="small">
+              <Tag color={getRoleColor(employee.role)}>
                 {getRoleLabel(employee.role)}
               </Tag>
             </div>
@@ -354,17 +357,17 @@ export const OrganizationChart = () => {
         <Space wrap>
           <div className="flex items-center gap-2">
             <CrownOutlined className="text-purple-500" />
-            <Tag color="purple" size="small">시스템 관리자</Tag>
+            <Tag color="purple">시스템 관리자</Tag>
             <span className="text-sm text-gray-500">전체 시스템 관리 권한</span>
           </div>
           <div className="flex items-center gap-2">
             <TeamOutlined className="text-blue-500" />
-            <Tag color="blue" size="small">HR 관리자</Tag>
+            <Tag color="blue">HR 관리자</Tag>
             <span className="text-sm text-gray-500">인사 관리 권한</span>
           </div>
           <div className="flex items-center gap-2">
             <UserOutlined className="text-gray-500" />
-            <Tag size="small">직원</Tag>
+            <Tag>직원</Tag>
             <span className="text-sm text-gray-500">일반 사용자</span>
           </div>
         </Space>

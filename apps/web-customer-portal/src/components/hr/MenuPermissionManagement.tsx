@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Modal, Form, Select, Switch, Space, message, Tag, Divider } from 'antd';
+import { Card, Table, Button, Modal, Form, Select, Switch, Space, message, Tag, Divider, Input } from 'antd';
 import { SettingOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -306,7 +306,7 @@ export const MenuPermissionManagement = () => {
             <div>
               <span className="text-sm font-medium">역할: </span>
               {record.conditions.roles.map(role => (
-                <Tag key={role} size="small">{availableRoles.find(r => r.id === role)?.name || role}</Tag>
+                <Tag key={role}>{availableRoles.find(r => r.id === role)?.name || role}</Tag>
               ))}
             </div>
           )}
@@ -314,7 +314,7 @@ export const MenuPermissionManagement = () => {
             <div>
               <span className="text-sm font-medium">권한: </span>
               {record.conditions.permissions.map(perm => (
-                <Tag key={perm} size="small" color="blue">{perm}</Tag>
+                <Tag key={perm} color="blue">{perm}</Tag>
               ))}
             </div>
           )}
@@ -322,7 +322,7 @@ export const MenuPermissionManagement = () => {
             <div>
               <span className="text-sm font-medium">부서: </span>
               {record.conditions.departments.map(dept => (
-                <Tag key={dept} size="small" color="orange">{dept}</Tag>
+                <Tag key={dept} color="orange">{dept}</Tag>
               ))}
             </div>
           )}
@@ -338,7 +338,7 @@ export const MenuPermissionManagement = () => {
           {menus.map((menuKey: string) => {
             const menu = availableMenus.find(m => m.key === menuKey);
             return (
-              <Tag key={menuKey} color="green" size="small">
+              <Tag key={menuKey} color="green">
                 {menu?.name || menuKey}
               </Tag>
             );

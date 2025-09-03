@@ -480,7 +480,6 @@ export const AttendanceCard = ({ className }: AttendanceCardProps) => {
               description={`시뮬레이션된 위치: ${simulatedLocation.lat.toFixed(6)}, ${simulatedLocation.lng.toFixed(6)}`}
               type="info"
               showIcon
-              size="small"
               action={
                 <Button 
                   size="small" 
@@ -503,7 +502,6 @@ export const AttendanceCard = ({ className }: AttendanceCardProps) => {
               message="위치 확인 중..."
               type="info"
               showIcon
-              size="small"
             />
           ) : locationResult ? (
             <Alert
@@ -511,7 +509,6 @@ export const AttendanceCard = ({ className }: AttendanceCardProps) => {
               description={locationResult.message}
               type={locationResult.isValid ? "success" : "warning"}
               showIcon
-              size="small"
               action={
                 <Button 
                   size="small" 
@@ -528,7 +525,6 @@ export const AttendanceCard = ({ className }: AttendanceCardProps) => {
               description="GPS를 활성화하고 위치 권한을 허용해주세요"
               type="info"
               showIcon
-              size="small"
               action={
                 <Button 
                   size="small" 

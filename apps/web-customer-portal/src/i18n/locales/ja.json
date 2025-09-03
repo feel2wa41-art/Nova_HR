@@ -1,0 +1,85 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "edit": "編集",
+    "delete": "削除",
+    "add": "追加",
+    "required": "必須",
+    "optional": "任意",
+    "duplicate": "複製"
+  },
+  "form": {
+    "fields": {
+      "currency": "通貨/金額",
+      "bank_name": "銀行名",
+      "account_number": "口座番号"
+    },
+    "currency": {
+      "currencyCode": "通貨コード",
+      "selectCurrency": "通貨選択",
+      "JPY": "JPY (日本円)",
+      "KRW": "KRW (韓国ウォン)",
+      "USD": "USD (米ドル)",
+      "EUR": "EUR (ユーロ)",
+      "CNY": "CNY (人民元)",
+      "GBP": "GBP (英ポンド)",
+      "IDR": "IDR (ルピア)"
+    },
+    "bankName": {
+      "placeholder": "銀行を選択",
+      "autoFill": "主要銀行自動入力"
+    },
+    "fieldName": "フィールド名",
+    "fieldNamePlaceholder": "例: leaveType",
+    "displayName": "表示名",
+    "displayNamePlaceholder": "例: 休暇種類",
+    "fieldType": "フィールドタイプ",
+    "description": "説明",
+    "descriptionPlaceholder": "フィールドの説明を入力",
+    "selectOptions": "選択オプション (1行に1つ)",
+    "selectOptionsPlaceholder": "オプション1\nオプション2\nオプション3",
+    "bankList": "銀行リスト (1行に1つ)",
+    "bankListPlaceholder": "三菱UFJ銀行\nみずほ銀行\n三井住友銀行\nりそな銀行",
+    "minValue": "最小値",
+    "maxValue": "最大値",
+    "minAmount": "最小金額",
+    "maxAmount": "最大金額",
+    "minLength": "最小長",
+    "maxLength": "最大長",
+    "deleteFieldConfirm": "このフィールドを削除しますか？",
+    "schemaBuilderTitle": "フォームスキーマビルダー",
+    "schemaBuilderDescription": "電子承認で使用する動的フォームのフィールドを構成してください。生成されたスキーマはJSON Schema形式で保存されます。",
+    "formFieldConfig": "フォームフィールド設定",
+    "schemaPreview": "スキーマプレビュー",
+    "addField": "フィールド追加",
+    "noFieldsYet": "まだフィールドがありません。",
+    "clickAddField": "\"フィールド追加\"ボタンをクリックして新しいフィールドを追加してください。",
+    "generatedSchema": "生成されたJSON Schema",
+    "defaultFieldTitle": "フィールド",
+    "copy": "(コピー)",
+    "schemaOutputToConsole": "スキーマがコンソールに出力されました。"
+  },
+  "menu": {
+    "dashboard": "ダッシュボード",
+    "attendance": "出勤管理",
+    "leave": "休暇",
+    "approval": "承認",
+    "attitude": "勤務態度",
+    "settings": "設定",
+    "hr": "HR管理",
+    "admin": "管理者",
+    "logout": "ログアウト",
+    "profile": "プロフィール設定",
+    "approvalManagement": "承認管理",
+    "attitudeStatistics": "態度統計",
+    "appWhitelist": "生産性アプリリスト",
+    "userManagement": "ユーザー管理",
+    "companySettings": "会社設定"
+  },
+  "language": {
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  }
+}
