@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: https://api.nova-hr.com https://nova-hr.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;" />
+    <title>Nova HR Desktop Agent</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      #root {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Loading screen styles */
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .loading-text {
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+
+      .loading-subtitle {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      /* Titlebar styles for frameless window */
+      .titlebar {
+        height: 32px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-app-region: drag;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .titlebar-text {
+        font-size: 12px;
+        font-weight: 500;
+        color: white;
+        opacity: 0.9;
+      }
+
+      .titlebar-controls {
+        -webkit-app-region: no-drag;
+        display: flex;
+        gap: 8px;
+      }
+
+      .titlebar-button {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+
+      .titlebar-button:hover {
+        opacity: 0.8;
+      }
+
+      .minimize-button {
+        background: #ffd700;
+      }
+
+      .close-button {
+        background: #ff5f57;
+      }
+
+      /* Main content styles */
+      .main-content {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Error boundary styles */
+      .error-boundary {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        padding: 20px;
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .error-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+        opacity: 0.8;
+      }
+
+      .error-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      .error-message {
+        font-size: 16px;
+        opacity: 0.9;
+        margin-bottom: 20px;
+        max-width: 500px;
+        line-height: 1.5;
+      }
+
+      .error-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .error-button {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .error-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      .error-button.primary {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+      }
+
+      .error-button.primary:hover {
+        background: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Nova HR Desktop Agent</div>
+        <div class="loading-subtitle">Initializing application...</div>
+      </div>
+    </div>
+
+    <script>
+      // Global error handler
+      window.addEventListener('error', (event) => {
+        console.error('Global error:', event.error)
+        showErrorScreen('Application Error', event.error?.message || 'An unexpected error occurred')
+      })
+
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('Unhandled promise rejection:', event.reason)
+        showErrorScreen('Promise Rejection', event.reason?.message || 'An unhandled promise rejection occurred')
+      })
+
+      function showErrorScreen(title, message) {
+        const root = document.getElementById('root')
+        root.innerHTML = `
+          <div class="error-boundary">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title">${title}</div>
+            <div class="error-message">${message}</div>
+            <div class="error-actions">
+              <button class="error-button primary" onclick="location.reload()">
+                Reload Application
+              </button>
+              <button class="error-button" onclick="window.electronAPI?.app.restart()">
+                Restart Application
+              </button>
+            </div>
+          </div>
+        `
+      }
+
+      // Initialize app when DOM is ready
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM Content Loaded')
+        
+        // Check if Electron API is available
+        if (!window.electronAPI) {
+          showErrorScreen(
+            'Electron API Not Available', 
+            'The desktop application features are not available. Please restart the application.'
+          )
+          return
+        }
+
+        // Update loading text
+        const loadingText = document.querySelector('.loading-subtitle')
+        if (loadingText) {
+          loadingText.textContent = 'Loading user interface...'
+        }
+      })
+
+      // Show app info in console
+      console.log(`
+      ███╗   ██╗ ██████╗ ██╗   ██╗ █████╗     ██╗  ██╗██████╗ 
+      ████╗  ██║██╔═══██╗██║   ██║██╔══██╗    ██║  ██║██╔══██╗
+      ██╔██╗ ██║██║   ██║██║   ██║███████║    ███████║██████╔╝
+      ██║╚██╗██║██║   ██║╚██╗ ██╔╝██╔══██║    ██╔══██║██╔══██╗
+      ██║ ╚████║╚██████╔╝ ╚████╔╝ ██║  ██║    ██║  ██║██║  ██║
+      ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝    ╚═╝  ╚═╝╚═╝  ╚═╝
+      
+      Desktop Agent - Version 1.0.0
+      🚀 Employee productivity and monitoring solution
+      `)
+    </script>
+    
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

@@ -4,13 +4,21 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 import { PrismaService } from './shared/services/prisma.service';
+import { createSecurityConfig, validateSecurityConfig } from './config/security.config';
+import { createHelmetConfig } from './config/helmet.config';
+import { SecurityHeadersMiddleware, RequestLoggingMiddleware } from './middleware/security.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
+  // Load and validate security configuration
+  const securityConfig = createSecurityConfig(configService);
+  validateSecurityConfig(securityConfig);
 
   // Configure body parser for large payloads (screenshots)
   const express = require('express');
@@ -19,17 +27,21 @@ async function bootstrap() {
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
-  // Security
-  app.use(helmet());
+  // Cookie parser for session management
+  app.use(cookieParser(securityConfig.encryption.cookieSecret));
+
+  // Security middleware
+  app.use(new SecurityHeadersMiddleware().use);
+  app.use(new RequestLoggingMiddleware().use);
+
+  // Helmet security headers
+  app.use(helmet(createHelmetConfig(configService)));
+  
+  // Compression
   app.use(compression());
 
-  // CORS - Allow all origins for development
-  app.enableCors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-  });
+  // CORS - Use security config
+  app.enableCors(securityConfig.cors);
 
   // Global validation pipe
   app.useGlobalPipes(

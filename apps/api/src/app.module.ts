@@ -14,10 +14,11 @@ import { UploadModule } from './modules/upload/upload.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { AttitudeModule } from './modules/attitude/attitude.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-// import { AttitudeModule } from './modules/attitude/attitude.module';
 
 @Module({
   imports: [
@@ -54,7 +55,8 @@ import { AppService } from './app.service';
     NotificationModule,
     ReportsModule,
     SettingsModule,
-    // AttitudeModule,
+    AttitudeModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
