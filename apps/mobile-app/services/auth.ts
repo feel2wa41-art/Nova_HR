@@ -14,6 +14,7 @@ export interface AuthResponse {
     email: string;
     name: string;
     role: string;
+    language?: string;
     employee_profile?: {
       base_location?: {
         id: string;
@@ -89,6 +90,20 @@ export const authService = {
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
       return null;
+    }
+  },
+
+  async updateLanguageSetting(language: string): Promise<void> {
+    try {
+      const token = await this.getStoredToken();
+      if (!token) throw new Error('No access token');
+
+      await axios.put(`${API_BASE_URL}/users/me/language`, { language }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error('Update language setting failed:', error);
+      throw error;
     }
   }
 };

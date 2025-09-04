@@ -13,7 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AuthService } from './auth.service';
 import { EnhancedJwtAuthGuard } from './guards/enhanced-jwt.guard';
 import { LoginDto, RefreshTokenDto, RegisterDto } from './dto/auth.dto';
-import { User } from '@prisma/client';
+import { auth_user } from '@prisma/client';
 
 @ApiTags('Auth')
 @Controller('auth')

@@ -428,21 +428,21 @@ export const approvalApi = {
   getPendingCount: (): Promise<{ count: number }> =>
     apiClient.get('/approval/pending/count').then(res => res.data),
 
-  // Inbox (수신함)
+  // Inbox
   getInboxDocuments: (params: { page?: number; limit?: number; type?: string; search?: string; status?: string }): Promise<ApprovalListResponse> =>
     apiClient.get('/approval/inbox', { params }).then(res => res.data),
 
   getInboxCount: (): Promise<{ count: number }> =>
     apiClient.get('/approval/inbox/count').then(res => res.data),
 
-  // Outbox (상신함)
+  // Outbox
   getOutboxDocuments: (params: { page?: number; limit?: number; search?: string; status?: string; sortBy?: string }): Promise<ApprovalListResponse> =>
     apiClient.get('/approval/outbox', { params }).then(res => res.data),
 
   getOutboxCount: (): Promise<{ count: number }> =>
     apiClient.get('/approval/outbox/count').then(res => res.data),
 
-  // Reference (참조문서)
+  // Reference Documents
   getReferenceDocuments: (params: { page?: number; limit?: number }): Promise<ApprovalListResponse> =>
     apiClient.get('/approval/reference', { params }).then(res => res.data),
 
@@ -557,6 +557,63 @@ export interface IdleReportRequest {
   duration: number;
   reason?: string;
 }
+
+// HR Community API
+export interface CommunityPost {
+  id: string;
+  title: string;
+  content: string;
+  post_type: 'GENERAL' | 'ANNOUNCEMENT' | 'POLICY' | 'URGENT' | 'CELEBRATION' | 'QUESTION';
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  is_pinned: boolean;
+  tags: string[];
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  created_at: string;
+  updated_at: string;
+  author: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  is_liked: boolean;
+}
+
+export const api = {
+  ...authApi,
+  ...attendanceApi,
+  ...companyApi,
+  ...approvalApi,
+  ...userApi,
+  
+  // HR Community methods
+  hrCommunity: {
+    getPosts: (params?: any) =>
+      apiClient.get('/hr-community/posts', { params }).then(res => res.data),
+    
+    createPost: (data: any) =>
+      apiClient.post('/hr-community/posts', data).then(res => res.data),
+    
+    getPost: (id: string) =>
+      apiClient.get(`/hr-community/posts/${id}`).then(res => res.data),
+    
+    likePost: (id: string) =>
+      apiClient.post(`/hr-community/posts/${id}/like`).then(res => res.data),
+    
+    recordView: (id: string) =>
+      apiClient.post(`/hr-community/posts/${id}/view`).then(res => res.data),
+    
+    getNotifications: (params?: any) =>
+      apiClient.get('/hr-community/notifications', { params }).then(res => res.data),
+    
+    getUnreadCount: () =>
+      apiClient.get('/hr-community/notifications/unread-count').then(res => res.data),
+    
+    getVapidKey: () =>
+      apiClient.get('/hr-community/vapid-public-key').then(res => res.data),
+  }
+};
 
 export const attitudeApi = {
   // Session management

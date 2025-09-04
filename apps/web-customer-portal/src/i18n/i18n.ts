@@ -9,9 +9,8 @@ import { DEFAULT_LANGUAGE, LanguageCode } from '../constants/languages';
 // Get stored language preference or default to DEFAULT_LANGUAGE
 const getStoredLanguage = (): LanguageCode => {
   const stored = localStorage.getItem('i18nextLng') || localStorage.getItem('language');
-  const tenant = JSON.parse(localStorage.getItem('tenant') || '{}');
-  // 명시적으로 한국어를 기본값으로 설정
-  return stored || tenant?.settings?.language || 'ko';
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  return stored || user?.language || DEFAULT_LANGUAGE;
 };
 
 const resources = {
@@ -32,7 +31,7 @@ i18n
   .init({
     resources,
     lng: getStoredLanguage(),
-    fallbackLng: 'ko', // 한국어를 기본 폴백 언어로 설정
+    fallbackLng: DEFAULT_LANGUAGE,
     debug: false,
     interpolation: {
       escapeValue: false
@@ -48,6 +47,16 @@ i18n
 export const updateLanguageFromAPI = (language: LanguageCode) => {
   i18n.changeLanguage(language);
   localStorage.setItem('language', language);
+};
+
+// Update language from user profile data
+export const updateLanguageFromUser = (user: any) => {
+  if (user?.language) {
+    const currentLang = i18n.language;
+    if (currentLang !== user.language) {
+      updateLanguageFromAPI(user.language);
+    }
+  }
 };
 
 export default i18n;

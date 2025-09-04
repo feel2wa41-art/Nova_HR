@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
+import { HelmetOptions } from 'helmet';
 
-export const createHelmetConfig = (configService: ConfigService) => {
+export const createHelmetConfig = (configService: ConfigService): HelmetOptions => {
   const isProduction = process.env.NODE_ENV === 'production';
   
   return {

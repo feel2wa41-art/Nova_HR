@@ -16,9 +16,6 @@ export default defineConfig({
           build: {
             rollupOptions: {
               external: [
-                'active-win',
-                'screenshot-desktop',
-                'keytar',
                 'sharp'
               ]
             }

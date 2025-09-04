@@ -12,14 +12,14 @@ import {
   LeaveType,
   LeaveStatus
 } from './dto/leave.dto';
-import { UserRole } from '@prisma/client';
+// UserRole removed - using string role checks
 
 @Injectable()
 export class LeaveService {
   constructor(private prisma: PrismaService) {}
 
   async createLeaveRequest(userId: string, createDto: CreateLeaveRequestDto) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.auth_user.findUnique({
       where: { id: userId },
       include: { 
         company: {
@@ -61,7 +61,7 @@ export class LeaveService {
     }
 
     // Check for overlapping leave requests
-    const overlapping = await this.prisma.leaveRequest.findFirst({
+    const overlapping = await this.prisma.leave_request.findFirst({
       where: {
         user_id: userId,
         status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
@@ -81,7 +81,7 @@ export class LeaveService {
     }
 
     // Create leave request
-    const leaveRequest = await this.prisma.leaveRequest.create({
+    const leaveRequest = await this.prisma.leave_request.create({
       data: {
         user_id: userId,
         leave_type: createDto.leave_type,
@@ -115,7 +115,7 @@ export class LeaveService {
     });
 
     // Log audit trail
-    await this.prisma.auditLog.create({
+    await this.prisma.audit_log.create({
       data: {
         user_id: userId,
         action: 'CREATE_LEAVE_REQUEST',
@@ -131,7 +131,7 @@ export class LeaveService {
   }
 
   async updateLeaveRequest(id: string, userId: string, updateDto: UpdateLeaveRequestDto) {
-    const leaveRequest = await this.prisma.leaveRequest.findUnique({
+    const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id },
       include: { user: true }
     });
@@ -161,7 +161,7 @@ export class LeaveService {
       days = this.calculateLeaveDays(startDate, endDate, updateDto.half_day_period);
     }
 
-    const updatedRequest = await this.prisma.leaveRequest.update({
+    const updatedRequest = await this.prisma.leave_request.update({
       where: { id },
       data: {
         ...updateDto,
@@ -188,7 +188,7 @@ export class LeaveService {
     });
 
     // Log audit trail
-    await this.prisma.auditLog.create({
+    await this.prisma.audit_log.create({
       data: {
         user_id: userId,
         action: 'UPDATE_LEAVE_REQUEST',
@@ -231,7 +231,7 @@ export class LeaveService {
     }
 
     const [requests, total] = await Promise.all([
-      this.prisma.leaveRequest.findMany({
+      this.prisma.leave_request.findMany({
         where,
         include: {
           user: {
@@ -264,7 +264,7 @@ export class LeaveService {
         skip: (queryDto.page - 1) * queryDto.limit,
         take: queryDto.limit
       }),
-      this.prisma.leaveRequest.count({ where })
+      this.prisma.leave_request.count({ where })
     ]);
 
     return {
@@ -279,7 +279,7 @@ export class LeaveService {
   }
 
   async getLeaveRequest(id: string, requestingUserId: string, userRole: string) {
-    const leaveRequest = await this.prisma.leaveRequest.findUnique({
+    const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id },
       include: {
         user: {
@@ -323,7 +323,7 @@ export class LeaveService {
   }
 
   async approveLeaveRequest(id: string, approvedById: string, approveDto: ApproveLeaveRequestDto) {
-    const leaveRequest = await this.prisma.leaveRequest.findUnique({
+    const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id },
       include: { user: true }
     });
@@ -336,7 +336,7 @@ export class LeaveService {
       throw new BadRequestException('Only pending leave requests can be approved');
     }
 
-    const approvedRequest = await this.prisma.leaveRequest.update({
+    const approvedRequest = await this.prisma.leave_request.update({
       where: { id },
       data: {
         status: LeaveStatus.APPROVED,
@@ -365,7 +365,7 @@ export class LeaveService {
     });
 
     // Log audit trail
-    await this.prisma.auditLog.create({
+    await this.prisma.audit_log.create({
       data: {
         user_id: approvedById,
         action: 'APPROVE_LEAVE_REQUEST',
@@ -381,7 +381,7 @@ export class LeaveService {
   }
 
   async rejectLeaveRequest(id: string, rejectedById: string, rejectDto: RejectLeaveRequestDto) {
-    const leaveRequest = await this.prisma.leaveRequest.findUnique({
+    const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id },
       include: { user: true }
     });
@@ -394,7 +394,7 @@ export class LeaveService {
       throw new BadRequestException('Only pending leave requests can be rejected');
     }
 
-    const rejectedRequest = await this.prisma.leaveRequest.update({
+    const rejectedRequest = await this.prisma.leave_request.update({
       where: { id },
       data: {
         status: LeaveStatus.REJECTED,
@@ -421,7 +421,7 @@ export class LeaveService {
     });
 
     // Log audit trail
-    await this.prisma.auditLog.create({
+    await this.prisma.audit_log.create({
       data: {
         user_id: rejectedById,
         action: 'REJECT_LEAVE_REQUEST',
@@ -437,7 +437,7 @@ export class LeaveService {
   }
 
   async cancelLeaveRequest(id: string, userId: string) {
-    const leaveRequest = await this.prisma.leaveRequest.findUnique({
+    const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id }
     });
 
@@ -459,7 +459,7 @@ export class LeaveService {
       throw new BadRequestException('Cannot cancel leave that has already started');
     }
 
-    const cancelledRequest = await this.prisma.leaveRequest.update({
+    const cancelledRequest = await this.prisma.leave_request.update({
       where: { id },
       data: {
         status: LeaveStatus.CANCELLED,
@@ -477,7 +477,7 @@ export class LeaveService {
     });
 
     // Log audit trail
-    await this.prisma.auditLog.create({
+    await this.prisma.audit_log.create({
       data: {
         user_id: userId,
         action: 'CANCEL_LEAVE_REQUEST',
@@ -496,7 +496,7 @@ export class LeaveService {
     const targetYear = year || new Date().getFullYear();
     
     // Get user's leave settings
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.auth_user.findUnique({
       where: { id: userId },
       include: {
         company: {
@@ -519,7 +519,7 @@ export class LeaveService {
     const startOfYear = new Date(targetYear, 0, 1);
     const endOfYear = new Date(targetYear, 11, 31);
 
-    const approvedLeave = await this.prisma.leaveRequest.findMany({
+    const approvedLeave = await this.prisma.leave_request.findMany({
       where: {
         user_id: userId,
         status: LeaveStatus.APPROVED,
@@ -580,20 +580,20 @@ export class LeaveService {
     }
 
     const [totalRequests, approvedRequests, pendingRequests, rejectedRequests] = await Promise.all([
-      this.prisma.leaveRequest.count({ where: whereClause }),
-      this.prisma.leaveRequest.count({ 
+      this.prisma.leave_request.count({ where: whereClause }),
+      this.prisma.leave_request.count({ 
         where: { ...whereClause, status: LeaveStatus.APPROVED } 
       }),
-      this.prisma.leaveRequest.count({ 
+      this.prisma.leave_request.count({ 
         where: { ...whereClause, status: LeaveStatus.PENDING } 
       }),
-      this.prisma.leaveRequest.count({ 
+      this.prisma.leave_request.count({ 
         where: { ...whereClause, status: LeaveStatus.REJECTED } 
       })
     ]);
 
     // Get leave requests by type
-    const leaveByType = await this.prisma.leaveRequest.groupBy({
+    const leaveByType = await this.prisma.leave_request.groupBy({
       by: ['leave_type'],
       where: whereClause,
       _count: { id: true },

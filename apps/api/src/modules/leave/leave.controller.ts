@@ -28,7 +28,7 @@ import {
   LeaveSettingsDto,
   LeaveStatus
 } from './dto/leave.dto';
-import { UserRole } from '@prisma/client';
+// UserRole removed - using string role checks
 
 @ApiTags('Leave')
 @Controller('leave')
@@ -199,7 +199,7 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
     const adminId = req.user.sub;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can approve leave requests');
     }
 
@@ -220,7 +220,7 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
     const adminId = req.user.sub;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can reject leave requests');
     }
 
@@ -278,7 +278,7 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
 
     // Check permission for accessing other user's balance
-    if (queryDto.user_id && queryDto.user_id !== currentUserId && userRole !== UserRole.HR_ADMIN) {
+    if (queryDto.user_id && queryDto.user_id !== currentUserId && userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Cannot access other users leave balance');
     }
 
@@ -323,7 +323,7 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can view leave statistics');
     }
 
@@ -346,7 +346,7 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can view leave calendar');
     }
 
@@ -399,7 +399,7 @@ export class LeaveController {
   async getPendingApprovals(@Request() req) {
     const userRole = req.user.roles?.[0];
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can view pending approvals');
     }
 
@@ -424,7 +424,7 @@ export class LeaveController {
   ) {
     const userRole = req.user.roles?.[0];
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can import leave records');
     }
 

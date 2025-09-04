@@ -4,7 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import compression from 'compression';
-import * as cookieParser from 'cookie-parser';
+const cookieParser = require('cookie-parser');
 
 import { AppModule } from './app.module';
 import { PrismaService } from './shared/services/prisma.service';

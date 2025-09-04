@@ -25,7 +25,7 @@ import {
   AdminAttendanceUpdateDto,
   BulkAttendanceImportDto,
 } from './dto/attendance.dto';
-import { UserRole } from '@prisma/client';
+// UserRole removed - using string role checks
 
 @ApiTags('Attendance')
 @Controller('attendance')
@@ -162,7 +162,7 @@ export class AttendanceController {
     const userId = req.user.sub;
     const userRole = req.user.roles?.[0];
     
-    if (historyDto.userId && historyDto.userId !== userId && userRole !== UserRole.HR_ADMIN) {
+    if (historyDto.userId && historyDto.userId !== userId && userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Cannot access other users attendance data');
     }
     
@@ -191,7 +191,7 @@ export class AttendanceController {
     const userId = req.user.sub;
     const userRole = req.user.roles?.[0];
     
-    if (userRole === UserRole.HR_ADMIN) {
+    if (userRole === 'HR_ADMIN') {
       return this.attendanceService.getAllAdjustmentRequests(status);
     } else {
       return this.attendanceService.getUserAdjustmentRequests(userId, status);
@@ -205,7 +205,7 @@ export class AttendanceController {
     const userRole = req.user.roles?.[0];
     const adminId = req.user.sub;
     
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can approve adjustment requests');
     }
     
@@ -223,7 +223,7 @@ export class AttendanceController {
     const userRole = req.user.roles?.[0];
     const adminId = req.user.sub;
     
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can reject adjustment requests');
     }
     
@@ -243,7 +243,7 @@ export class AttendanceController {
     const currentUserId = req.user.sub;
     const userRole = req.user.roles?.[0];
     
-    if (userId && userId !== currentUserId && userRole !== UserRole.HR_ADMIN) {
+    if (userId && userId !== currentUserId && userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Cannot access other users statistics');
     }
     

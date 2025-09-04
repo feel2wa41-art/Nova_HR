@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../shared/services/prisma.service';
+import { EmailService } from '../email/email.service';
 import {
   CreateApprovalCategoryDto,
   UpdateApprovalCategoryDto,
@@ -12,15 +13,18 @@ import {
   ApprovalAction,
   RouteStepType
 } from './dto/approval.dto';
-import { UserRole } from '@prisma/client';
+// Removed UserRole import - using string role checks instead
 
 @Injectable()
 export class ApprovalService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService
+  ) {}
 
   // Category Management
   async createCategory(createDto: CreateApprovalCategoryDto, companyId: string) {
-    const category = await this.prisma.approvalCategory.create({
+    const category = await this.prisma.approval_category.create({
       data: {
         company_id: companyId,
         name: createDto.name,
@@ -45,7 +49,7 @@ export class ApprovalService {
         created_at: new Date()
       }));
 
-      await this.prisma.approvalRouteTemplate.createMany({
+      await this.prisma.approval_route_template.createMany({
         data: routeSteps
       });
     }
@@ -54,7 +58,7 @@ export class ApprovalService {
   }
 
   async updateCategory(id: string, updateDto: UpdateApprovalCategoryDto, companyId: string) {
-    const category = await this.prisma.approvalCategory.findFirst({
+    const category = await this.prisma.approval_category.findFirst({
       where: { id, company_id: companyId }
     });
 
@@ -62,7 +66,7 @@ export class ApprovalService {
       throw new NotFoundException('Approval category not found');
     }
 
-    const updatedCategory = await this.prisma.approvalCategory.update({
+    const updatedCategory = await this.prisma.approval_category.update({
       where: { id },
       data: {
         ...updateDto,
@@ -73,7 +77,7 @@ export class ApprovalService {
     // Update route template if provided
     if (updateDto.default_route) {
       // Delete existing route steps
-      await this.prisma.approvalRouteTemplate.deleteMany({
+      await this.prisma.approval_route_template.deleteMany({
         where: { category_id: id }
       });
 
@@ -89,7 +93,7 @@ export class ApprovalService {
           created_at: new Date()
         }));
 
-        await this.prisma.approvalRouteTemplate.createMany({
+        await this.prisma.approval_route_template.createMany({
           data: routeSteps
         });
       }
@@ -104,7 +108,7 @@ export class ApprovalService {
       where.is_active = true;
     }
 
-    return this.prisma.approvalCategory.findMany({
+    return this.prisma.approval_category.findMany({
       where,
       include: {
         route_template: {
@@ -131,7 +135,7 @@ export class ApprovalService {
   }
 
   async getCategory(id: string) {
-    const category = await this.prisma.approvalCategory.findUnique({
+    const category = await this.prisma.approval_category.findUnique({
       where: { id },
       include: {
         route_template: {
@@ -163,7 +167,7 @@ export class ApprovalService {
   }
 
   async deleteCategory(id: string, companyId: string) {
-    const category = await this.prisma.approvalCategory.findFirst({
+    const category = await this.prisma.approval_category.findFirst({
       where: { id, company_id: companyId }
     });
 
@@ -172,7 +176,7 @@ export class ApprovalService {
     }
 
     // Check if category has any drafts
-    const draftCount = await this.prisma.approvalDraft.count({
+    const draftCount = await this.prisma.approval_draft.count({
       where: { category_id: id }
     });
 
@@ -181,11 +185,11 @@ export class ApprovalService {
     }
 
     // Delete route template first
-    await this.prisma.approvalRouteTemplate.deleteMany({
+    await this.prisma.approval_route_template.deleteMany({
       where: { category_id: id }
     });
 
-    await this.prisma.approvalCategory.delete({
+    await this.prisma.approval_category.delete({
       where: { id }
     });
 
@@ -194,7 +198,7 @@ export class ApprovalService {
 
   // Draft Management
   async createDraft(createDto: CreateApprovalDraftDto, requesterId: string) {
-    const category = await this.prisma.approvalCategory.findUnique({
+    const category = await this.prisma.approval_category.findUnique({
       where: { id: createDto.category_id },
       include: {
         route_template: {
@@ -211,7 +215,7 @@ export class ApprovalService {
       throw new BadRequestException('Cannot create draft for inactive category');
     }
 
-    const draft = await this.prisma.approvalDraft.create({
+    const draft = await this.prisma.approval_draft.create({
       data: {
         category_id: createDto.category_id,
         requester_id: requesterId,
@@ -229,7 +233,7 @@ export class ApprovalService {
     // Create approval route steps
     const routeSteps = createDto.custom_route || category.route_template;
     if (routeSteps && routeSteps.length > 0) {
-      const approvalSteps = routeSteps.map((step, index) => ({
+      const approval_steps = routeSteps.map((step, index) => ({
         draft_id: draft.id,
         step_order: step.step_order || index + 1,
         step_type: step.step_type,
@@ -240,8 +244,8 @@ export class ApprovalService {
         created_at: new Date()
       }));
 
-      await this.prisma.approvalStep.createMany({
-        data: approvalSteps
+      await this.prisma.approval_step.createMany({
+        data: approval_steps
       });
     }
 
@@ -249,7 +253,7 @@ export class ApprovalService {
   }
 
   async updateDraft(id: string, updateDto: UpdateApprovalDraftDto, userId: string) {
-    const draft = await this.prisma.approvalDraft.findUnique({
+    const draft = await this.prisma.approval_draft.findUnique({
       where: { id }
     });
 
@@ -265,7 +269,7 @@ export class ApprovalService {
       throw new BadRequestException('Only draft status documents can be updated');
     }
 
-    const updatedDraft = await this.prisma.approvalDraft.update({
+    const updatedDraft = await this.prisma.approval_draft.update({
       where: { id },
       data: {
         ...updateDto,
@@ -277,13 +281,13 @@ export class ApprovalService {
     // Update approval route if provided
     if (updateDto.custom_route) {
       // Delete existing steps
-      await this.prisma.approvalStep.deleteMany({
+      await this.prisma.approval_step.deleteMany({
         where: { draft_id: id }
       });
 
       // Create new steps
       if (updateDto.custom_route.length > 0) {
-        const approvalSteps = updateDto.custom_route.map(step => ({
+        const approval_steps = updateDto.custom_route.map(step => ({
           draft_id: id,
           step_order: step.step_order,
           step_type: step.step_type,
@@ -294,8 +298,8 @@ export class ApprovalService {
           created_at: new Date()
         }));
 
-        await this.prisma.approvalStep.createMany({
-          data: approvalSteps
+        await this.prisma.approval_step.createMany({
+          data: approval_steps
         });
       }
     }
@@ -331,7 +335,7 @@ export class ApprovalService {
         break;
       default:
         // All - admin only, otherwise user's own
-        if (userRole !== UserRole.HR_ADMIN) {
+        if (userRole !== 'HR_ADMIN') {
           where.OR = [
             { requester_id: userId },
             {
@@ -352,7 +356,7 @@ export class ApprovalService {
       where.category_id = queryDto.category_id;
     }
 
-    if (queryDto.requester_id && userRole === UserRole.HR_ADMIN) {
+    if (queryDto.requester_id && userRole === 'HR_ADMIN') {
       where.requester_id = queryDto.requester_id;
     }
 
@@ -375,7 +379,7 @@ export class ApprovalService {
     }
 
     const [drafts, total] = await Promise.all([
-      this.prisma.approvalDraft.findMany({
+      this.prisma.approval_draft.findMany({
         where,
         include: {
           category: {
@@ -420,7 +424,7 @@ export class ApprovalService {
         skip: (queryDto.page - 1) * queryDto.limit,
         take: queryDto.limit
       }),
-      this.prisma.approvalDraft.count({ where })
+      this.prisma.approval_draft.count({ where })
     ]);
 
     return {
@@ -435,7 +439,7 @@ export class ApprovalService {
   }
 
   async getDraft(id: string, userId: string) {
-    const draft = await this.prisma.approvalDraft.findUnique({
+    const draft = await this.prisma.approval_draft.findUnique({
       where: { id },
       include: {
         category: {
@@ -503,14 +507,14 @@ export class ApprovalService {
     }
 
     // Check if there are approval steps
-    const approvalSteps = await this.prisma.approvalStep.findMany({
+    const approval_steps = await this.prisma.approval_step.findMany({
       where: { draft_id: id },
       orderBy: { step_order: 'asc' }
     });
 
-    if (approvalSteps.length === 0) {
+    if (approval_steps.length === 0) {
       // No approval steps - auto approve
-      await this.prisma.approvalDraft.update({
+      await this.prisma.approval_draft.update({
         where: { id },
         data: {
           status: ApprovalStatus.APPROVED,
@@ -520,7 +524,7 @@ export class ApprovalService {
       });
     } else {
       // Start approval process
-      await this.prisma.approvalDraft.update({
+      await this.prisma.approval_draft.update({
         where: { id },
         data: {
           status: ApprovalStatus.PENDING,
@@ -528,10 +532,36 @@ export class ApprovalService {
           updated_at: new Date()
         }
       });
+
+      // Send email notification to first approver
+      try {
+        const firstApprover = approval_steps.find(step => step.step_order === 1);
+        if (firstApprover) {
+          const approverData = await this.prisma.auth_user.findUnique({
+            where: { id: firstApprover.approver_id }
+          });
+
+          if (approverData) {
+            await this.emailService.sendApprovalRequestEmail(
+              approverData.email,
+              {
+                requestorName: draft.requester.name,
+                approverName: approverData.name,
+                documentTitle: draft.title,
+                documentType: draft.category.name,
+                requestedAt: new Date(),
+                approvalUrl: `${process.env.CLIENT_URL || 'http://localhost:3001'}/approval/inbox/${id}`
+              }
+            );
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send approval request email:', emailError);
+      }
     }
 
     // Log audit trail
-    await this.prisma.auditLog.create({
+    await this.prisma.audit_log.create({
       data: {
         user_id: userId,
         action: 'SUBMIT_APPROVAL_DRAFT',
@@ -591,7 +621,7 @@ export class ApprovalService {
           throw new BadRequestException('Forward to user ID is required for FORWARD action');
         }
         // Update the current step to point to new approver
-        await this.prisma.approvalStep.update({
+        await this.prisma.approval_step.update({
           where: { id: currentStep.id },
           data: {
             approver_id: processDto.forward_to_user_id,
@@ -607,7 +637,7 @@ export class ApprovalService {
 
     // Update the step
     if (processDto.action !== ApprovalAction.FORWARD) {
-      await this.prisma.approvalStep.update({
+      await this.prisma.approval_step.update({
         where: { id: currentStep.id },
         data: {
           status: newStepStatus,
@@ -620,7 +650,7 @@ export class ApprovalService {
     }
 
     // Update the draft status
-    await this.prisma.approvalDraft.update({
+    await this.prisma.approval_draft.update({
       where: { id },
       data: {
         status: newStatus,
@@ -628,8 +658,81 @@ export class ApprovalService {
       }
     });
 
+    // Send email notification based on action
+    try {
+      const approverData = await this.prisma.auth_user.findUnique({
+        where: { id: approverId }
+      });
+
+      if (processDto.action === ApprovalAction.APPROVE || processDto.action === ApprovalAction.REJECT) {
+        // Final approval/rejection - notify requester
+        if (newStatus === ApprovalStatus.APPROVED || newStatus === ApprovalStatus.REJECTED) {
+          await this.emailService.sendApprovalCompletionEmail(
+            draft.requester.email,
+            {
+              requestorName: draft.requester.name,
+              approverName: approverData?.name || 'Unknown',
+              documentTitle: draft.title,
+              documentType: draft.category.name,
+              status: newStatus === ApprovalStatus.APPROVED ? 'APPROVED' : 'REJECTED',
+              completedAt: new Date(),
+              comments: processDto.comments
+            }
+          );
+        } else if (processDto.action === ApprovalAction.APPROVE) {
+          // Not final step - notify next approver
+          const nextApprover = draft.approval_steps.find(
+            step => step.step_order > currentStep.step_order && 
+                   step.status === 'PENDING' && 
+                   step.is_required
+          );
+
+          if (nextApprover) {
+            const nextApproverData = await this.prisma.auth_user.findUnique({
+              where: { id: nextApprover.approver_id }
+            });
+
+            if (nextApproverData) {
+              await this.emailService.sendApprovalRequestEmail(
+                nextApproverData.email,
+                {
+                  requestorName: draft.requester.name,
+                  approverName: nextApproverData.name,
+                  documentTitle: draft.title,
+                  documentType: draft.category.name,
+                  requestedAt: new Date(),
+                  approvalUrl: `${process.env.CLIENT_URL || 'http://localhost:3001'}/approval/inbox/${id}`
+                }
+              );
+            }
+          }
+        }
+      } else if (processDto.action === ApprovalAction.FORWARD) {
+        // Forward to another approver - notify new approver
+        const newApproverData = await this.prisma.auth_user.findUnique({
+          where: { id: processDto.forward_to_user_id }
+        });
+
+        if (newApproverData) {
+          await this.emailService.sendApprovalRequestEmail(
+            newApproverData.email,
+            {
+              requestorName: draft.requester.name,
+              approverName: newApproverData.name,
+              documentTitle: draft.title,
+              documentType: draft.category.name,
+              requestedAt: new Date(),
+              approvalUrl: `${process.env.CLIENT_URL || 'http://localhost:3001'}/approval/inbox/${id}`
+            }
+          );
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send approval notification email:', emailError);
+    }
+
     // Log audit trail
-    await this.prisma.auditLog.create({
+    await this.prisma.audit_log.create({
       data: {
         user_id: approverId,
         action: `APPROVAL_${processDto.action}`,
@@ -660,12 +763,12 @@ export class ApprovalService {
     }
 
     // Delete approval steps first
-    await this.prisma.approvalStep.deleteMany({
+    await this.prisma.approval_step.deleteMany({
       where: { draft_id: id }
     });
 
     // Delete the draft
-    await this.prisma.approvalDraft.delete({
+    await this.prisma.approval_draft.delete({
       where: { id }
     });
 
@@ -690,26 +793,26 @@ export class ApprovalService {
     }
 
     const [totalDrafts, approvedDrafts, pendingDrafts, rejectedDrafts] = await Promise.all([
-      this.prisma.approvalDraft.count({ where: whereClause }),
-      this.prisma.approvalDraft.count({ 
+      this.prisma.approval_draft.count({ where: whereClause }),
+      this.prisma.approval_draft.count({ 
         where: { ...whereClause, status: ApprovalStatus.APPROVED } 
       }),
-      this.prisma.approvalDraft.count({ 
+      this.prisma.approval_draft.count({ 
         where: { ...whereClause, status: ApprovalStatus.PENDING } 
       }),
-      this.prisma.approvalDraft.count({ 
+      this.prisma.approval_draft.count({ 
         where: { ...whereClause, status: ApprovalStatus.REJECTED } 
       })
     ]);
 
     // Get statistics by category
-    const categoryStats = await this.prisma.approvalDraft.groupBy({
+    const categoryStats = await this.prisma.approval_draft.groupBy({
       by: ['category_id'],
       where: whereClause,
       _count: { id: true }
     });
 
-    const categoryDetails = await this.prisma.approvalCategory.findMany({
+    const categoryDetails = await this.prisma.approval_category.findMany({
       where: {
         id: { in: categoryStats.map(stat => stat.category_id) }
       },

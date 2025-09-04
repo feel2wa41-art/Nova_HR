@@ -98,6 +98,12 @@ self.addEventListener('notificationclick', (event) => {
     url = '/attendance';
   } else if (data.type === 'DOCUMENT_NOTIFICATION') {
     url = '/approval/inbox';
+  } else if (data.type === 'HR_COMMUNITY_POST' && data.referenceId) {
+    url = `/community/posts/${data.referenceId}`;
+  } else if (data.type === 'HR_COMMUNITY_COMMENT' && data.referenceId) {
+    url = `/community/posts/${data.referenceId}`;
+  } else if (data.type === 'HR_COMMUNITY_LIKE' && data.referenceId) {
+    url = `/community/posts/${data.referenceId}`;
   } else if (data.referenceType && data.referenceId) {
     // Generic mapping based on reference type
     switch (data.referenceType) {
@@ -109,6 +115,9 @@ self.addEventListener('notificationclick', (event) => {
         break;
       case 'attitude':
         url = '/attitude';
+        break;
+      case 'community':
+        url = `/community/posts/${data.referenceId}`;
         break;
     }
   }

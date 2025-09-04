@@ -3,6 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { authService } from '../services/auth';
+import { updateLanguageFromUser } from '../i18n/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -17,6 +19,13 @@ export default function HomeScreen() {
       const token = await authService.getStoredToken();
       
       if (token) {
+        // Load user data and update language preference
+        const userData = await AsyncStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          await updateLanguageFromUser(user);
+        }
+        
         // User is logged in, redirect to attendance
         router.replace('/attendance');
       } else {

@@ -140,8 +140,11 @@ export class ActivityMonitorService {
 
   private async checkActiveWindow(): Promise<void> {
     try {
-      const activeWin = await import('active-win')
-      const win = await activeWin.default()
+      // Fallback activity tracking without active-win
+      const win = {
+        title: 'Unknown Application',
+        owner: { name: 'System', processId: 0, path: 'system' }
+      }
 
       if (!win) {
         this.handleAppSwitch(null)

@@ -38,7 +38,7 @@ const CompanyManagement: React.FC = () => {
 
   const columns: ColumnsType<Company> = [
     {
-      title: '회사정보',
+      title: 'Company Information',
       key: 'company',
       render: (record: Company) => (
         <div>
@@ -51,7 +51,7 @@ const CompanyManagement: React.FC = () => {
       ),
     },
     {
-      title: '연락처',
+      title: 'Contact',
       key: 'contact',
       render: (record: Company) => (
         <div>
@@ -61,7 +61,7 @@ const CompanyManagement: React.FC = () => {
       ),
     },
     {
-      title: '플랜',
+      title: 'Plan',
       key: 'plan',
       render: (record: Company) => {
         const plan = record.tenant?.plan || 'BASIC';
@@ -78,14 +78,14 @@ const CompanyManagement: React.FC = () => {
       },
     },
     {
-      title: '사용자',
+      title: 'Users',
       key: 'userCount',
       render: (record: Company) => (
         <Badge count={record.userCount || 0} color="#1890ff" />
       ),
     },
     {
-      title: '월 매출',
+      title: 'Monthly Revenue',
       key: 'monthlyRevenue',
       render: (record: Company) => (
         <Text strong style={{ color: '#52c41a' }}>
@@ -94,7 +94,7 @@ const CompanyManagement: React.FC = () => {
       ),
     },
     {
-      title: '상태',
+      title: 'Status',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
@@ -104,9 +104,9 @@ const CompanyManagement: React.FC = () => {
           SUSPENDED: 'error'
         };
         const labels = {
-          ACTIVE: '활성',
-          INACTIVE: '비활성',
-          SUSPENDED: '정지'
+          ACTIVE: 'Active',
+          INACTIVE: 'Inactive',
+          SUSPENDED: 'Suspended'
         };
         return (
           <Tag color={colors[status as keyof typeof colors]}>
@@ -116,23 +116,23 @@ const CompanyManagement: React.FC = () => {
       },
     },
     {
-      title: '가입일',
+      title: 'Registration Date',
       key: 'joinDate',
       render: (record: Company) => new Date(record.joinDate || record.created_at).toLocaleDateString('ko-KR'),
     },
     {
-      title: '작업',
+      title: 'Actions',
       key: 'actions',
       render: () => (
         <Space>
-          <Tooltip title="상세보기">
+          <Tooltip title="View Details">
             <Button 
               type="text" 
               icon={<EyeOutlined />} 
               size="small"
             />
           </Tooltip>
-          <Tooltip title="설정">
+          <Tooltip title="Settings">
             <Button 
               type="text" 
               icon={<EditOutlined />}
@@ -147,7 +147,7 @@ const CompanyManagement: React.FC = () => {
   return (
     <div>
       <Title level={2} style={{ marginBottom: '24px' }}>
-        🏢 기업 관리
+        🏢 Company Management
       </Title>
 
       {/* 전체 통계 */}
@@ -155,7 +155,7 @@ const CompanyManagement: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="총 기업 수"
+              title="Total Companies"
               value={companies.length}
               prefix={<BankOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -165,7 +165,7 @@ const CompanyManagement: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="활성 기업"
+              title="Active Companies"
               value={activeCompanies}
               prefix={<BankOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -175,7 +175,7 @@ const CompanyManagement: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="총 사용자"
+              title="Total Users"
               value={totalUsers}
               prefix={<UserOutlined />}
               valueStyle={{ color: '#722ed1' }}
@@ -185,10 +185,10 @@ const CompanyManagement: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="월 총 매출"
+              title="Total Monthly Revenue"
               value={totalRevenue}
               prefix={<DollarOutlined />}
-              suffix="원"
+              suffix="KRW"
               valueStyle={{ color: '#f5222d' }}
               formatter={(value) => `${Number(value).toLocaleString()}`}
             />
@@ -204,7 +204,7 @@ const CompanyManagement: React.FC = () => {
               <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#666' }}>
                 {companies.filter(c => c.tenant?.plan === 'BASIC').length}
               </div>
-              <div style={{ color: '#666' }}>Basic 플랜</div>
+              <div style={{ color: '#666' }}>Basic Plan</div>
             </div>
           </Card>
         </Col>
@@ -214,7 +214,7 @@ const CompanyManagement: React.FC = () => {
               <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1890ff' }}>
                 {companies.filter(c => c.tenant?.plan === 'PROFESSIONAL').length}
               </div>
-              <div style={{ color: '#666' }}>Professional 플랜</div>
+              <div style={{ color: '#666' }}>Professional Plan</div>
             </div>
           </Card>
         </Col>
@@ -224,7 +224,7 @@ const CompanyManagement: React.FC = () => {
               <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#fa8c16' }}>
                 {companies.filter(c => c.tenant?.plan === 'ENTERPRISE').length}
               </div>
-              <div style={{ color: '#666' }}>Enterprise 플랜</div>
+              <div style={{ color: '#666' }}>Enterprise Plan</div>
             </div>
           </Card>
         </Col>
@@ -241,7 +241,7 @@ const CompanyManagement: React.FC = () => {
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `총 ${total}개 기업`
+            showTotal: (total) => `Total ${total} companies`
           }}
           scroll={{ x: 1200 }}
         />

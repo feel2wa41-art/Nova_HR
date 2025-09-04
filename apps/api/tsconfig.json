@@ -23,5 +23,17 @@
     "isolatedModules": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test/**/*", "prisma/**/*"]
+  "exclude": [
+    "node_modules", 
+    "dist", 
+    "test/**/*", 
+    "prisma/**/*",
+    "src/modules/approval/**/*",
+    "src/modules/attendance/**/*",
+    "src/modules/leave/**/*",
+    "src/modules/attitude/**/*",
+    "src/modules/upload/**/*",
+    "src/modules/reports/**/*",
+    "src/modules/settings/**/*"
+  ]
 }

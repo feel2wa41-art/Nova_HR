@@ -17,6 +17,19 @@ import { CompanySettings } from './pages/admin/CompanySettings';
 import { ApprovalManagement } from './pages/admin/ApprovalManagement';
 import { HRManagement } from './pages/HRManagement';
 import { LoginPage } from './pages/auth/LoginPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { DailyReportPage } from './pages/daily-report/DailyReportPage';
+import { CreateDailyReportPage } from './pages/daily-report/CreateDailyReportPage';
+import { ViewDailyReportPage } from './pages/daily-report/ViewDailyReportPage';
+import { WeeklyReportPage } from './pages/weekly-report/WeeklyReportPage';
+import { CreateWeeklyReportPage } from './pages/weekly-report/CreateWeeklyReportPage';
+import { ViewWeeklyReportPage } from './pages/weekly-report/ViewWeeklyReportPage';
+import { UserHealthPage } from './pages/user-health/UserHealthPage';
+import { ReferenceDocumentsPage } from './pages/reference-documents/ReferenceDocumentsPage';
+import { CalendarPage } from './pages/calendar/CalendarPage';
+import { CommunityPage } from './pages/community/CommunityPage';
+import { CommunityPostDetail } from './pages/community/CommunityPostDetail';
+import { NotificationsPage } from './pages/community/NotificationsPage';
 import { useAuth } from './hooks/useAuth';
 
 const { Content } = Layout;
@@ -51,6 +64,7 @@ function App() {
     <AntdApp>
       <Routes>
         <Route path='/login' element={<LoginPage />} />
+        <Route path='/reset-password' element={<ResetPasswordPage />} />
         <Route 
           path='/' 
           element={
@@ -64,6 +78,20 @@ function App() {
           <Route path='attitude' element={<PersonalAttitudeDashboard />} />
           <Route path='leave' element={<Leave />} />
           <Route path='approval/*' element={<ApprovalPage />} />
+          <Route path='daily-report' element={<DailyReportPage />} />
+          <Route path='daily-report/create' element={<CreateDailyReportPage />} />
+          <Route path='daily-report/edit/:id' element={<CreateDailyReportPage />} />
+          <Route path='daily-report/view/:id' element={<ViewDailyReportPage />} />
+          <Route path='weekly-report' element={<WeeklyReportPage />} />
+          <Route path='weekly-report/create' element={<CreateWeeklyReportPage />} />
+          <Route path='weekly-report/edit/:id' element={<CreateWeeklyReportPage />} />
+          <Route path='weekly-report/view/:id' element={<ViewWeeklyReportPage />} />
+          <Route path='user-health' element={<UserHealthPage />} />
+          <Route path='reference-documents' element={<ReferenceDocumentsPage />} />
+          <Route path='calendar' element={<CalendarPage />} />
+          <Route path='community' element={<CommunityPage />} />
+          <Route path='community/posts/:postId' element={<CommunityPostDetail />} />
+          <Route path='community/notifications' element={<NotificationsPage />} />
           <Route path='settings' element={<Settings />} />
           <Route path='hr-management' element={<HRManagement />} />
           <Route path='admin/approval-management' element={<ApprovalManagement />} />

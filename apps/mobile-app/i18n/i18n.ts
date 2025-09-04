@@ -21,11 +21,18 @@ const getStoredLanguage = async () => {
     const stored = await AsyncStorage.getItem('language');
     if (stored) return stored;
     
+    // Check user profile language preference
+    const userData = await AsyncStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      if (user?.language) return user.language;
+    }
+    
     // Get device language
     const deviceLang = Localization.locale.split('-')[0];
     return deviceLang === 'ko' ? 'ko' : 'en';
   } catch {
-    return 'ko';
+    return 'en'; // Default to English
   }
 };
 
@@ -38,7 +45,7 @@ const initI18n = async () => {
     .init({
       resources,
       lng: language,
-      fallbackLng: 'ko',
+      fallbackLng: 'en',
       interpolation: {
         escapeValue: false
       },
@@ -50,6 +57,13 @@ const initI18n = async () => {
 export const changeLanguage = async (language: 'ko' | 'en') => {
   await AsyncStorage.setItem('language', language);
   await i18n.changeLanguage(language);
+};
+
+// Update language from user profile data
+export const updateLanguageFromUser = async (user: any) => {
+  if (user?.language && user.language !== i18n.language) {
+    await changeLanguage(user.language);
+  }
 };
 
 // Initialize on app start

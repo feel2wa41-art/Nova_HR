@@ -1,8 +1,9 @@
-import { Form, Input, Button, Card, Typography, App } from 'antd';
+import { Form, Input, Button, Card, Typography, App, Modal } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { PasswordResetModal } from './PasswordResetModal';
 
 const { Title, Text } = Typography;
 
@@ -16,6 +17,7 @@ export const LoginPage = () => {
   const [form] = Form.useForm();
   const { login, isLoading, isAuthenticated, logout } = useAuth();
   const { message } = App.useApp();
+  const [resetModalVisible, setResetModalVisible] = useState(false);
 
   // Clear any existing authentication state on login page
   useEffect(() => {
@@ -117,8 +119,23 @@ export const LoginPage = () => {
                 로그인
               </Button>
             </Form.Item>
+
+            <div className='text-center mt-4'>
+              <Button
+                type='link'
+                onClick={() => setResetModalVisible(true)}
+                className='p-0'
+              >
+                비밀번호를 잊으셨나요?
+              </Button>
+            </div>
           </Form>
         </Card>
+
+        <PasswordResetModal
+          visible={resetModalVisible}
+          onClose={() => setResetModalVisible(false)}
+        />
       </div>
     </div>
   );

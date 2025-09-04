@@ -1,6 +1,7 @@
 import { 
   Controller, 
   Get, 
+  Put,
   Patch, 
   Delete, 
   Param, 
@@ -11,9 +12,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @ApiTags('Users')
 @Controller('users')
@@ -75,6 +76,15 @@ export class UsersController {
     @Body() body: { newPassword: string }
   ) {
     return this.usersService.updatePassword(req.user.userId, body.newPassword);
+  }
+
+  @Put('me/language')
+  @ApiOperation({ summary: 'Update current user language preference' })
+  async updateLanguage(
+    @Request() req: any,
+    @Body() body: { language: string }
+  ) {
+    return this.usersService.updateUser(req.user.userId, { language: body.language });
   }
 
   @Patch(':id')

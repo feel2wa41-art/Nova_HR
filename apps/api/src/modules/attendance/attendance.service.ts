@@ -1,24 +1,24 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/services/prisma.service';
+import {
+  CheckInDto,
+  CheckOutDto,
+  AttendanceHistoryDto,
+  AttendanceAdjustmentDto,
+} from './dto/attendance.dto';
 
 @Injectable()
 export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async checkIn(userId: string, data: {
-    latitude: number;
-    longitude: number;
-    location_id?: string;
-    note?: string;
-    face_image?: string;
-  }) {
+  async checkIn(userId: string, checkInDto: CheckInDto) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const existingAttendance = await this.prisma.attendance.findFirst({
       where: {
         user_id: userId,
-        created_at: {
+        date_key: {
           gte: today,
         }
       }
@@ -29,21 +29,33 @@ export class AttendanceService {
     }
 
     let locationVerified = false;
-    let companyLocation = null;
+    let requiresApproval = false;
+    let status = 'NORMAL';
 
-    if (data.location_id) {
-      companyLocation = await this.prisma.company_location.findUnique({
-        where: { id: data.location_id }
-      });
+    // Get user's base location for verification
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId },
+      include: {
+        employee_profile: {
+          include: {
+            base_location: true
+          }
+        }
+      }
+    });
 
-      if (companyLocation) {
-        const distance = this.calculateDistance(
-          data.latitude,
-          data.longitude,
-          companyLocation.lat,
-          companyLocation.lng
-        );
-        locationVerified = distance <= companyLocation.radius_m;
+    if (user?.employee_profile?.base_location) {
+      const distance = this.calculateDistance(
+        checkInDto.location.latitude,
+        checkInDto.location.longitude,
+        user.employee_profile.base_location.lat,
+        user.employee_profile.base_location.lng
+      );
+      locationVerified = distance <= user.employee_profile.base_location.radius_m;
+      
+      if (!locationVerified) {
+        status = checkInDto.isRemote ? 'REMOTE' : 'OFFSITE';
+        requiresApproval = !checkInDto.isRemote;
       }
     }
 
@@ -52,13 +64,13 @@ export class AttendanceService {
       date_key: today,
       check_in_at: new Date(),
       check_in_loc: {
-        lat: data.latitude,
-        lng: data.longitude,
-        verified: locationVerified,
-        location_id: data.location_id
+        lat: checkInDto.location.latitude,
+        lng: checkInDto.location.longitude,
+        accuracy: checkInDto.location.accuracy,
+        verified: locationVerified
       },
-      notes: data.note,
-      status: locationVerified ? 'NORMAL' : 'OFFSITE',
+      notes: checkInDto.reasonText,
+      status,
     };
 
     if (existingAttendance) {
@@ -91,19 +103,14 @@ export class AttendanceService {
     }
   }
 
-  async checkOut(userId: string, data: {
-    latitude: number;
-    longitude: number;
-    location_id?: string;
-    note?: string;
-  }) {
+  async checkOut(userId: string, checkOutDto: CheckOutDto) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const attendance = await this.prisma.attendance.findFirst({
       where: {
         user_id: userId,
-        created_at: {
+        date_key: {
           gte: today,
         }
       }
@@ -118,20 +125,27 @@ export class AttendanceService {
     }
 
     let locationVerified = false;
-    if (data.location_id) {
-      const companyLocation = await this.prisma.company_location.findUnique({
-        where: { id: data.location_id }
-      });
-
-      if (companyLocation) {
-        const distance = this.calculateDistance(
-          data.latitude,
-          data.longitude,
-          companyLocation.lat,
-          companyLocation.lng
-        );
-        locationVerified = distance <= companyLocation.radius_m;
+    
+    // Get user's base location for verification
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId },
+      include: {
+        employee_profile: {
+          include: {
+            base_location: true
+          }
+        }
       }
+    });
+
+    if (user?.employee_profile?.base_location) {
+      const distance = this.calculateDistance(
+        checkOutDto.location.latitude,
+        checkOutDto.location.longitude,
+        user.employee_profile.base_location.lat,
+        user.employee_profile.base_location.lng
+      );
+      locationVerified = distance <= user.employee_profile.base_location.radius_m;
     }
 
     const checkOutTime = new Date();
@@ -142,13 +156,13 @@ export class AttendanceService {
       data: {
         check_out_at: checkOutTime,
         check_out_loc: {
-          lat: data.latitude,
-          lng: data.longitude,
-          verified: locationVerified,
-          location_id: data.location_id
+          lat: checkOutDto.location.latitude,
+          lng: checkOutDto.location.longitude,
+          accuracy: checkOutDto.location.accuracy,
+          verified: locationVerified
         },
         work_minutes: workingMinutes,
-        notes: attendance.notes ? `${attendance.notes} | ${data.note || ''}` : data.note,
+        notes: attendance.notes ? `${attendance.notes} | ${checkOutDto.reasonText || ''}` : checkOutDto.reasonText,
       },
       include: {
         user: {
@@ -162,39 +176,61 @@ export class AttendanceService {
     });
   }
 
-  async getAttendanceRecords(userId: string, startDate?: string, endDate?: string) {
+  async getAttendanceHistory(userId: string, historyDto: AttendanceHistoryDto) {
     const whereClause: any = { user_id: userId };
 
-    if (startDate && endDate) {
-      whereClause.created_at = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+    if (historyDto.startDate && historyDto.endDate) {
+      whereClause.date_key = {
+        gte: new Date(historyDto.startDate),
+        lte: new Date(historyDto.endDate),
       };
     }
 
-    return this.prisma.attendance.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    if (historyDto.status) {
+      whereClause.status = historyDto.status;
+    }
+
+    const skip = ((historyDto.page || 1) - 1) * (historyDto.limit || 20);
+    const take = historyDto.limit || 20;
+
+    const [data, total] = await Promise.all([
+      this.prisma.attendance.findMany({
+        where: whereClause,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
           }
-        }
-      },
-      orderBy: { created_at: 'desc' }
-    });
+        },
+        orderBy: { date_key: 'desc' },
+        skip,
+        take
+      }),
+      this.prisma.attendance.count({ where: whereClause })
+    ]);
+
+    return {
+      data,
+      pagination: {
+        total,
+        page: historyDto.page || 1,
+        limit: historyDto.limit || 20,
+        totalPages: Math.ceil(total / (historyDto.limit || 20))
+      }
+    };
   }
 
-  async getTodayAttendance(userId: string) {
+  async getCurrentAttendanceStatus(userId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return this.prisma.attendance.findFirst({
+    const todayAttendance = await this.prisma.attendance.findFirst({
       where: {
         user_id: userId,
-        created_at: {
+        date_key: {
           gte: today,
         }
       },
@@ -208,22 +244,31 @@ export class AttendanceService {
         }
       }
     });
+
+    // Get working hours policy (simplified - you might want to get from company policy)
+    const workingHours = {
+      start_time: '09:00',
+      end_time: '18:00',
+      break_duration_minutes: 60
+    };
+
+    return {
+      isCheckedIn: todayAttendance?.check_in_at && !todayAttendance?.check_out_at,
+      todayAttendance,
+      workingHours
+    };
   }
 
-  async createAttendanceRequest(userId: string, data: {
-    date: string;
-    type: 'CHECK_IN' | 'CHECK_OUT' | 'ADJUST';
-    requested_time: string;
-    reason: string;
-    supporting_documents?: string[];
-  }) {
+  async createAdjustmentRequest(userId: string, adjustmentDto: AttendanceAdjustmentDto) {
     return this.prisma.attendance_request.create({
       data: {
         user_id: userId,
-        target_at: new Date(data.requested_time),
-        request_type: data.type,
-        reason_text: data.reason,
-        attach_urls: data.supporting_documents || [],
+        request_date: new Date(adjustmentDto.date),
+        request_type: adjustmentDto.adjustmentType,
+        check_in_time: adjustmentDto.checkInTime ? new Date(adjustmentDto.checkInTime) : null,
+        check_out_time: adjustmentDto.checkOutTime ? new Date(adjustmentDto.checkOutTime) : null,
+        reason_text: adjustmentDto.reason,
+        attach_urls: adjustmentDto.attachments || [],
         status: 'PENDING',
       },
       include: {
@@ -238,9 +283,14 @@ export class AttendanceService {
     });
   }
 
-  async getAttendanceRequests(userId: string) {
+  async getUserAdjustmentRequests(userId: string, status?: string) {
+    const whereClause: any = { user_id: userId };
+    if (status) {
+      whereClause.status = status;
+    }
+
     return this.prisma.attendance_request.findMany({
-      where: { user_id: userId },
+      where: whereClause,
       include: {
         user: {
           select: {
@@ -254,22 +304,117 @@ export class AttendanceService {
     });
   }
 
-  async getAttendanceStats(userId: string, month?: string) {
-    const startOfMonth = month ? new Date(month) : new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+  async getAllAdjustmentRequests(status?: string) {
+    const whereClause: any = {};
+    if (status) {
+      whereClause.status = status;
+    }
 
-    const endOfMonth = new Date(startOfMonth);
-    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+    return this.prisma.attendance_request.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+  }
+
+  async approveAdjustmentRequest(requestId: string, adminId: string) {
+    const request = await this.prisma.attendance_request.findUnique({
+      where: { id: requestId }
+    });
+
+    if (!request) {
+      throw new NotFoundException('Adjustment request not found');
+    }
+
+    return this.prisma.attendance_request.update({
+      where: { id: requestId },
+      data: {
+        status: 'APPROVED',
+        approved_by: adminId,
+        approved_at: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        }
+      }
+    });
+  }
+
+  async rejectAdjustmentRequest(requestId: string, adminId: string, reason: string) {
+    const request = await this.prisma.attendance_request.findUnique({
+      where: { id: requestId }
+    });
+
+    if (!request) {
+      throw new NotFoundException('Adjustment request not found');
+    }
+
+    return this.prisma.attendance_request.update({
+      where: { id: requestId },
+      data: {
+        status: 'REJECTED',
+        approved_by: adminId,
+        approved_at: new Date(),
+        rejection_reason: reason,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        }
+      }
+    });
+  }
+
+  async getAttendanceStatistics(userId: string, period: string = 'month') {
+    const now = new Date();
+    let startDate: Date, endDate: Date;
+
+    switch (period) {
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        endDate = now;
+        break;
+      case 'quarter':
+        startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+        endDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0);
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+        break;
+      default: // month
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+    }
 
     const records = await this.prisma.attendance.findMany({
       where: {
         user_id: userId,
-        created_at: {
-          gte: startOfMonth,
-          lt: endOfMonth,
+        date_key: {
+          gte: startDate,
+          lte: endDate,
         }
-      }
+      },
+      orderBy: { date_key: 'desc' }
     });
 
     const totalDays = records.length;
@@ -283,12 +428,19 @@ export class AttendanceService {
       return checkInHour <= 9; // Assuming 9 AM is the standard start time
     }).length;
 
+    const statusCounts = records.reduce((acc, record) => {
+      acc[record.status] = (acc[record.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     return {
+      period,
       totalDays,
       totalWorkingHours,
       avgWorkingHours: Math.round(avgWorkingHours * 100) / 100,
       onTimeRate: totalDays > 0 ? Math.round((onTimeCheckins / totalDays) * 100) : 0,
-      records: records.slice(0, 5), // Last 5 records
+      statusBreakdown: statusCounts,
+      recentRecords: records.slice(0, 5), // Last 5 records
     };
   }
 

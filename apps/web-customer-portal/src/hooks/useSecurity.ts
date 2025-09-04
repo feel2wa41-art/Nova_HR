@@ -26,7 +26,7 @@ export const useSecurity = () => {
       () => {
         setSessionWarning(true);
         message.warning({
-          content: '세션이 곧 만료됩니다. 계속 사용하시려면 활동해주세요.',
+          content: 'Your session will expire soon. Please continue your activity to maintain your session.',
           duration: 10,
           key: 'session-warning',
         });
@@ -34,7 +34,7 @@ export const useSecurity = () => {
       () => {
         setIsSecureSession(false);
         message.error({
-          content: '보안상 세션이 만료되었습니다. 다시 로그인해주세요.',
+          content: 'Your session has expired for security reasons. Please log in again.',
           duration: 5,
           key: 'session-expired',
         });

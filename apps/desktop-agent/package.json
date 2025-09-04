@@ -2,7 +2,7 @@
   "name": "@nova-hr/desktop-agent",
   "version": "1.0.0",
   "description": "Nova HR Desktop Agent for employee monitoring and productivity tracking",
-  "main": "dist-electron/main/index.js",
+  "main": "dist-electron/index.js",
   "type": "module",
   "private": true,
   "author": "Nova HR Team",
@@ -12,7 +12,7 @@
     "build:dev": "vite build",
     "build:electron": "electron-builder",
     "build:win": "vite build && electron-builder --win",
-    "build:mac": "vite build && electron-builder --mac", 
+    "build:mac": "vite build && electron-builder --mac",
     "build:linux": "vite build && electron-builder --linux",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
@@ -26,22 +26,21 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@electron-toolkit/utils": "^3.0.0",
     "@electron/remote": "^2.0.12",
-    "active-win": "^8.0.0",
     "axios": "^1.6.2",
     "electron-store": "^9.0.0",
     "electron-updater": "^6.1.7",
-    "keytar": "^7.9.0",
     "node-cron": "^3.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
-    "screenshot-desktop": "^1.15.0",
     "sharp": "^0.33.0",
     "temp": "^0.9.4",
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
@@ -80,29 +79,33 @@
       "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
     ],
     "mac": {
-      "icon": "assets/icon.icns",
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
     "win": {
-      "icon": "assets/icon.ico",
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
     "linux": {
-      "icon": "assets/icon.png",
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },

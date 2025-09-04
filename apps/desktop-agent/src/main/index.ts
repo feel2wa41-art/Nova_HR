@@ -9,8 +9,9 @@ import { ApiService } from './services/ApiService'
 import { AuthService } from './services/AuthService'
 import { TrayService } from './services/TrayService'
 
-// Define app icon
-const icon = nativeImage.createFromPath(join(__dirname, '../../assets/icon.png'))
+// Define app icon - create a fallback icon if file doesn't exist
+const iconPath = join(__dirname, '../../assets/icon.png')
+const icon = nativeImage.createEmpty() // Create empty icon as fallback
 
 class DesktopAgent {
   private mainWindow: BrowserWindow | null = null

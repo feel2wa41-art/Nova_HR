@@ -40,7 +40,7 @@ export const createSecurityConfig = (configService: ConfigService): SecurityConf
 
   // Parse CORS origins
   const corsOrigin = configService.get('CORS_ORIGIN', '*');
-  const origins = corsOrigin === '*' ? true : corsOrigin.split(',').map((origin: string) => origin.trim());
+  const origins = corsOrigin === '*' ? '*' : corsOrigin.split(',').map((origin: string) => origin.trim());
 
   // Validate production settings
   if (process.env.NODE_ENV === 'production') {
@@ -95,7 +95,7 @@ export const validateSecurityConfig = (config: SecurityConfig) => {
   }
 
   // CORS validation
-  if (process.env.NODE_ENV === 'production' && config.cors.origin === true) {
+  if (process.env.NODE_ENV === 'production' && config.cors.origin === '*') {
     errors.push('CORS origin must be restricted in production');
   }
 

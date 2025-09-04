@@ -27,7 +27,7 @@ import {
   ApprovalStatisticsQueryDto,
   BulkApprovalImportDto
 } from './dto/approval.dto';
-import { UserRole } from '@prisma/client';
+// Removed UserRole import - using string role checks instead
 
 @ApiTags('Approval')
 @Controller('approval')
@@ -47,7 +47,7 @@ export class ApprovalController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can create approval categories');
     }
 
@@ -84,7 +84,7 @@ export class ApprovalController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can update approval categories');
     }
 
@@ -98,7 +98,7 @@ export class ApprovalController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can delete approval categories');
     }
 
@@ -188,7 +188,7 @@ export class ApprovalController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can view approval statistics');
     }
 
@@ -235,7 +235,7 @@ export class ApprovalController {
   ) {
     const userRole = req.user.roles?.[0];
 
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can import approval records');
     }
 

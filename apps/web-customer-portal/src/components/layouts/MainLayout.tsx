@@ -20,6 +20,12 @@ import {
   SendOutlined,
   FundProjectionScreenOutlined,
   EyeOutlined,
+  FileSearchOutlined,
+  CalendarTwoTone,
+  HeartOutlined,
+  BookOutlined,
+  CalendarFilled,
+  MessageOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -118,6 +124,21 @@ export const MainLayout = () => {
         label: '휴가',
       },
       {
+        key: '/daily-report',
+        icon: <FileSearchOutlined />,
+        label: '일일보고서',
+      },
+      {
+        key: '/weekly-report',
+        icon: <CalendarTwoTone />,
+        label: '주간보고서',
+      },
+      {
+        key: '/user-health',
+        icon: <HeartOutlined />,
+        label: '사용자 헬스 체크',
+      },
+      {
         key: '/approval',
         icon: <FileTextOutlined />,
         label: '전자결재',
@@ -172,6 +193,21 @@ export const MainLayout = () => {
             ),
           },
         ],
+      },
+      {
+        key: '/reference-documents',
+        icon: <BookOutlined />,
+        label: '참고결재문서',
+      },
+      {
+        key: '/calendar',
+        icon: <CalendarFilled />,
+        label: '캘린더',
+      },
+      {
+        key: '/community',
+        icon: <MessageOutlined />,
+        label: 'HR 커뮤니티',
       },
       {
         key: '/settings',

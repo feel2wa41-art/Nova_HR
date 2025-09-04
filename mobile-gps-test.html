@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nova HR - 모바일 GPS 테스트</title>
+    <title>Reko HR - Mobile GPS Test</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -95,31 +95,31 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏢 Nova HR</h1>
-            <h2>모바일 GPS 출근 테스트</h2>
+            <h1>🏢 Reko HR</h1>
+            <h2>Mobile GPS Attendance Test</h2>
         </div>
 
         <div class="status-card">
-            <h3>📍 위치 상태</h3>
-            <div id="location-status">위치 확인 중...</div>
+            <h3>📍 Location Status</h3>
+            <div id="location-status">Checking location...</div>
         </div>
 
         <div class="location-info" id="location-info" style="display: none;">
-            <h4>현재 위치</h4>
+            <h4>Current Location</h4>
             <div id="current-location"></div>
         </div>
 
         <div class="distance-info" id="distance-info" style="display: none;">
-            <h4>회사와의 거리</h4>
+            <h4>Distance from Office</h4>
             <div id="office-distance"></div>
         </div>
 
         <button id="get-location-btn" class="btn btn-primary" onclick="getCurrentLocation()">
-            위치 확인하기
+            Check Location
         </button>
 
         <button id="check-in-btn" class="btn btn-success" onclick="checkIn()" disabled>
-            출근하기
+            Check In
         </button>
 
         <div id="message-area"></div>
@@ -146,9 +146,9 @@
         let nearestOffice = null;
         let isWithinRange = false;
 
-        // 거리 계산 함수 (Haversine 공식)
+        // Distance calculation function (Haversine formula)
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // 지구 반지름 (미터)
+            const R = 6371e3; // Earth radius (meters)
             const φ1 = lat1 * Math.PI / 180;
             const φ2 = lat2 * Math.PI / 180;
             const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -162,17 +162,17 @@
             return R * c;
         }
 
-        // 현재 위치 가져오기
+        // Get current location
         function getCurrentLocation() {
             const statusElement = document.getElementById('location-status');
             const getLocationBtn = document.getElementById('get-location-btn');
             
             getLocationBtn.disabled = true;
-            getLocationBtn.textContent = '위치 확인 중...';
-            statusElement.innerHTML = '<div class="loading">GPS 위치를 가져오는 중...</div>';
+            getLocationBtn.textContent = 'Checking location...';
+            statusElement.innerHTML = '<div class="loading">Getting GPS location...</div>';
 
             if (!navigator.geolocation) {
-                showError('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+                showError('This browser does not support location services.');
                 return;
             }
 
@@ -188,28 +188,28 @@
                     checkDistanceToOffice();
                     
                     getLocationBtn.disabled = false;
-                    getLocationBtn.textContent = '위치 새로고침';
+                    getLocationBtn.textContent = 'Refresh Location';
                 },
                 error => {
                     let errorMessage = '';
                     switch(error.code) {
                         case error.PERMISSION_DENIED:
-                            errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
+                            errorMessage = 'Location permission denied. Please allow location access in browser settings.';
                             break;
                         case error.POSITION_UNAVAILABLE:
-                            errorMessage = '위치 정보를 사용할 수 없습니다.';
+                            errorMessage = 'Location information is unavailable.';
                             break;
                         case error.TIMEOUT:
-                            errorMessage = '위치 요청 시간이 초과되었습니다.';
+                            errorMessage = 'Location request timed out.';
                             break;
                         default:
-                            errorMessage = '알 수 없는 오류가 발생했습니다.';
+                            errorMessage = 'An unknown error occurred.';
                             break;
                     }
                     showError(errorMessage);
                     
                     getLocationBtn.disabled = false;
-                    getLocationBtn.textContent = '다시 시도';
+                    getLocationBtn.textContent = 'Try Again';
                 },
                 {
                     enableHighAccuracy: true,
@@ -219,23 +219,23 @@
             );
         }
 
-        // 위치 정보 표시
+        // Display location information
         function displayLocation() {
             const locationInfoElement = document.getElementById('location-info');
             const currentLocationElement = document.getElementById('current-location');
             
             locationInfoElement.style.display = 'block';
             currentLocationElement.innerHTML = `
-                <strong>위도:</strong> ${currentLocation.lat.toFixed(6)}<br>
-                <strong>경도:</strong> ${currentLocation.lng.toFixed(6)}<br>
-                <strong>정확도:</strong> ±${Math.round(currentLocation.accuracy)}m
+                <strong>Latitude:</strong> ${currentLocation.lat.toFixed(6)}<br>
+                <strong>Longitude:</strong> ${currentLocation.lng.toFixed(6)}<br>
+                <strong>Accuracy:</strong> ±${Math.round(currentLocation.accuracy)}m
             `;
 
             document.getElementById('location-status').innerHTML = 
-                '<span style="color: #28a745;">✅ 위치 확인 완료</span>';
+                '<span style="color: #28a745;">✅ Location confirmed</span>';
         }
 
-        // 회사와의 거리 확인
+        // Check distance from office
         function checkDistanceToOffice() {
             if (!currentLocation) return;
 
@@ -263,7 +263,7 @@
             displayDistanceInfo();
         }
 
-        // 거리 정보 표시
+        // Display distance information
         function displayDistanceInfo() {
             const distanceInfoElement = document.getElementById('distance-info');
             const officeDistanceElement = document.getElementById('office-distance');
@@ -276,61 +276,61 @@
                 `${(nearestOffice.distance / 1000).toFixed(1)}km`;
 
             officeDistanceElement.innerHTML = `
-                <strong>가장 가까운 사무실:</strong> ${nearestOffice.name}<br>
-                <strong>거리:</strong> ${distanceText}<br>
-                <strong>출근 반경:</strong> ${nearestOffice.radius}m<br>
-                <strong>상태:</strong> ${isWithinRange ? 
-                    '<span style="color: #28a745;">✅ 출근 가능</span>' : 
-                    '<span style="color: #dc3545;">❌ 출근 불가능</span>'
+                <strong>Nearest Office:</strong> ${nearestOffice.name}<br>
+                <strong>Distance:</strong> ${distanceText}<br>
+                <strong>Check-in Range:</strong> ${nearestOffice.radius}m<br>
+                <strong>Status:</strong> ${isWithinRange ? 
+                    '<span style="color: #28a745;">✅ Check-in available</span>' : 
+                    '<span style="color: #dc3545;">❌ Check-in not available</span>'
                 }
             `;
 
-            // 출근 버튼 상태 업데이트
+            // Update check-in button status
             checkInBtn.disabled = !isWithinRange;
             if (isWithinRange) {
                 checkInBtn.className = 'btn btn-success';
-                checkInBtn.textContent = '출근하기';
+                checkInBtn.textContent = 'Check In';
             } else {
                 checkInBtn.className = 'btn btn-danger';
-                checkInBtn.textContent = `출근 불가 (${Math.round(nearestOffice.distance - nearestOffice.radius)}m 더 가까이)`;
+                checkInBtn.textContent = `Check-in unavailable (${Math.round(nearestOffice.distance - nearestOffice.radius)}m closer needed)`;
             }
         }
 
-        // 출근하기
+        // Check in
         function checkIn() {
             if (!isWithinRange) {
-                showError('회사 위치 반경 내에 있지 않습니다.');
+                showError('You are not within the office location range.');
                 return;
             }
 
             const now = new Date();
-            const timeString = now.toLocaleTimeString('ko-KR');
+            const timeString = now.toLocaleTimeString('en-US');
             
-            showSuccess(`✅ 출근 완료!\n시간: ${timeString}\n위치: ${nearestOffice.name}`);
+            showSuccess(`✅ Check-in completed!\nTime: ${timeString}\nLocation: ${nearestOffice.name}`);
             
-            // 출근 버튼 비활성화
+            // Disable check-in button
             const checkInBtn = document.getElementById('check-in-btn');
             checkInBtn.disabled = true;
-            checkInBtn.textContent = '출근 완료';
+            checkInBtn.textContent = 'Checked In';
             checkInBtn.className = 'btn btn-success';
         }
 
-        // 에러 메시지 표시
+        // Display error message
         function showError(message) {
             const messageArea = document.getElementById('message-area');
             messageArea.innerHTML = `<div class="error">${message}</div>`;
             
             document.getElementById('location-status').innerHTML = 
-                '<span style="color: #dc3545;">❌ 위치 확인 실패</span>';
+                '<span style="color: #dc3545;">❌ Location check failed</span>';
         }
 
-        // 성공 메시지 표시
+        // Display success message
         function showSuccess(message) {
             const messageArea = document.getElementById('message-area');
             messageArea.innerHTML = `<div class="success">${message}</div>`;
         }
 
-        // 페이지 로드 시 자동으로 위치 확인 시작
+        // Automatically start location check when page loads
         window.onload = function() {
             setTimeout(getCurrentLocation, 1000);
         };

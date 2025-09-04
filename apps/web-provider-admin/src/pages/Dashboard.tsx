@@ -54,22 +54,22 @@ const Dashboard: React.FC = () => {
 
   const columns = [
     {
-      title: '회사명',
+      title: 'Company Name',
       dataIndex: 'companyName',
       key: 'companyName',
     },
     {
-      title: '요청자',
+      title: 'Requester',
       dataIndex: 'requesterName',
       key: 'requesterName',
     },
     {
-      title: '요청일',
+      title: 'Request Date',
       dataIndex: 'requestDate',
       key: 'requestDate',
     },
     {
-      title: '상태',
+      title: 'Status',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
@@ -79,9 +79,9 @@ const Dashboard: React.FC = () => {
           REJECTED: 'red'
         };
         const labels = {
-          PENDING: '대기중',
-          APPROVED: '승인됨',
-          REJECTED: '거부됨'
+          PENDING: 'Pending',
+          APPROVED: 'Approved',
+          REJECTED: 'Rejected'
         };
         return (
           <Tag color={colors[status as keyof typeof colors]}>
@@ -95,7 +95,7 @@ const Dashboard: React.FC = () => {
   return (
     <div>
       <Title level={2} style={{ marginBottom: '24px' }}>
-        📊 서비스 제공자 대시보드
+        📊 Service Provider Dashboard
       </Title>
       
       {/* 통계 카드 */}
@@ -103,7 +103,7 @@ const Dashboard: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="총 기업 수"
+              title="Total Companies"
               value={dashboardStats.totalCompanies}
               prefix={<BankOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -113,7 +113,7 @@ const Dashboard: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="활성 기업"
+              title="Active Companies"
               value={dashboardStats.activeCompanies}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -123,7 +123,7 @@ const Dashboard: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="대기 중 신청"
+              title="Pending Applications"
               value={dashboardStats.pendingRequests}
               prefix={<TeamOutlined />}
               valueStyle={{ color: '#fa8c16' }}
@@ -133,7 +133,7 @@ const Dashboard: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="총 사용자"
+              title="Total Users"
               value={dashboardStats.totalUsers}
               prefix={<UserOutlined />}
               valueStyle={{ color: '#722ed1' }}
@@ -147,10 +147,10 @@ const Dashboard: React.FC = () => {
         <Col span={12}>
           <Card>
             <Statistic
-              title="이번 달 예상 매출"
+              title="This Month's Expected Revenue"
               value={dashboardStats.monthlyRevenue}
               prefix={<DollarOutlined />}
-              suffix="원"
+              suffix="KRW"
               valueStyle={{ color: '#f5222d' }}
               formatter={(value) => `${Number(value).toLocaleString()}`}
             />
@@ -159,10 +159,10 @@ const Dashboard: React.FC = () => {
         <Col span={12}>
           <Card>
             <Statistic
-              title="평균 기업당 매출"
+              title="Average Revenue per Company"
               value={Math.round(dashboardStats.monthlyRevenue / dashboardStats.activeCompanies)}
               prefix={<BankOutlined />}
-              suffix="원"
+              suffix="KRW"
               valueStyle={{ color: '#13c2c2' }}
               formatter={(value) => `${Number(value).toLocaleString()}`}
             />
@@ -171,7 +171,7 @@ const Dashboard: React.FC = () => {
       </Row>
 
       {/* 최근 기업 가입 신청 */}
-      <Card title="🏢 최근 기업 가입 신청" style={{ marginBottom: '32px' }}>
+      <Card title="🏢 Recent Company Applications" style={{ marginBottom: '32px' }}>
         <Table
           dataSource={recentRequests}
           columns={columns}
@@ -184,45 +184,45 @@ const Dashboard: React.FC = () => {
       {/* 시스템 상태 */}
       <Row gutter={[16, 16]}>
         <Col span={12}>
-          <Card title="🔧 시스템 상태">
+          <Card title="🔧 System Status">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>API 서버</span>
-                <Tag color="green">정상</Tag>
+                <span>API Server</span>
+                <Tag color="green">Normal</Tag>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>데이터베이스</span>
-                <Tag color="green">정상</Tag>
+                <span>Database</span>
+                <Tag color="green">Normal</Tag>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>이메일 서비스</span>
-                <Tag color="green">정상</Tag>
+                <span>Email Service</span>
+                <Tag color="green">Normal</Tag>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>파일 저장소</span>
-                <Tag color="orange">점검중</Tag>
+                <span>File Storage</span>
+                <Tag color="orange">Maintenance</Tag>
               </div>
             </div>
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="📈 이번 주 활동">
+          <Card title="📈 This Week's Activity">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>새 기업 가입</span>
-                <strong style={{ color: '#1890ff' }}>3개</strong>
+                <span>New Company Registrations</span>
+                <strong style={{ color: '#1890ff' }}>3</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>승인 처리</span>
-                <strong style={{ color: '#52c41a' }}>2건</strong>
+                <span>Approvals Processed</span>
+                <strong style={{ color: '#52c41a' }}>2</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>신규 사용자</span>
-                <strong style={{ color: '#722ed1' }}>45명</strong>
+                <span>New Users</span>
+                <strong style={{ color: '#722ed1' }}>45</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>지원 티켓</span>
-                <strong style={{ color: '#fa8c16' }}>1건</strong>
+                <span>Support Tickets</span>
+                <strong style={{ color: '#fa8c16' }}>1</strong>
               </div>
             </div>
           </Card>

@@ -72,21 +72,18 @@ export class AdminService {
           name: dto.name,
           password: hashedPassword,
           role: dto.role,
-          company_id: dto.companyId,
-          is_active: true,
-          email_verified: true,
-          employee_profile: dto.empNo || dto.department || dto.title || dto.phone ? {
+          tenant_id: dto.companyId,
+          status: "ACTIVE",
+          employee_profile: dto.empNo || dto.department || dto.phone ? {
             create: {
               emp_no: dto.empNo,
               department: dto.department,
-              title: dto.title,
-              phone: dto.phone,
               hire_date: new Date(),
             },
           } : undefined,
         },
         include: {
-          company: true,
+          tenant: true,
           employee_profile: true,
         },
       });
@@ -116,7 +113,7 @@ export class AdminService {
       }
 
       // Check permission
-      if (!isGlobalAdmin && user.company_id !== adminCompanyId) {
+      if (!isGlobalAdmin && user.tenant_id !== adminCompanyId) {
         throw new ForbiddenException('Cannot update user from different company');
       }
 
@@ -126,28 +123,23 @@ export class AdminService {
         data: {
           name: dto.name,
           role: dto.role,
-          is_active: dto.isActive,
-          employee_profile: (dto.empNo !== undefined || dto.department !== undefined || 
-                           dto.title !== undefined || dto.phone !== undefined) ? {
+          status: dto.isActive ? "ACTIVE" : "INACTIVE",
+          employee_profile: (dto.empNo !== undefined || dto.department !== undefined || dto.phone !== undefined) ? {
             upsert: {
               create: {
                 emp_no: dto.empNo,
                 department: dto.department,
-                title: dto.title,
-                phone: dto.phone,
                 hire_date: new Date(),
               },
               update: {
                 emp_no: dto.empNo,
                 department: dto.department,
-                title: dto.title,
-                phone: dto.phone,
               },
             },
           } : undefined,
         },
         include: {
-          company: true,
+          tenant: true,
           employee_profile: true,
         },
       });
@@ -170,9 +162,9 @@ export class AdminService {
 
       // Company filter
       if (isGlobalAdmin && dto.companyId) {
-        whereClause.company_id = dto.companyId;
+        whereClause.tenant_id = dto.companyId;
       } else if (!isGlobalAdmin) {
-        whereClause.company_id = adminCompanyId;
+        whereClause.tenant_id = adminCompanyId;
       }
 
       // Role filter
@@ -182,7 +174,7 @@ export class AdminService {
 
       // Status filter
       if (dto.isActive !== undefined) {
-        whereClause.is_active = dto.isActive;
+        whereClause.status = dto.isActive ? "ACTIVE" : "INACTIVE";
       }
 
       // Department filter
@@ -207,11 +199,11 @@ export class AdminService {
         this.prisma.auth_user.findMany({
           where: whereClause,
           include: {
-            company: {
+            tenant: {
               select: {
                 id: true,
                 name: true,
-                code: true,
+                domain: true,
               },
             },
             employee_profile: true,
@@ -253,7 +245,7 @@ export class AdminService {
       }
 
       // Check permission
-      if (!isGlobalAdmin && user.company_id !== adminCompanyId) {
+      if (!isGlobalAdmin && user.tenant_id !== adminCompanyId) {
         throw new ForbiddenException('Cannot delete user from different company');
       }
 
@@ -266,8 +258,8 @@ export class AdminService {
       await this.prisma.auth_user.update({
         where: { id: userId },
         data: {
-          is_active: false,
-          deleted_at: new Date(),
+          status: "INACTIVE",
+          updated_at: new Date(),
         },
       });
 
@@ -290,12 +282,12 @@ export class AdminService {
         },
         select: {
           id: true,
-          company_id: true,
+          tenant_id: true,
         },
       });
 
       if (!isGlobalAdmin) {
-        const unauthorizedUsers = users.filter(user => user.company_id !== adminCompanyId);
+        const unauthorizedUsers = users.filter(user => user.tenant_id !== adminCompanyId);
         if (unauthorizedUsers.length > 0) {
           throw new ForbiddenException('Cannot perform action on users from different companies');
         }
@@ -309,13 +301,13 @@ export class AdminService {
       let updateData: any;
       switch (dto.action) {
         case 'activate':
-          updateData = { is_active: true, deleted_at: null };
+          updateData = { status: "ACTIVE" };
           break;
         case 'deactivate':
-          updateData = { is_active: false };
+          updateData = { status: "INACTIVE" };
           break;
         case 'delete':
-          updateData = { is_active: false, deleted_at: new Date() };
+          updateData = { status: "INACTIVE" };
           break;
         default:
           throw new BadRequestException('Invalid action');
@@ -353,7 +345,7 @@ export class AdminService {
       }
 
       // Check permission
-      if (!isGlobalAdmin && user.company_id !== adminCompanyId) {
+      if (!isGlobalAdmin && user.tenant_id !== adminCompanyId) {
         throw new ForbiddenException('Cannot reset password for user from different company');
       }
 
@@ -365,7 +357,7 @@ export class AdminService {
         where: { id: dto.userId },
         data: {
           password: hashedPassword,
-          password_changed_at: new Date(),
+          updated_at: new Date(),
         },
       });
 
@@ -386,24 +378,20 @@ export class AdminService {
         throw new ForbiddenException('Global admin access required');
       }
 
-      // Check if company code already exists
-      const existingCompany = await this.prisma.company.findUnique({
-        where: { code: dto.code },
+      // Check if company domain already exists
+      const existingCompany = await this.prisma.tenant.findUnique({
+        where: { domain: dto.code },
       });
 
       if (existingCompany) {
         throw new ConflictException('Company code already exists');
       }
 
-      const company = await this.prisma.company.create({
+      const company = await this.prisma.tenant.create({
         data: {
           name: dto.name,
-          code: dto.code,
-          business_number: dto.businessNumber,
-          address: dto.address,
-          phone: dto.phone,
-          email: dto.email,
-          is_active: true,
+          domain: dto.code,
+          status: "ACTIVE",
         },
       });
 
@@ -423,7 +411,7 @@ export class AdminService {
         throw new ForbiddenException('Global admin access required');
       }
 
-      const company = await this.prisma.company.findUnique({
+      const company = await this.prisma.tenant.findUnique({
         where: { id: companyId },
       });
 
@@ -431,15 +419,11 @@ export class AdminService {
         throw new NotFoundException('Company not found');
       }
 
-      const updatedCompany = await this.prisma.company.update({
+      const updatedCompany = await this.prisma.tenant.update({
         where: { id: companyId },
         data: {
           name: dto.name,
-          business_number: dto.businessNumber,
-          address: dto.address,
-          phone: dto.phone,
-          email: dto.email,
-          is_active: dto.isActive,
+          status: dto.isActive ? "ACTIVE" : "INACTIVE",
         },
       });
 
@@ -459,12 +443,12 @@ export class AdminService {
         throw new ForbiddenException('Global admin access required');
       }
 
-      const companies = await this.prisma.company.findMany({
+      const companies = await this.prisma.tenant.findMany({
         include: {
           _count: {
             select: {
               users: true,
-              locations: true,
+              companies: true,
             },
           },
         },
@@ -508,7 +492,6 @@ export class AdminService {
             select: {
               id: true,
               name: true,
-              code: true,
             },
           },
         },
@@ -563,9 +546,9 @@ export class AdminService {
       const whereClause: any = {};
       
       if (isGlobalAdmin && dto.companyId) {
-        whereClause.company_id = dto.companyId;
+        whereClause.tenant_id = dto.companyId;
       } else if (!isGlobalAdmin && adminCompanyId) {
-        whereClause.company_id = adminCompanyId;
+        whereClause.tenant_id = adminCompanyId;
       }
 
       // Get user statistics
@@ -582,11 +565,11 @@ export class AdminService {
         this.prisma.auth_user.count({
           where: {
             ...whereClause,
-            is_active: true,
+            status: "ACTIVE",
           },
         }),
-        isGlobalAdmin ? this.prisma.company.count({
-          where: { is_active: true },
+        isGlobalAdmin ? this.prisma.tenant.count({
+          where: { status: "ACTIVE" },
         }) : Promise.resolve(1),
         this.prisma.attendance.count({
           where: {
@@ -603,9 +586,9 @@ export class AdminService {
               gte: startDate,
               lte: endDate,
             },
-            ...(whereClause.company_id ? {
+            ...(whereClause.tenant_id ? {
               user: {
-                company_id: whereClause.company_id,
+                tenant_id: whereClause.tenant_id,
               },
             } : {}),
           },
@@ -661,38 +644,24 @@ export class AdminService {
         throw new ForbiddenException('Cannot update settings for different company');
       }
 
-      // Update or create company settings
-      const settings = await this.prisma.company_settings.upsert({
+      // Update or create settings using the generic settings table
+      const settings = await this.prisma.settings.upsert({
         where: {
-          company_id: companyId,
+          category_key_company_id: {
+            category: "SYSTEM",
+            key: "GENERAL",
+            company_id: companyId,
+          },
         },
         update: {
-          working_hours_per_day: dto.workingHoursPerDay,
-          working_days_per_week: dto.workingDaysPerWeek,
-          default_attendance_radius: dto.defaultAttendanceRadius,
-          allow_remote_work: dto.allowRemoteWork,
-          require_face_verification: dto.requireFaceVerification,
-          screenshot_interval: dto.screenshotInterval,
-          enable_attitude_monitoring: dto.enableAttitudeMonitoring,
+          value: dto as any,
           updated_at: new Date(),
         },
         create: {
           company_id: companyId,
-          working_hours_per_day: dto.workingHoursPerDay ?? 8,
-          working_days_per_week: dto.workingDaysPerWeek ?? 5,
-          default_attendance_radius: dto.defaultAttendanceRadius ?? 200,
-          allow_remote_work: dto.allowRemoteWork ?? false,
-          require_face_verification: dto.requireFaceVerification ?? false,
-          screenshot_interval: dto.screenshotInterval ?? 5,
-          enable_attitude_monitoring: dto.enableAttitudeMonitoring ?? true,
-        },
-        include: {
-          company: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          category: "SYSTEM",
+          key: "GENERAL",
+          value: dto as any,
         },
       });
 

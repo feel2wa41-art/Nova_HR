@@ -108,12 +108,12 @@ export const RouteTemplateManagement = () => {
   const createTemplateMutation = useMutation({
     mutationFn: (data: any) => approvalApi.createRouteTemplate(data),
     onSuccess: () => {
-      message.success('결재선 템플릿이 생성되었습니다.');
+      message.success('Approval route template has been created.');
       queryClient.invalidateQueries({ queryKey: ['adminApprovalTemplates'] });
       handleCancel();
     },
     onError: () => {
-      message.error('템플릿 생성에 실패했습니다.');
+      message.error('Failed to create template.');
     },
   });
 
@@ -122,12 +122,12 @@ export const RouteTemplateManagement = () => {
     mutationFn: ({ id, data }: { id: string; data: any }) => 
       approvalApi.updateRouteTemplate(id, data),
     onSuccess: () => {
-      message.success('결재선 템플릿이 수정되었습니다.');
+      message.success('Approval route template has been updated.');
       queryClient.invalidateQueries({ queryKey: ['adminApprovalTemplates'] });
       handleCancel();
     },
     onError: () => {
-      message.error('템플릿 수정에 실패했습니다.');
+      message.error('Failed to update template.');
     },
   });
 
@@ -135,11 +135,11 @@ export const RouteTemplateManagement = () => {
   const deleteTemplateMutation = useMutation({
     mutationFn: (id: string) => approvalApi.deleteRouteTemplate(id),
     onSuccess: () => {
-      message.success('결재선 템플릿이 삭제되었습니다.');
+      message.success('Approval route template has been deleted.');
       queryClient.invalidateQueries({ queryKey: ['adminApprovalTemplates'] });
     },
     onError: () => {
-      message.error('템플릿 삭제에 실패했습니다.');
+      message.error('Failed to delete template.');
     },
   });
 
@@ -154,9 +154,9 @@ export const RouteTemplateManagement = () => {
 
   const getStageTypeName = (type: string) => {
     switch (type) {
-      case 'AGREEMENT': return '합의';
-      case 'APPROVAL': return '결재';
-      case 'REFERENCE': return '참조';
+      case 'AGREEMENT': return 'Agreement';
+      case 'APPROVAL': return 'Approval';
+      case 'REFERENCE': return 'Reference';
       default: return type;
     }
   };
@@ -241,7 +241,7 @@ export const RouteTemplateManagement = () => {
   const addStage = () => {
     const newStage: Omit<RouteStage, 'id'> = {
       stage_type: 'APPROVAL',
-      name: `결재 단계 ${stages.length + 1}`,
+      name: `Approval Stage ${stages.length + 1}`,
       order_index: stages.length,
       mode: 'ALL',
       approvers: [],
@@ -287,12 +287,12 @@ export const RouteTemplateManagement = () => {
 
   const columns: ColumnsType<RouteTemplate> = [
     {
-      title: '템플릿명',
+      title: 'Template Name',
       dataIndex: 'name',
       render: (text, record) => (
         <div>
           <Text strong>{text}</Text>
-          {record.is_default && <Tag color="green" style={{ marginLeft: 8 }}>기본</Tag>}
+          {record.is_default && <Tag color="green" style={{ marginLeft: 8 }}>Default</Tag>}
           {record.description && (
             <>
               <br />
@@ -305,40 +305,40 @@ export const RouteTemplateManagement = () => {
       ),
     },
     {
-      title: '카테고리',
+      title: 'Category',
       dataIndex: 'category',
       width: 120,
       render: (category) => category ? (
         <Tag color="blue">{category.name}</Tag>
       ) : (
-        <Tag>전체</Tag>
+        <Tag>All</Tag>
       ),
     },
     {
-      title: '결재 단계',
+      title: 'Approval Stages',
       dataIndex: 'stages',
       render: (stages: RouteStage[]) => (
         <div className="flex gap-1 flex-wrap">
           {stages?.map((stage, index) => (
             <Tag key={stage.id} color={getStageColor(stage.stage_type)}>
-              {index + 1}. {getStageTypeName(stage.stage_type)} ({stage.approvers?.length || 0}명)
+              {index + 1}. {getStageTypeName(stage.stage_type)} ({stage.approvers?.length || 0} people)
             </Tag>
           )) || []}
         </div>
       ),
     },
     {
-      title: '상태',
+      title: 'Status',
       dataIndex: 'is_active',
       width: 100,
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'}>
-          {isActive ? '활성' : '비활성'}
+          {isActive ? 'Active' : 'Inactive'}
         </Tag>
       ),
     },
     {
-      title: '작업',
+      title: 'Actions',
       key: 'actions',
       width: 150,
       render: (_, record) => (
@@ -349,13 +349,13 @@ export const RouteTemplateManagement = () => {
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           >
-            수정
+            Edit
           </Button>
           <Popconfirm
-            title="정말 삭제하시겠습니까?"
+            title="Are you sure you want to delete this?"
             onConfirm={() => handleDelete(record.id)}
-            okText="삭제"
-            cancelText="취소"
+            okText="Delete"
+            cancelText="Cancel"
           >
             <Button
               type="text"
@@ -363,7 +363,7 @@ export const RouteTemplateManagement = () => {
               danger
               icon={<DeleteOutlined />}
             >
-              삭제
+              Delete
             </Button>
           </Popconfirm>
         </Space>
@@ -374,9 +374,9 @@ export const RouteTemplateManagement = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <Title level={4}>결재선 템플릿 관리</Title>
+        <Title level={4}>Approval Route Template Management</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          템플릿 추가
+          Add Template
         </Button>
       </div>
 
@@ -389,17 +389,17 @@ export const RouteTemplateManagement = () => {
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>
-            `${range[0]}-${range[1]} / 총 ${total}개`,
+            `${range[0]}-${range[1]} / Total ${total} items`,
         }}
       />
 
       <Modal
-        title={editingTemplate ? '결재선 템플릿 수정' : '결재선 템플릿 추가'}
+        title={editingTemplate ? 'Edit Approval Route Template' : 'Add Approval Route Template'}
         open={modalVisible}
         onCancel={handleCancel}
         footer={[
           <Button key="cancel" onClick={handleCancel}>
-            취소
+            Cancel
           </Button>,
           <Button
             key="submit"
@@ -407,7 +407,7 @@ export const RouteTemplateManagement = () => {
             onClick={handleSubmit}
             loading={createTemplateMutation.isPending || updateTemplateMutation.isPending}
           >
-            {editingTemplate ? '수정' : '생성'}
+            {editingTemplate ? 'Update' : 'Create'}
           </Button>,
         ]}
         width={800}
@@ -417,16 +417,16 @@ export const RouteTemplateManagement = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="템플릿명"
+                label="Template Name"
                 name="name"
-                rules={[{ required: true, message: '템플릿명을 입력해주세요' }]}
+                rules={[{ required: true, message: 'Please enter template name' }]}
               >
-                <Input placeholder="예: 기본 결재선" />
+                <Input placeholder="e.g. Default Approval Route" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="카테고리" name="category_id">
-                <Select placeholder="카테고리 선택" allowClear>
+              <Form.Item label="Category" name="category_id">
+                <Select placeholder="Select category" allowClear>
                   {categories.map((category: any) => (
                     <Select.Option key={category.id} value={category.id}>
                       {category.name}
@@ -437,28 +437,28 @@ export const RouteTemplateManagement = () => {
             </Col>
           </Row>
 
-          <Form.Item label="설명" name="description">
-            <TextArea rows={2} placeholder="템플릿 설명을 입력하세요" />
+          <Form.Item label="Description" name="description">
+            <TextArea rows={2} placeholder="Enter template description" />
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="기본 템플릿" name="is_default" valuePropName="checked">
+              <Form.Item label="Default Template" name="is_default" valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="활성화" name="is_active" valuePropName="checked" initialValue={true}>
+              <Form.Item label="Active" name="is_active" valuePropName="checked" initialValue={true}>
                 <Switch />
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider>결재 단계 설정</Divider>
+          <Divider>Approval Stage Setup</Divider>
 
           <div className="mb-4">
             <Button type="dashed" onClick={addStage} icon={<PlusOutlined />}>
-              단계 추가
+              Add Stage
             </Button>
           </div>
 
@@ -473,7 +473,7 @@ export const RouteTemplateManagement = () => {
               {stages.map((stage, index) => (
                 <Step
                   key={index}
-                  title={`${index + 1}단계`}
+                  title={`Stage ${index + 1}`}
                   description={getStageTypeName(stage.stage_type)}
                 />
               ))}
@@ -481,46 +481,46 @@ export const RouteTemplateManagement = () => {
           )}
 
           {stages.length > 0 && (
-            <Card title={`${currentStage + 1}단계 설정`} size="small">
+            <Card title={`Stage ${currentStage + 1} Setup`} size="small">
               <Row gutter={16}>
                 <Col span={8}>
                   <div className="mb-2">
-                    <Text strong>단계 유형</Text>
+                    <Text strong>Stage Type</Text>
                   </div>
                   <Select
                     value={stages[currentStage]?.stage_type}
                     onChange={(value) => updateStage(currentStage, { stage_type: value })}
                     style={{ width: '100%' }}
                   >
-                    <Select.Option value="AGREEMENT">합의</Select.Option>
-                    <Select.Option value="APPROVAL">결재</Select.Option>
-                    <Select.Option value="REFERENCE">참조</Select.Option>
+                    <Select.Option value="AGREEMENT">Agreement</Select.Option>
+                    <Select.Option value="APPROVAL">Approval</Select.Option>
+                    <Select.Option value="REFERENCE">Reference</Select.Option>
                   </Select>
                 </Col>
                 <Col span={8}>
                   <div className="mb-2">
-                    <Text strong>승인 모드</Text>
+                    <Text strong>Approval Mode</Text>
                   </div>
                   <Select
                     value={stages[currentStage]?.mode}
                     onChange={(value) => updateStage(currentStage, { mode: value })}
                     style={{ width: '100%' }}
                   >
-                    <Select.Option value="ALL">전체 승인</Select.Option>
-                    <Select.Option value="ANY">일부 승인</Select.Option>
-                    <Select.Option value="SEQUENTIAL">순차 승인</Select.Option>
+                    <Select.Option value="ALL">All Approval</Select.Option>
+                    <Select.Option value="ANY">Partial Approval</Select.Option>
+                    <Select.Option value="SEQUENTIAL">Sequential Approval</Select.Option>
                   </Select>
                 </Col>
                 <Col span={8}>
                   <div className="mb-2">
-                    <Text strong>작업</Text>
+                    <Text strong>Actions</Text>
                   </div>
                   <Button
                     danger
                     onClick={() => removeStage(currentStage)}
                     disabled={stages.length <= 1}
                   >
-                    단계 삭제
+                    Delete Stage
                   </Button>
                 </Col>
               </Row>
@@ -528,12 +528,12 @@ export const RouteTemplateManagement = () => {
               <Divider />
 
               <div className="mb-2">
-                <Text strong>승인자 목록</Text>
+                <Text strong>Approver List</Text>
               </div>
 
               <Row gutter={16}>
                 <Col span={12}>
-                  <Card title="사용자 선택" size="small">
+                  <Card title="Select Users" size="small">
                     <List
                       dataSource={users}
                       renderItem={(user: User) => (
@@ -547,7 +547,7 @@ export const RouteTemplateManagement = () => {
                                 (a) => a.user_id === user.id
                               )}
                             >
-                              추가
+                              Add
                             </Button>,
                           ]}
                         >
@@ -563,7 +563,7 @@ export const RouteTemplateManagement = () => {
                   </Card>
                 </Col>
                 <Col span={12}>
-                  <Card title="선택된 승인자" size="small">
+                  <Card title="Selected Approvers" size="small">
                     {stages[currentStage]?.approvers.length > 0 ? (
                       <List
                         dataSource={stages[currentStage].approvers}
@@ -575,7 +575,7 @@ export const RouteTemplateManagement = () => {
                                 size="small"
                                 onClick={() => removeApproverFromStage(currentStage, index)}
                               >
-                                제거
+                                Remove
                               </Button>,
                             ]}
                           >
@@ -589,7 +589,7 @@ export const RouteTemplateManagement = () => {
                         style={{ maxHeight: 300, overflowY: 'auto' }}
                       />
                     ) : (
-                      <Empty description="승인자를 선택해주세요" />
+                      <Empty description="Please select approvers" />
                     )}
                   </Card>
                 </Col>

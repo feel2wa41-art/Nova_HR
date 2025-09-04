@@ -11,9 +11,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
-import { RolesGuard } from '../../shared/guards/roles.guard';
-import { Roles } from '../../shared/decorators/roles.decorator';
+import { EnhancedJwtAuthGuard } from '../../auth/guards/enhanced-jwt.guard';
 import { AdminService } from './admin.service';
 import {
   CreateUserDto,
@@ -30,8 +28,7 @@ import {
 
 @ApiTags('Admin Management')
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'hr_manager')
+@UseGuards(EnhancedJwtAuthGuard)
 @ApiBearerAuth()
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -124,7 +121,6 @@ export class AdminController {
 
   // Company Management (Global Admin only)
   @Post('companies')
-  @Roles('admin')
   @ApiOperation({ summary: 'Create company (Global Admin only)' })
   @ApiResponse({ status: 201, description: 'Company created successfully' })
   @ApiResponse({ status: 403, description: 'Global admin access required' })
@@ -133,7 +129,6 @@ export class AdminController {
   }
 
   @Get('companies')
-  @Roles('admin')
   @ApiOperation({ summary: 'Get company list (Global Admin only)' })
   @ApiResponse({ status: 200, description: 'Company list retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Global admin access required' })
@@ -142,7 +137,6 @@ export class AdminController {
   }
 
   @Put('companies/:id')
-  @Roles('admin')
   @ApiOperation({ summary: 'Update company (Global Admin only)' })
   @ApiResponse({ status: 200, description: 'Company updated successfully' })
   @ApiResponse({ status: 403, description: 'Global admin access required' })
@@ -261,7 +255,7 @@ export class AdminController {
     const departments = await this.adminService['prisma'].employee_profile.findMany({
       where: {
         user: {
-          company_id: req.user.role === 'admin' ? undefined : req.user.companyId,
+          tenant_id: req.user.role === 'admin' ? undefined : req.user.tenantId,
         },
       },
       select: {
@@ -291,7 +285,7 @@ export class AdminController {
       this.adminService['prisma'].company.count(),
       this.adminService['prisma'].auth_user.count({
         where: {
-          last_login_at: {
+          last_login: {
             gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
           },
         },

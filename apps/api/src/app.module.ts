@@ -1,21 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { ScheduleModule } from '@nestjs/schedule';
 
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './modules/users/users.module';
-import { CompanyModule } from './modules/company/company.module';
-import { AttendanceModule } from './modules/attendance/attendance.module';
-// import { LeaveModule } from './modules/leave/leave.module';
-import { ApprovalModule } from './modules/approval/approval.module';
-import { UploadModule } from './modules/upload/upload.module';
-import { NotificationModule } from './modules/notification/notification.module';
-import { ReportsModule } from './modules/reports/reports.module';
-import { SettingsModule } from './modules/settings/settings.module';
-import { AttitudeModule } from './modules/attitude/attitude.module';
-import { AdminModule } from './modules/admin/admin.module';
+import { CompanyRequestModule } from './modules/company-request/company-request.module';
+import { EmailModule } from './modules/email/email.module';
+import { DailyReportModule } from './modules/daily-report/daily-report.module';
+import { WeeklyReportModule } from './modules/weekly-report/weekly-report.module';
+import { ReferenceDocumentModule } from './modules/reference-document/reference-document.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
+import { HrCommunityModule } from './modules/hr-community/hr-community.module';
+import awsConfig from './config/aws.config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -26,6 +22,7 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      load: [awsConfig],
     }),
 
     // Rate limiting
@@ -40,23 +37,16 @@ import { AppService } from './app.service';
       }),
     }),
 
-    // Scheduling
-    ScheduleModule.forRoot(),
-
-    // Core modules
+    // Essential modules only
     SharedModule,
     AuthModule,
-    UsersModule,
-    CompanyModule,
-    AttendanceModule,
-    // LeaveModule,
-    ApprovalModule,
-    UploadModule,
-    NotificationModule,
-    ReportsModule,
-    SettingsModule,
-    AttitudeModule,
-    AdminModule,
+    CompanyRequestModule,
+    EmailModule,
+    DailyReportModule,
+    WeeklyReportModule,
+    ReferenceDocumentModule,
+    CalendarModule,
+    HrCommunityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

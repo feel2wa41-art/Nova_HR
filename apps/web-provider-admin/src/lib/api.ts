@@ -93,19 +93,19 @@ export const authAPI = {
 // Company Registration APIs
 export const companyAPI = {
   getRegistrationRequests: async (): Promise<CompanyRequest[]> => {
-    const response = await api.get('/company/registration-requests');
+    const response = await api.get('/company-requests');
     return response.data;
   },
 
   approveRegistration: async (requestId: string, notes?: string) => {
-    const response = await api.post(`/company/registration-requests/${requestId}/approve`, {
+    const response = await api.post(`/company-requests/${requestId}/approve`, {
       notes,
     });
     return response.data;
   },
 
   rejectRegistration: async (requestId: string, notes?: string) => {
-    const response = await api.post(`/company/registration-requests/${requestId}/reject`, {
+    const response = await api.post(`/company-requests/${requestId}/reject`, {
       notes,
     });
     return response.data;

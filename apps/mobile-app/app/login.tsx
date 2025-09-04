@@ -17,6 +17,8 @@ import {
 } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { authService, AuthResponse } from '../services/auth';
+import { updateLanguageFromUser } from '../i18n/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('employee@nova-hr.com');
@@ -38,6 +40,10 @@ export default function LoginScreen() {
         email: email.trim(),
         password: password
       });
+
+      // Store user data and update language preference
+      await AsyncStorage.setItem('user', JSON.stringify(response.user));
+      await updateLanguageFromUser(response.user);
 
       Alert.alert(
         '로그인 성공',
@@ -177,6 +183,32 @@ export default function LoginScreen() {
                 style={styles.demoButton}
               >
                 직원 계정
+              </Button>
+            </Card.Content>
+          </Card>
+
+          {/* Password Reset */}
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text variant="titleMedium" style={[styles.sectionTitle, { textAlign: 'center' }]}>
+                비밀번호를 잊으셨나요?
+              </Text>
+              
+              <Button
+                mode="text"
+                onPress={() => {
+                  // TODO: Navigate to password reset page
+                  Alert.alert(
+                    '비밀번호 찾기',
+                    '웹 브라우저에서 비밀번호를 재설정해주세요.\n\n' +
+                    process.env.EXPO_PUBLIC_WEB_URL + '/login',
+                    [{ text: '확인' }]
+                  );
+                }}
+                disabled={isLoading}
+                style={{ marginTop: 8 }}
+              >
+                비밀번호 재설정하기
               </Button>
             </Card.Content>
           </Card>

@@ -141,7 +141,7 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
       }
 
       if (currentPermission !== 'granted') {
-        message.warning('푸시 알림 권한이 필요합니다.');
+        message.warning('Push notification permission is required.');
         return false;
       }
 
@@ -179,14 +179,14 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
         setIsSubscribed(true);
         await refreshSubscriptions();
         
-        message.success('푸시 알림 구독이 완료되었습니다!');
+        message.success('Push notification subscription completed!');
         return true;
       }
 
       return false;
     } catch (error: any) {
       console.error('Push subscription failed:', error);
-      message.error('푸시 알림 구독에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+      message.error('Push notification subscription failed: ' + (error.message || 'Unknown error'));
       return false;
     } finally {
       setIsLoading(false);
@@ -220,11 +220,11 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
       
       await refreshSubscriptions();
       
-      message.success('푸시 알림 구독이 해제되었습니다.');
+      message.success('Push notification subscription has been cancelled.');
       return true;
     } catch (error: any) {
       console.error('Push unsubscribe failed:', error);
-      message.error('푸시 알림 구독 해제에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+      message.error('Push notification unsubscription failed: ' + (error.message || 'Unknown error'));
       return false;
     } finally {
       setIsLoading(false);
@@ -238,11 +238,11 @@ export const usePushNotifications = (): UsePushNotificationsReturn => {
 
     try {
       await apiClient.post('/push/test');
-      message.success('테스트 알림을 전송했습니다!');
+      message.success('Test notification sent!');
       return true;
     } catch (error: any) {
       console.error('Test notification failed:', error);
-      message.error('테스트 알림 전송에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+      message.error('Failed to send test notification: ' + (error.message || 'Unknown error'));
       return false;
     }
   }, [isSupported, isSubscribed]);

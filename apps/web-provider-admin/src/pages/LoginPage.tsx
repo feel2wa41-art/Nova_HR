@@ -13,10 +13,10 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (values: { email: string; password: string }) => {
     try {
       await login(values.email, values.password);
-      message.success('로그인 성공!');
+      message.success('Login successful!');
       navigate('/dashboard');
     } catch (error: any) {
-      message.error(error.response?.data?.message || '로그인에 실패했습니다.');
+      message.error(error.response?.data?.message || 'Login failed.');
     }
   };
 
@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <BankOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
           <Title level={2} style={{ margin: '0 0 8px 0' }}>Nova HR</Title>
-          <Text type="secondary">서비스 제공자 관리 시스템</Text>
+          <Text type="secondary">Service Provider Management System</Text>
         </div>
 
         <Form
@@ -44,21 +44,21 @@ const LoginPage: React.FC = () => {
         >
           <Form.Item
             name="email"
-            rules={[{ required: true, message: '이메일을 입력해주세요!' }]}
+            rules={[{ required: true, message: 'Please enter your email!' }]}
           >
             <Input 
               prefix={<UserOutlined />} 
-              placeholder="이메일" 
+              placeholder="Email" 
             />
           </Form.Item>
 
           <Form.Item
             name="password"
-            rules={[{ required: true, message: '비밀번호를 입력해주세요!' }]}
+            rules={[{ required: true, message: 'Please enter your password!' }]}
           >
             <Input.Password 
               prefix={<LockOutlined />} 
-              placeholder="비밀번호" 
+              placeholder="Password" 
             />
           </Form.Item>
 
@@ -70,7 +70,7 @@ const LoginPage: React.FC = () => {
               block
               style={{ height: '40px' }}
             >
-              로그인
+              Login
             </Button>
           </Form.Item>
         </Form>
@@ -83,7 +83,7 @@ const LoginPage: React.FC = () => {
           textAlign: 'center'
         }}>
           <Text type="secondary" style={{ fontSize: '12px' }}>
-            테스트 계정<br />
+            Test Account<br />
             ID: admin@nova-hr.com<br />
             PW: admin123
           </Text>

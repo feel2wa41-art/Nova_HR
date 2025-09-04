@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authApi } from '../lib/api';
+import { updateLanguageFromUser } from '../i18n/i18n';
 
 interface User {
   id: string;
@@ -9,6 +10,7 @@ interface User {
   role: string;
   title?: string;
   avatar_url?: string;
+  language?: string;
   permissions?: string[];
 }
 
@@ -48,6 +50,9 @@ export const useAuth = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+
+          // Update language from user preference
+          updateLanguageFromUser(response.user);
         } catch (error) {
           set({ isLoading: false });
           throw error;
@@ -77,6 +82,9 @@ export const useAuth = create<AuthState>()(
               isAuthenticated: true,
               isLoading: false,
             });
+
+            // Update language from user preference
+            updateLanguageFromUser(userProfile);
           } catch (error) {
             // Token is invalid, clear everything
             localStorage.removeItem('nova_hr_token');

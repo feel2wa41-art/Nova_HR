@@ -23,6 +23,7 @@ export class UsersService {
         avatar_url: true,
         status: true,
         role: true,
+        language: true,
         last_login: true,
         created_at: true,
         employee_profile: {
@@ -54,6 +55,7 @@ export class UsersService {
         avatar_url: true,
         status: true,
         role: true,
+        language: true,
         tenant_id: true,
         org_id: true,
         last_login: true,
@@ -102,6 +104,7 @@ export class UsersService {
     avatar_url?: string;
     status?: string;
     role?: string;
+    language?: string;
     org_id?: string;
   }) {
     const user = await this.prisma.auth_user.findUnique({
@@ -124,6 +127,7 @@ export class UsersService {
         avatar_url: true,
         status: true,
         role: true,
+        language: true,
         updated_at: true,
       }
     });

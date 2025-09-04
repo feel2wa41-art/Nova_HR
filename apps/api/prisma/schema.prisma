@@ -24,6 +24,7 @@ model auth_user {
   avatar_url  String?
   status      String  @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED, PENDING
   role        String  @default("EMPLOYEE") // SUPER_ADMIN, PROVIDER_ADMIN, CUSTOMER_ADMIN, HR_MANAGER, MANAGER, EMPLOYEE
+  language    String  @default("en") // User's preferred language code
   tenant_id   String?
   org_id      String?
   last_login  DateTime?
@@ -46,8 +47,354 @@ model auth_user {
   expense_requests expense_request[] @relation("user_expense_requests")
   approved_expenses expense_request[] @relation("approved_expense_requests")
   rejected_expenses expense_request[] @relation("rejected_expense_requests")
+  password_reset_tokens password_reset_token[] @relation("password_reset_tokens")
+  daily_reports daily_report[] @relation("user_daily_reports")
+  reviewed_reports daily_report[] @relation("reviewed_daily_reports")
+  weekly_reports weekly_report[] @relation("user_weekly_reports")
+  reviewed_weekly_reports weekly_report[] @relation("reviewed_weekly_reports")
+  user_status user_status?
+  organized_events event[] @relation("organized_events")
+  event_participations event_participant[]
+  uploaded_attachments event_attachment[] @relation("uploaded_attachments")
+  authored_posts board_post[] @relation("authored_posts")
+  authored_comments board_comment[] @relation("authored_comments")
+  uploaded_board_attachments board_attachment[] @relation("uploaded_board_attachments")
+  board_likes board_like[]
+  reference_documents reference_document[] @relation("reference_documents")
+  reference_document_views reference_document_view[] @relation("reference_document_views")
+  created_calendar_events calendar_event[] @relation("created_events")
+  calendar_event_attendees calendar_event_attendee[] @relation("event_attendees")
+  uploaded_event_attachments calendar_event_attachment[] @relation("uploaded_event_attachments")
+  authored_announcements company_announcement[] @relation("authored_announcements")
+  read_announcements company_announcement_read[] @relation("read_announcements")
+  calendar_settings user_calendar_settings? @relation("calendar_settings")
+  authored_community_posts hr_community_post[] @relation("authored_community_posts")
+  uploaded_community_attachments hr_community_attachment[] @relation("uploaded_community_attachments")
+  authored_community_comments hr_community_comment[] @relation("authored_community_comments")
+  community_likes hr_community_like[] @relation("community_likes")
+  community_views hr_community_view[] @relation("community_views")
+  received_community_notifications hr_community_notification[] @relation("received_community_notifications")
+  notification_preferences user_notification_preference? @relation("notification_preferences")
+  web_push_subscriptions web_push_subscription[] @relation("web_push_subscriptions")
 
   @@map("auth_users")
+}
+
+model password_reset_token {
+  id         String   @id @default(uuid())
+  user_id    String
+  token      String   @unique
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  user auth_user @relation("password_reset_tokens", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// Daily Report System
+model program_category {
+  id          String   @id @default(uuid())
+  company_id  String
+  name        String   // e.g., "Development", "Communication", "Documentation", "Design", "Management"
+  description String?
+  color       String?  // For UI display
+  icon        String?  // Icon identifier
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  company               company                 @relation(fields: [company_id], references: [id])
+  program_mappings      program_category_mapping[]
+  daily_report_entries  daily_report_entry[]
+  weekly_report_entries weekly_report_entry[]
+
+  @@map("program_categories")
+}
+
+model program_category_mapping {
+  id              String   @id @default(uuid())
+  category_id     String
+  program_name    String   // e.g., "Visual Studio Code", "Slack", "Chrome"
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  category program_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@unique([category_id, program_name])
+  @@map("program_category_mappings")
+}
+
+model daily_report {
+  id           String   @id @default(uuid())
+  user_id      String
+  report_date  DateTime @db.Date
+  summary      String?  // Overall daily summary
+  achievements String?  // Key achievements
+  challenges   String?  // Challenges faced
+  tomorrow_plan String? // Plan for tomorrow
+  status       String   @default("DRAFT") // DRAFT, SUBMITTED, REVIEWED
+  submitted_at DateTime?
+  reviewed_by  String?
+  reviewed_at  DateTime?
+  review_notes String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  user      auth_user           @relation("user_daily_reports", fields: [user_id], references: [id])
+  reviewer  auth_user?          @relation("reviewed_daily_reports", fields: [reviewed_by], references: [id])
+  entries   daily_report_entry[]
+
+  @@unique([user_id, report_date])
+  @@map("daily_reports")
+}
+
+model daily_report_entry {
+  id            String   @id @default(uuid())
+  report_id     String
+  category_id   String
+  task_description String
+  duration_minutes Int    // Time spent in minutes
+  programs_used String[] // List of programs used for this task
+  output        String?  // What was produced/completed
+  notes         String?  // Additional notes
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  report   daily_report      @relation(fields: [report_id], references: [id], onDelete: Cascade)
+  category program_category  @relation(fields: [category_id], references: [id])
+
+  @@map("daily_report_entries")
+}
+
+// Weekly Report System
+model weekly_report {
+  id          String   @id @default(uuid())
+  user_id     String
+  week_start  DateTime @db.Date // Monday of the week
+  week_end    DateTime @db.Date // Sunday of the week
+  summary     String?  @db.Text // Overall weekly summary
+  achievements String? @db.Text // Key achievements this week
+  challenges  String?  @db.Text // Challenges faced
+  next_week_goals String? @db.Text // Goals for next week
+  status      String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED
+  submitted_at DateTime?
+  reviewed_by  String?
+  reviewed_at  DateTime?
+  is_auto_generated Boolean @default(false) // True if generated from daily reports
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  user        auth_user           @relation("user_weekly_reports", fields: [user_id], references: [id])
+  reviewer    auth_user?          @relation("reviewed_weekly_reports", fields: [reviewed_by], references: [id])
+  entries     weekly_report_entry[]
+  daily_reports_included String[] // IDs of daily reports that were used for auto-generation
+
+  @@unique([user_id, week_start])
+  @@map("weekly_reports")
+}
+
+model weekly_report_entry {
+  id           String   @id @default(uuid())
+  report_id    String
+  category_id  String
+  summary      String   @db.Text // Summary of work done in this category
+  total_hours  Int      // Total hours spent in this category (minutes)
+  key_tasks    String[] // List of key tasks completed
+  deliverables String[] // List of deliverables produced
+  programs_used String[] // Programs used in this category
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  report   weekly_report     @relation(fields: [report_id], references: [id], onDelete: Cascade)
+  category program_category  @relation(fields: [category_id], references: [id])
+
+  @@map("weekly_report_entries")
+}
+
+// User Health Check & Organization System
+model user_status {
+  id              String   @id @default(uuid())
+  user_id         String   @unique
+  status          String   @default("ACTIVE") // ACTIVE, INACTIVE, ON_LEAVE, SICK_LEAVE, VACATION
+  last_seen       DateTime?
+  location        String?  // Current work location
+  mood            String?  // Happy, Neutral, Busy, etc.
+  status_message  String?  // Custom status message
+  birthday        DateTime? @db.Date
+  phone_extension String?  // Office phone extension
+  updated_at      DateTime @updatedAt
+  created_at      DateTime @default(now())
+
+  // Relations
+  user auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_statuses")
+}
+
+// Events & Announcements System
+model event {
+  id          String   @id @default(uuid())
+  company_id  String
+  title       String
+  description String?  @db.Text
+  event_type  String   @default("GENERAL") // GENERAL, BIRTHDAY, HOLIDAY, MEETING, TRAINING
+  start_date  DateTime
+  end_date    DateTime?
+  all_day     Boolean  @default(false)
+  location    String?
+  organizer_id String
+  max_participants Int?
+  is_public   Boolean  @default(true)
+  status      String   @default("ACTIVE") // ACTIVE, CANCELLED, COMPLETED
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  company        company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  organizer      auth_user         @relation("organized_events", fields: [organizer_id], references: [id])
+  participants   event_participant[]
+  attachments    event_attachment[]
+
+  @@map("events")
+}
+
+model event_participant {
+  id         String   @id @default(uuid())
+  event_id   String
+  user_id    String
+  status     String   @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  responded_at DateTime?
+  notes      String?
+  created_at DateTime @default(now())
+
+  // Relations
+  event event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user  auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, user_id])
+  @@map("event_participants")
+}
+
+model event_attachment {
+  id         String   @id @default(uuid())
+  event_id   String
+  filename   String
+  file_path  String
+  file_size  Int
+  mime_type  String
+  uploaded_by String
+  created_at DateTime @default(now())
+
+  // Relations
+  event event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user  auth_user @relation("uploaded_attachments", fields: [uploaded_by], references: [id])
+
+  @@map("event_attachments")
+}
+
+// Bulletin Board System
+model board_category {
+  id         String   @id @default(uuid())
+  company_id String
+  name       String
+  description String?
+  color      String?  @default("#1890ff")
+  icon       String?
+  order_index Int     @default(0)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  company company      @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  posts   board_post[]
+
+  @@map("board_categories")
+}
+
+model board_post {
+  id          String   @id @default(uuid())
+  category_id String
+  author_id   String
+  title       String
+  content     String   @db.Text
+  is_pinned   Boolean  @default(false)
+  is_important Boolean @default(false)
+  view_count  Int      @default(0)
+  status      String   @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  tags        String[] // Array of tags
+  expires_at  DateTime? // Auto-archive date
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  category    board_category     @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  author      auth_user          @relation("authored_posts", fields: [author_id], references: [id])
+  comments    board_comment[]
+  attachments board_attachment[]
+  likes       board_like[]
+
+  @@map("board_posts")
+}
+
+model board_comment {
+  id         String   @id @default(uuid())
+  post_id    String
+  author_id  String
+  content    String   @db.Text
+  parent_id  String?  // For nested comments
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  post   board_post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  author auth_user      @relation("authored_comments", fields: [author_id], references: [id])
+  parent board_comment? @relation("comment_replies", fields: [parent_id], references: [id])
+  replies board_comment[] @relation("comment_replies")
+
+  @@map("board_comments")
+}
+
+model board_attachment {
+  id         String   @id @default(uuid())
+  post_id    String
+  filename   String
+  file_path  String
+  file_size  Int
+  mime_type  String
+  uploaded_by String
+  created_at DateTime @default(now())
+
+  // Relations
+  post board_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user auth_user  @relation("uploaded_board_attachments", fields: [uploaded_by], references: [id])
+
+  @@map("board_attachments")
+}
+
+model board_like {
+  id         String   @id @default(uuid())
+  post_id    String
+  user_id    String
+  created_at DateTime @default(now())
+
+  // Relations
+  post board_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user auth_user  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, user_id])
+  @@map("board_likes")
 }
 
 model tenant {
@@ -66,6 +413,7 @@ model tenant {
   companies   company[]
   auto_approval_settings auto_approval_settings[]
   approval_route_templates approval_route_template[]
+  company_requests company_request[]
 
   @@map("tenants")
 }
@@ -96,6 +444,14 @@ model company {
   org_units     org_unit[]
   work_policies work_policy[]
   auto_approval_settings auto_approval_settings[]
+  program_categories program_category[]
+  events event[]
+  board_categories board_category[]
+  reference_documents reference_document[]
+  calendar_events calendar_event[]
+  company_announcements company_announcement[]
+  hr_community_posts hr_community_post[]
+  notification_templates notification_template[]
 
   @@map("companies")
 }
@@ -342,6 +698,7 @@ model approval_category {
   drafts approval_draft[]
   auto_approval_settings auto_approval_settings[]
   approval_route_templates approval_route_template[]
+  reference_documents reference_document[] @relation("reference_documents")
 
   @@unique([code, company_id])
   @@map("approval_categories")
@@ -747,6 +1104,86 @@ model attitude_app_whitelist {
   @@map("attitude_app_whitelist")
 }
 
+// ================================
+// SERVICE APPLICATION & PROVIDER
+// ================================
+
+// Service provider (본사) tenant - Special tenant for Nova HR provider
+model provider_tenant {
+  id          String   @id @default(uuid())
+  name        String   @default("Nova HR Inc.")
+  domain      String   @unique @default("provider.nova-hr.com")
+  status      String   @default("ACTIVE")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  provider_admins provider_admin[]
+  
+  @@map("provider_tenant")
+}
+
+// Provider admin users (본사 관리자)
+model provider_admin {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  phone       String?
+  role        String   @default("PROVIDER_ADMIN") // PROVIDER_ADMIN, PROVIDER_SUPER_ADMIN
+  status      String   @default("ACTIVE")
+  tenant_id   String
+  last_login  DateTime?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  tenant      provider_tenant @relation(fields: [tenant_id], references: [id])
+  approved_requests company_request[] @relation("approver")
+  
+  @@map("provider_admins")
+}
+
+// Company registration requests from public website
+model company_request {
+  id                String   @id @default(uuid())
+  company_name      String
+  business_number   String?
+  ceo_name          String
+  contact_email     String
+  contact_phone     String
+  address           String?
+  employee_count    String?  // 1-10, 11-50, 51-200, 201-500, 500+
+  industry          String?  // IT, Manufacturing, Service, etc.
+  description       String?  @db.Text
+  notes             String?  @db.Text
+  
+  // Request status
+  status            String   @default("PENDING") // PENDING, REVIEWING, APPROVED, REJECTED
+  reviewed_by       String?
+  reviewed_at       DateTime?
+  rejection_reason  String?  @db.Text
+  
+  // Auto-generated on approval
+  tenant_id         String?  // Created tenant ID after approval
+  company_id        String?  // Created company ID after approval
+  admin_user_id     String?  // Created admin user ID after approval
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations
+  reviewer          provider_admin? @relation("approver", fields: [reviewed_by], references: [id])
+  tenant            tenant? @relation(fields: [tenant_id], references: [id])
+  
+  @@index([status, created_at])
+  @@index([contact_email])
+  @@map("company_requests")
+}
+
+// Add relation to tenant model
+// (This is just a comment - we need to update the existing tenant model)
+
 model attitude_web_whitelist {
   id          String   @id @default(uuid())
   company_id  String?
@@ -784,5 +1221,412 @@ model auto_approval_settings {
   category approval_category? @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
   @@map("auto_approval_settings")
+}
+
+// ================================
+// REFERENCE DOCUMENTS
+// ================================
+
+model reference_document {
+  id          String   @id @default(uuid())
+  company_id  String
+  author_id   String
+  category_id String?
+  title       String
+  content     Json     // Form data based on category schema
+  description String?  // Main content/body text
+  tags        String[] // Tags for easier searching
+  view_count  Int      @default(0)
+  is_public   Boolean  @default(true)  // Whether other users can view
+  is_template Boolean  @default(false) // Whether this is a template
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  company     company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  author      auth_user         @relation("reference_documents", fields: [author_id], references: [id], onDelete: Cascade)
+  category    approval_category? @relation("reference_documents", fields: [category_id], references: [id], onDelete: SetNull)
+  attachments reference_document_attachment[]
+  views       reference_document_view[]
+
+  @@map("reference_documents")
+}
+
+model reference_document_attachment {
+  id          String @id @default(uuid())
+  document_id String
+  file_name   String
+  file_path   String
+  file_size   Int
+  mime_type   String
+  created_at  DateTime @default(now())
+
+  // Relations
+  document reference_document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@map("reference_document_attachments")
+}
+
+model reference_document_view {
+  id          String   @id @default(uuid())
+  document_id String
+  user_id     String
+  viewed_at   DateTime @default(now())
+
+  // Relations
+  document reference_document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  user     auth_user           @relation("reference_document_views", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([document_id, user_id])
+  @@map("reference_document_views")
+}
+
+// ================================
+// CALENDAR & SCHEDULE SYSTEM
+// ================================
+
+model calendar_event {
+  id            String   @id @default(uuid())
+  company_id    String
+  creator_id    String
+  title         String
+  description   String?
+  start_date    DateTime
+  end_date      DateTime
+  all_day       Boolean  @default(false)
+  event_type    String   @default("PERSONAL") // PERSONAL, MEETING, COMPANY_ANNOUNCEMENT, HOLIDAY, BIRTHDAY, LEAVE
+  location      String?
+  color         String?  @default("#1890ff")
+  is_public     Boolean  @default(false) // Whether others can see this event
+  is_recurring  Boolean  @default(false)
+  recurrence_rule String? // RRULE for recurring events
+  reminder_minutes Int[]  @default([15]) // Reminder times in minutes before event
+  status        String   @default("CONFIRMED") // CONFIRMED, TENTATIVE, CANCELLED
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  company       company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  creator       auth_user @relation("created_events", fields: [creator_id], references: [id], onDelete: Cascade)
+  attendees     calendar_event_attendee[]
+  attachments   calendar_event_attachment[]
+
+  @@map("calendar_events")
+}
+
+model calendar_event_attendee {
+  id        String   @id @default(uuid())
+  event_id  String
+  user_id   String
+  status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, TENTATIVE
+  response_message String?
+  is_organizer Boolean @default(false)
+  can_edit  Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  event     calendar_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user      auth_user @relation("event_attendees", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, user_id])
+  @@map("calendar_event_attendees")
+}
+
+model calendar_event_attachment {
+  id          String @id @default(uuid())
+  event_id    String
+  file_name   String
+  file_path   String
+  file_size   Int
+  mime_type   String
+  uploaded_by String
+  created_at  DateTime @default(now())
+
+  // Relations
+  event       calendar_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  uploader    auth_user @relation("uploaded_event_attachments", fields: [uploaded_by], references: [id], onDelete: Cascade)
+
+  @@map("calendar_event_attachments")
+}
+
+model public_holiday {
+  id          String   @id @default(uuid())
+  country     String   @default("KR") // ISO country code
+  name        String
+  date        DateTime @db.Date
+  is_national Boolean  @default(true)
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([country, date, name])
+  @@map("public_holidays")
+}
+
+model company_announcement {
+  id              String   @id @default(uuid())
+  company_id      String
+  author_id       String
+  title           String
+  content         String   @db.Text
+  announcement_type String @default("GENERAL") // GENERAL, URGENT, POLICY, EVENT, MAINTENANCE
+  priority        String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  is_published    Boolean  @default(false)
+  publish_date    DateTime?
+  expire_date     DateTime?
+  target_audience String   @default("ALL") // ALL, DEPARTMENT, SPECIFIC_USERS
+  department_ids  String[] // Target departments
+  user_ids        String[] // Target specific users
+  read_count      Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  company         company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  author          auth_user @relation("authored_announcements", fields: [author_id], references: [id], onDelete: Cascade)
+  attachments     company_announcement_attachment[]
+  read_receipts   company_announcement_read[]
+
+  @@map("company_announcements")
+}
+
+model company_announcement_attachment {
+  id              String @id @default(uuid())
+  announcement_id String
+  file_name       String
+  file_path       String
+  file_size       Int
+  mime_type       String
+  created_at      DateTime @default(now())
+
+  // Relations
+  announcement    company_announcement @relation(fields: [announcement_id], references: [id], onDelete: Cascade)
+
+  @@map("company_announcement_attachments")
+}
+
+model company_announcement_read {
+  id              String   @id @default(uuid())
+  announcement_id String
+  user_id         String
+  read_at         DateTime @default(now())
+
+  // Relations
+  announcement    company_announcement @relation(fields: [announcement_id], references: [id], onDelete: Cascade)
+  user            auth_user @relation("read_announcements", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([announcement_id, user_id])
+  @@map("company_announcement_reads")
+}
+
+model user_calendar_settings {
+  id                    String   @id @default(uuid())
+  user_id               String   @unique
+  default_view          String   @default("MONTH") // MONTH, WEEK, DAY, AGENDA
+  week_start            Int      @default(0) // 0 = Sunday, 1 = Monday
+  work_hours_start      String   @default("09:00")
+  work_hours_end        String   @default("18:00")
+  show_weekends         Boolean  @default(true)
+  default_reminder      Int      @default(15) // Minutes before event
+  time_zone             String   @default("Asia/Seoul")
+  show_declined_events  Boolean  @default(false)
+  calendar_color_scheme Json?    // Custom color scheme for different event types
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  // Relations
+  user                  auth_user @relation("calendar_settings", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_calendar_settings")
+}
+
+// ================================
+// HR COMMUNITY & NOTIFICATION SYSTEM
+// ================================
+
+model hr_community_post {
+  id              String   @id @default(uuid())
+  company_id      String
+  author_id       String
+  title           String
+  content         String   @db.Text
+  post_type       String   @default("GENERAL") // GENERAL, ANNOUNCEMENT, POLICY, URGENT, CELEBRATION, QUESTION
+  priority        String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  is_pinned       Boolean  @default(false)
+  is_published    Boolean  @default(true)
+  allow_comments  Boolean  @default(true)
+  view_count      Int      @default(0)
+  like_count      Int      @default(0)
+  comment_count   Int      @default(0)
+  notification_settings Json? // Web push, email, app push preferences
+  target_audience String   @default("ALL") // ALL, DEPARTMENT, ROLE, SPECIFIC_USERS
+  department_ids  String[] // Target departments
+  role_ids        String[] // Target roles
+  user_ids        String[] // Target specific users
+  tags            String[] // Post tags for categorization
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  company         company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  author          auth_user @relation("authored_community_posts", fields: [author_id], references: [id], onDelete: Cascade)
+  attachments     hr_community_attachment[]
+  comments        hr_community_comment[]
+  likes           hr_community_like[]
+  views           hr_community_view[]
+  notifications   hr_community_notification[]
+
+  @@map("hr_community_posts")
+}
+
+model hr_community_attachment {
+  id          String @id @default(uuid())
+  post_id     String
+  file_name   String
+  file_path   String
+  file_size   Int
+  mime_type   String
+  uploaded_by String
+  created_at  DateTime @default(now())
+
+  // Relations
+  post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  uploader    auth_user @relation("uploaded_community_attachments", fields: [uploaded_by], references: [id], onDelete: Cascade)
+
+  @@map("hr_community_attachments")
+}
+
+model hr_community_comment {
+  id          String   @id @default(uuid())
+  post_id     String
+  author_id   String
+  parent_id   String?  // For nested comments (replies)
+  content     String   @db.Text
+  is_edited   Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  author      auth_user @relation("authored_community_comments", fields: [author_id], references: [id], onDelete: Cascade)
+  parent      hr_community_comment? @relation("comment_replies", fields: [parent_id], references: [id])
+  replies     hr_community_comment[] @relation("comment_replies")
+
+  @@map("hr_community_comments")
+}
+
+model hr_community_like {
+  id          String   @id @default(uuid())
+  post_id     String
+  user_id     String
+  created_at  DateTime @default(now())
+
+  // Relations
+  post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user        auth_user @relation("community_likes", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, user_id])
+  @@map("hr_community_likes")
+}
+
+model hr_community_view {
+  id          String   @id @default(uuid())
+  post_id     String
+  user_id     String
+  viewed_at   DateTime @default(now())
+
+  // Relations
+  post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user        auth_user @relation("community_views", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, user_id])
+  @@map("hr_community_views")
+}
+
+model hr_community_notification {
+  id                String   @id @default(uuid())
+  post_id           String
+  recipient_id      String
+  notification_type String   // POST_CREATED, COMMENT_ADDED, POST_LIKED, MENTION
+  title             String
+  message           String
+  is_read           Boolean  @default(false)
+  web_push_sent     Boolean  @default(false)
+  email_sent        Boolean  @default(false)
+  app_push_sent     Boolean  @default(false)
+  web_push_sent_at  DateTime?
+  email_sent_at     DateTime?
+  app_push_sent_at  DateTime?
+  created_at        DateTime @default(now())
+  read_at           DateTime?
+
+  // Relations
+  post              hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  recipient         auth_user @relation("received_community_notifications", fields: [recipient_id], references: [id], onDelete: Cascade)
+
+  @@map("hr_community_notifications")
+}
+
+model user_notification_preference {
+  id                    String   @id @default(uuid())
+  user_id               String   @unique
+  web_push_enabled      Boolean  @default(true)
+  email_enabled         Boolean  @default(true)
+  app_push_enabled      Boolean  @default(true)
+  community_posts       Boolean  @default(true) // New community posts
+  announcements         Boolean  @default(true) // Important announcements
+  comments              Boolean  @default(true) // Comments on my posts
+  likes                 Boolean  @default(false) // Likes on my posts
+  mentions              Boolean  @default(true) // When mentioned in posts/comments
+  urgent_only           Boolean  @default(false) // Only urgent notifications
+  quiet_hours_enabled   Boolean  @default(false)
+  quiet_hours_start     String?  @default("22:00") // 10 PM
+  quiet_hours_end       String?  @default("08:00") // 8 AM
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  // Relations
+  user                  auth_user @relation("notification_preferences", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_notification_preferences")
+}
+
+model web_push_subscription {
+  id          String   @id @default(uuid())
+  user_id     String
+  endpoint    String   @unique
+  p256dh_key  String   // Public key for encryption
+  auth_key    String   // Authentication secret
+  user_agent  String?  // Browser/device info
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  user        auth_user @relation("web_push_subscriptions", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("web_push_subscriptions")
+}
+
+model notification_template {
+  id              String   @id @default(uuid())
+  company_id      String?  // null for system-wide templates
+  name            String   // Template identifier
+  notification_type String // POST_CREATED, COMMENT_ADDED, etc.
+  channel         String   // WEB_PUSH, EMAIL, APP_PUSH
+  subject         String?  // For email notifications
+  title           String   // Notification title
+  body            String   // Notification body (supports placeholders)
+  html_body       String?  // HTML version for emails
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  company         company? @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@unique([company_id, name, channel])
+  @@map("notification_templates")
 }
 

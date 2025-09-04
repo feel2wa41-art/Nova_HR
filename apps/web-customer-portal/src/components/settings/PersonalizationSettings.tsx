@@ -28,6 +28,9 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
+import { updateLanguageFromAPI } from '../../i18n/i18n';
+import { getLanguageOptions, LanguageCode, DEFAULT_LANGUAGE } from '../../constants/languages';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -35,7 +38,7 @@ const { Option } = Select;
 interface PersonalizationPreferences {
   theme: 'light' | 'dark' | 'auto';
   primaryColor: string;
-  language: 'ko' | 'en';
+  language: LanguageCode;
   timezone: string;
   dateFormat: 'YYYY-MM-DD' | 'MM/DD/YYYY' | 'DD/MM/YYYY';
   timeFormat: '24h' | '12h';
@@ -48,15 +51,17 @@ interface PersonalizationPreferences {
 
 export const PersonalizationSettings: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
+  const languageOptions = getLanguageOptions();
 
   // Default settings
   const defaultSettings: PersonalizationPreferences = {
     theme: 'light',
     primaryColor: '#1890ff',
-    language: 'ko',
+    language: user?.language || DEFAULT_LANGUAGE,
     timezone: 'Asia/Seoul',
     dateFormat: 'YYYY-MM-DD',
     timeFormat: '24h',
@@ -67,17 +72,36 @@ export const PersonalizationSettings: React.FC = () => {
     fontSize: 14,
   };
 
+  const saveLanguageMutation = useMutation({
+    mutationFn: async (language: LanguageCode) => {
+      const response = await apiClient.put('/users/me/language', { language });
+      return response.data;
+    },
+    onSuccess: (data, language) => {
+      updateLanguageFromAPI(language);
+      message.success(t('messages.settingsSaved'));
+    },
+    onError: () => {
+      message.error(t('messages.settingsSaveError'));
+    },
+  });
+
   const saveSettingsMutation = useMutation({
     mutationFn: async (values: PersonalizationPreferences) => {
-      // This would call the API to save personalization preferences
+      // Save language preference separately
+      if (values.language !== user?.language) {
+        await saveLanguageMutation.mutateAsync(values.language);
+      }
+      
+      // This would call the API to save other personalization preferences
       // await apiClient.put('/user/personalization-preferences', values);
       return new Promise(resolve => setTimeout(resolve, 1000));
     },
     onSuccess: () => {
-      message.success('개인화 설정이 저장되었습니다.');
+      message.success(t('messages.settingsSaved'));
     },
     onError: () => {
-      message.error('설정 저장에 실패했습니다.');
+      message.error(t('messages.settingsSaveError'));
     },
   });
 
@@ -197,12 +221,16 @@ export const PersonalizationSettings: React.FC = () => {
           <Row gutter={[16, 16]}>
             <Col span={8}>
               <Form.Item 
-                label="언어"
+                label={t('settings.language')}
                 name="language"
               >
                 <Select>
-                  <Option value="ko">한국어</Option>
-                  <Option value="en">English</Option>
+                  {languageOptions.map(lang => (
+                    <Option key={lang.value} value={lang.value}>
+                      <span style={{ marginRight: 8 }}>{lang.flag}</span>
+                      {lang.label}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

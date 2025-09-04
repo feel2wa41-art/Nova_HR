@@ -343,6 +343,8 @@
     "deleteFailed": "Failed to delete",
     "logoutConfirm": "Are you sure you want to logout?",
     "languageChanged": "Language has been changed",
+    "settingsSaved": "Settings saved successfully",
+    "settingsSaveError": "Failed to save settings",
     "loading": "Loading...",
     "error": "An error occurred",
     "networkError": "Network error occurred",

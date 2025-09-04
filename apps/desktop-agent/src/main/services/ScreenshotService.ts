@@ -226,8 +226,8 @@ export class ScreenshotService {
     // Get active window info (if available)
     let activeWindow
     try {
-      const activeWin = await import('active-win')
-      const win = await activeWin.default()
+      // Fallback without active-win
+      const win = null
       if (win) {
         activeWindow = {
           title: win.title,

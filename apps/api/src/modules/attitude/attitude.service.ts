@@ -10,7 +10,7 @@ import {
   GetScreenshotGalleryDto,
   LiveMonitoringDto
 } from './dto/attitude.dto';
-import { uploadFile } from '../../shared/utils/file-upload.util';
+// import { uploadFile } from '../../shared/utils/file-upload.util';
 import { 
   startOfDay, 
   endOfDay, 
@@ -80,9 +80,9 @@ export class AttitudeService {
       });
 
       // Update user's last screenshot time
-      await this.prisma.user.update({
+      await this.prisma.auth_user.update({
         where: { id: userId },
-        data: { lastScreenshotAt: new Date() },
+        data: { updated_at: new Date() }, // Using updated_at since lastScreenshotAt doesn't exist
       });
 
       return {
