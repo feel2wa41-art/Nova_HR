@@ -8,11 +8,11 @@ async function main() {
 
   // Create default tenant
   const tenant = await prisma.tenant.upsert({
-    where: { domain: 'demo.nova-hr.com' },
+    where: { domain: 'demo.reko-hr.com' },
     update: {},
     create: {
       name: 'Demo Company',
-      domain: 'demo.nova-hr.com',
+      domain: 'demo.reko-hr.com',
       status: 'ACTIVE',
       plan: 'PREMIUM',
       max_users: 500,
@@ -37,7 +37,7 @@ async function main() {
       biz_no: '123-45-67890',
       ceo_name: '김대표',
       phone: '+82-2-1234-5678',
-      email: 'info@nova-hr.com',
+      email: 'info@reko-hr.com',
       address: '서울특별시 강남구 테헤란로 123',
       timezone: 'Asia/Seoul',
       currency: 'KRW',
@@ -112,10 +112,10 @@ async function main() {
   const hashedPassword = await bcrypt.hash('admin123', 12);
   
   const adminUser = await prisma.auth_user.upsert({
-    where: { email: 'admin@nova-hr.com' },
+    where: { email: 'admin@reko-hr.com' },
     update: {},
     create: {
-      email: 'admin@nova-hr.com',
+      email: 'admin@reko-hr.com',
       password: hashedPassword,
       name: '시스템 관리자',
       title: 'IT 관리자',
@@ -129,10 +129,10 @@ async function main() {
 
   // Create HR manager
   const hrManager = await prisma.auth_user.upsert({
-    where: { email: 'hr@nova-hr.com' },
+    where: { email: 'hr@reko-hr.com' },
     update: {},
     create: {
-      email: 'hr@nova-hr.com',
+      email: 'hr@reko-hr.com',
       password: hashedPassword,
       name: '김인사',
       title: 'HR 매니저',
@@ -146,10 +146,10 @@ async function main() {
 
   // Create regular employee
   const employee = await prisma.auth_user.upsert({
-    where: { email: 'employee@nova-hr.com' },
+    where: { email: 'employee@reko-hr.com' },
     update: {},
     create: {
-      email: 'employee@nova-hr.com',
+      email: 'employee@reko-hr.com',
       password: hashedPassword,
       name: '홍길동',
       title: '시니어 개발자',
@@ -158,6 +158,23 @@ async function main() {
       role: 'EMPLOYEE',
       tenant_id: tenant.id,
       org_id: devTeam.id,
+    },
+  });
+
+  // Create provider admin (for provider portal)
+  const providerAdmin = await prisma.auth_user.upsert({
+    where: { email: 'provider@nova-hr.com' },
+    update: {},
+    create: {
+      email: 'provider@nova-hr.com',
+      password: hashedPassword,
+      name: '제공사 관리자',
+      title: '서비스 제공사 관리자',
+      phone: '+82-10-9999-0000',
+      status: 'ACTIVE',
+      role: 'PROVIDER_ADMIN',
+      tenant_id: null, // Provider admin doesn't belong to a specific tenant
+      org_id: null,
     },
   });
 
@@ -245,6 +262,7 @@ async function main() {
     await prisma.leave_type.create({
       data: {
         ...leaveType,
+        company_id: company.id, // Assign to the company
         description: `${leaveType.name} 휴가`,
         requires_approval: true,
         deduct_weekends: false,
@@ -262,8 +280,16 @@ async function main() {
   
   for (const user of users) {
     for (const leaveType of leaveTypes) {
-      await prisma.leave_balance.create({
-        data: {
+      await prisma.leave_balance.upsert({
+        where: {
+          user_id_leave_type_year: {
+            user_id: user.id,
+            leave_type: leaveType.code,
+            year: currentYear,
+          },
+        },
+        update: {},
+        create: {
           user_id: user.id,
           leave_type: leaveType.code,
           year: currentYear,
@@ -666,9 +692,10 @@ async function main() {
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('\n📧 Test accounts:');
-  console.log('Admin: admin@nova-hr.com / admin123');
-  console.log('HR Manager: hr@nova-hr.com / admin123');
-  console.log('Employee: employee@nova-hr.com / admin123');
+  console.log('Admin: admin@reko-hr.com / admin123');
+  console.log('HR Manager: hr@reko-hr.com / admin123');
+  console.log('Employee: employee@reko-hr.com / admin123');
+  console.log('Provider Admin: provider@nova-hr.com / admin123');
 }
 
 main()

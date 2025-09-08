@@ -18,6 +18,7 @@ export const LoginPage = () => {
   const { login, isLoading, isAuthenticated, logout } = useAuth();
   const { message } = App.useApp();
   const [resetModalVisible, setResetModalVisible] = useState(false);
+  const [loginMessage, setLoginMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Clear any existing authentication state on login page
   useEffect(() => {
@@ -33,14 +34,25 @@ export const LoginPage = () => {
     }
   }, []);
 
+  // Handle message display in effect to avoid React 18 concurrent mode issues
+  useEffect(() => {
+    if (loginMessage) {
+      if (loginMessage.type === 'success') {
+        message.success(loginMessage.text);
+      } else {
+        message.error(loginMessage.text);
+      }
+      setLoginMessage(null);
+    }
+  }, [loginMessage, message]);
+
   const handleSubmit = async (values: LoginFormData) => {
     try {
       await login(values.email, values.password);
-      // Use setTimeout to prevent message handler blocking
-      setTimeout(() => message.success('로그인 성공!'), 0);
+      setLoginMessage({ type: 'success', text: '로그인 성공!' });
       navigate('/', { replace: true });
     } catch (error: any) {
-      setTimeout(() => message.error(error.message || '로그인에 실패했습니다'), 0);
+      setLoginMessage({ type: 'error', text: error.message || '로그인에 실패했습니다' });
     }
   };
 

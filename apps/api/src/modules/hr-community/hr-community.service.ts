@@ -20,7 +20,14 @@ export class HrCommunityService {
   // COMMUNITY POSTS
   // ================================
 
-  async createPost(companyId: string, authorId: string, dto: CreateCommunityPostDto) {
+  async createPost(companyId: string, authorId: string, dto: CreateCommunityPostDto, tenantId: string) {
+    // Verify author belongs to tenant
+    const author = await this.prisma.auth_user.findUnique({
+      where: { id: authorId, tenant_id: tenantId }
+    });
+    if (!author) {
+      throw new NotFoundException('Author not found or access denied');
+    }
     const post = await this.prisma.hr_community_post.create({
       data: {
         company_id: companyId,
@@ -66,7 +73,14 @@ export class HrCommunityService {
     return post;
   }
 
-  async findAllPosts(companyId: string, userId: string, query: GetCommunityPostsQueryDto) {
+  async findAllPosts(companyId: string, userId: string, query: GetCommunityPostsQueryDto, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
     const {
       search,
       post_type,
@@ -184,9 +198,24 @@ export class HrCommunityService {
     };
   }
 
-  async findPostById(postId: string, userId?: string) {
-    const post = await this.prisma.hr_community_post.findUnique({
-      where: { id: postId },
+  async findPostById(postId: string, userId?: string, tenantId?: string) {
+    // Verify user belongs to tenant if userId is provided
+    if (userId && tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new NotFoundException('User not found or access denied');
+      }
+    }
+
+    const post = await this.prisma.hr_community_post.findFirst({
+      where: { 
+        id: postId,
+        ...(tenantId && {
+          author: { tenant_id: tenantId }  // Tenant isolation security check
+        })
+      },
       include: {
         author: {
           select: {
@@ -254,9 +283,20 @@ export class HrCommunityService {
     };
   }
 
-  async updatePost(postId: string, userId: string, dto: UpdateCommunityPostDto) {
-    const post = await this.prisma.hr_community_post.findUnique({
-      where: { id: postId },
+  async updatePost(postId: string, userId: string, dto: UpdateCommunityPostDto, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
+    const post = await this.prisma.hr_community_post.findFirst({
+      where: { 
+        id: postId,
+        author: { tenant_id: tenantId }  // Tenant isolation security check
+      },
     });
 
     if (!post) {
@@ -303,9 +343,20 @@ export class HrCommunityService {
     });
   }
 
-  async deletePost(postId: string, userId: string) {
-    const post = await this.prisma.hr_community_post.findUnique({
-      where: { id: postId },
+  async deletePost(postId: string, userId: string, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
+    const post = await this.prisma.hr_community_post.findFirst({
+      where: { 
+        id: postId,
+        author: { tenant_id: tenantId }  // Tenant isolation security check
+      },
     });
 
     if (!post) {
@@ -359,7 +410,14 @@ export class HrCommunityService {
   // LIKES
   // ================================
 
-  async toggleLike(postId: string, userId: string) {
+  async toggleLike(postId: string, userId: string, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
     const existingLike = await this.prisma.hr_community_like.findUnique({
       where: {
         post_id_user_id: {
@@ -425,9 +483,20 @@ export class HrCommunityService {
   // COMMENTS
   // ================================
 
-  async createComment(postId: string, userId: string, dto: CreateCommentDto) {
-    const post = await this.prisma.hr_community_post.findUnique({
-      where: { id: postId },
+  async createComment(postId: string, userId: string, dto: CreateCommentDto, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
+    const post = await this.prisma.hr_community_post.findFirst({
+      where: { 
+        id: postId,
+        author: { tenant_id: tenantId }  // Tenant isolation security check
+      },
       select: { allow_comments: true, author_id: true, title: true }
     });
 
@@ -484,9 +553,20 @@ export class HrCommunityService {
     return comment;
   }
 
-  async updateComment(commentId: string, userId: string, dto: UpdateCommentDto) {
-    const comment = await this.prisma.hr_community_comment.findUnique({
-      where: { id: commentId },
+  async updateComment(commentId: string, userId: string, dto: UpdateCommentDto, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
+    const comment = await this.prisma.hr_community_comment.findFirst({
+      where: { 
+        id: commentId,
+        author: { tenant_id: tenantId }  // Tenant isolation security check
+      },
     });
 
     if (!comment) {
@@ -516,9 +596,20 @@ export class HrCommunityService {
     });
   }
 
-  async deleteComment(commentId: string, userId: string) {
-    const comment = await this.prisma.hr_community_comment.findUnique({
-      where: { id: commentId },
+  async deleteComment(commentId: string, userId: string, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
+    const comment = await this.prisma.hr_community_comment.findFirst({
+      where: { 
+        id: commentId,
+        author: { tenant_id: tenantId }  // Tenant isolation security check
+      },
       include: { replies: true }
     });
 
@@ -621,7 +712,14 @@ export class HrCommunityService {
   // UTILITY METHODS
   // ================================
 
-  async getAvailableTags(companyId: string) {
+  async getAvailableTags(companyId: string, tenantId: string) {
+    // Verify company belongs to tenant
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, tenant_id: tenantId }
+    });
+    if (!company) {
+      throw new NotFoundException('Company not found or access denied');
+    }
     const posts = await this.prisma.hr_community_post.findMany({
       where: {
         company_id: companyId,
@@ -636,7 +734,22 @@ export class HrCommunityService {
     return uniqueTags.sort();
   }
 
-  async getPopularPosts(companyId: string, userId: string, limit: number = 10) {
+  async getPopularPosts(companyId: string, userId: string, limit: number = 10, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
+    // Verify company belongs to tenant
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, tenant_id: tenantId }
+    });
+    if (!company) {
+      throw new NotFoundException('Company not found or access denied');
+    }
     const posts = await this.prisma.hr_community_post.findMany({
       where: {
         company_id: companyId,
@@ -674,7 +787,22 @@ export class HrCommunityService {
     return posts;
   }
 
-  async getMyPosts(companyId: string, authorId: string) {
+  async getMyPosts(companyId: string, authorId: string, tenantId: string) {
+    // Verify author belongs to tenant
+    const author = await this.prisma.auth_user.findUnique({
+      where: { id: authorId, tenant_id: tenantId }
+    });
+    if (!author) {
+      throw new NotFoundException('Author not found or access denied');
+    }
+
+    // Verify company belongs to tenant
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, tenant_id: tenantId }
+    });
+    if (!company) {
+      throw new NotFoundException('Company not found or access denied');
+    }
     return this.prisma.hr_community_post.findMany({
       where: {
         company_id: companyId,

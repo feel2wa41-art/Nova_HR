@@ -40,10 +40,10 @@ export class AdminController {
   @ApiResponse({ status: 403, description: 'Admin access required' })
   async createUser(@Request() req: any, @Body() dto: CreateUserDto) {
     return this.adminService.createUser(
-      req.user.id,
-      req.user.companyId,
+      req.user.sub,
+      req.user.tenantId,
       dto,
-      req.user.role === 'admin',
+      req.user.roles.includes('SUPER_ADMIN'),
     );
   }
 
@@ -53,9 +53,9 @@ export class AdminController {
   @ApiResponse({ status: 403, description: 'Admin access required' })
   async getUserList(@Request() req: any, @Query() dto: GetUserListDto) {
     return this.adminService.getUserList(
-      req.user.companyId,
+      req.user.tenantId,
       dto,
-      req.user.role === 'admin',
+      req.user.roles.includes('SUPER_ADMIN'),
     );
   }
 
@@ -70,11 +70,11 @@ export class AdminController {
     @Body() dto: UpdateUserDto,
   ) {
     return this.adminService.updateUser(
-      req.user.id,
-      req.user.companyId,
+      req.user.sub,
+      req.user.tenantId,
       userId,
       dto,
-      req.user.role === 'admin',
+      req.user.roles.includes('SUPER_ADMIN'),
     );
   }
 
@@ -85,10 +85,10 @@ export class AdminController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async deleteUser(@Request() req: any, @Param('id') userId: string) {
     return this.adminService.deleteUser(
-      req.user.id,
-      req.user.companyId,
+      req.user.sub,
+      req.user.tenantId,
       userId,
-      req.user.role === 'admin',
+      req.user.roles.includes('SUPER_ADMIN'),
     );
   }
 

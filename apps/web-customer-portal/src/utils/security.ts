@@ -186,7 +186,7 @@ export class SecureStorage {
 // Input Validation
 export class InputValidator {
   static readonly EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  static readonly PHONE_PATTERN = /^[\+]?[1-9][\d]{0,15}$/;
+  static readonly PHONE_PATTERN = /^[+]?[1-9][\d]{0,15}$/;
   static readonly PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
   static validateEmail(email: string): boolean {
@@ -194,7 +194,7 @@ export class InputValidator {
   }
 
   static validatePhone(phone: string): boolean {
-    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    const cleaned = phone.replace(/[\s\-()]/g, '');
     return this.PHONE_PATTERN.test(cleaned) && cleaned.length >= 10 && cleaned.length <= 15;
   }
 

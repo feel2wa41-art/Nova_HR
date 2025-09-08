@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   Table, 
@@ -8,13 +8,15 @@ import {
   Modal, 
   Form, 
   Input, 
-  message, 
   Typography,
   Descriptions,
   Row,
   Col,
   Badge,
-  Tooltip
+  Tooltip,
+  Alert,
+  App,
+  Select
 } from 'antd';
 import { 
   EyeOutlined,
@@ -22,11 +24,13 @@ import {
   CloseOutlined,
   MailOutlined,
   PhoneOutlined,
-  BankOutlined
+  BankOutlined,
+  PlusOutlined
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 import { companyAPI, type CompanyRequest } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -36,14 +40,32 @@ const CompanyRequests: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<CompanyRequest | null>(null);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [addCompanyModalVisible, setAddCompanyModalVisible] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
   const [form] = Form.useForm();
+  const [addCompanyForm] = Form.useForm();
   const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth();
+  const { message } = App.useApp();
 
-  const { data: requests = [], isLoading } = useQuery({
+  // Debug information
+  useEffect(() => {
+    console.log('CompanyRequests component mounted');
+    console.log('User:', user);
+    console.log('Is Authenticated:', isAuthenticated);
+    console.log('Auth token:', localStorage.getItem('provider_admin_token'));
+  }, [user, isAuthenticated]);
+
+  const { data: requests = [], isLoading, error } = useQuery({
     queryKey: ['company-requests'],
     queryFn: companyAPI.getRegistrationRequests,
+    enabled: !!user && isAuthenticated, // Only run query if user is authenticated
   });
+
+  // Debug query state
+  useEffect(() => {
+    console.log('Query state - loading:', isLoading, 'error:', error, 'requests:', requests);
+  }, [isLoading, error, requests]);
 
   const handleApprove = (request: CompanyRequest) => {
     setSelectedRequest(request);
@@ -92,6 +114,37 @@ const CompanyRequests: React.FC = () => {
         id: selectedRequest.id,
         action: actionType,
         notes: values.notes
+      });
+    });
+  };
+
+  // 기업 직접 추가 뮤테이션
+  const addCompanyMutation = useMutation({
+    mutationFn: companyAPI.createCompany,
+    onSuccess: () => {
+      message.success('기업이 성공적으로 추가되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['company-requests'] });
+      setAddCompanyModalVisible(false);
+      addCompanyForm.resetFields();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.message || '기업 추가 중 오류가 발생했습니다');
+    },
+  });
+
+  const handleAddCompany = () => {
+    addCompanyForm.validateFields().then(values => {
+      addCompanyMutation.mutate({
+        name: values.name,
+        business_number: values.business_number,
+        ceo_name: values.ceo_name,
+        contact_email: values.contact_email,
+        contact_phone: values.contact_phone,
+        address: values.address,
+        address_detail: values.address_detail,
+        industry: values.industry,
+        plan: values.plan || 'BASIC',
+        description: values.description,
       });
     });
   };
@@ -196,13 +249,32 @@ const CompanyRequests: React.FC = () => {
 
   return (
     <div>
+      {/* Debug information */}
+      {error && (
+        <Alert
+          message="API Error"
+          description={error?.message || 'Failed to load company requests'}
+          type="error"
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <Title level={2} style={{ margin: 0 }}>
           🏢 기업 가입 신청 관리
         </Title>
-        <Badge count={pendingCount} offset={[10, 0]}>
-          <BankOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-        </Badge>
+        <Space>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={() => setAddCompanyModalVisible(true)}
+          >
+            기업 직접 추가
+          </Button>
+          <Badge count={pendingCount} offset={[10, 0]}>
+            <BankOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+          </Badge>
+        </Space>
       </div>
 
       {/* 통계 요약 */}
@@ -340,6 +412,120 @@ const CompanyRequests: React.FC = () => {
                   : '거부 사유를 구체적으로 입력해주세요...'
               } 
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 기업 직접 추가 모달 */}
+      <Modal
+        title="기업 직접 추가"
+        open={addCompanyModalVisible}
+        onOk={handleAddCompany}
+        onCancel={() => {
+          setAddCompanyModalVisible(false);
+          addCompanyForm.resetFields();
+        }}
+        confirmLoading={addCompanyMutation.isPending}
+        width={800}
+        okText="추가"
+        cancelText="취소"
+      >
+        <Form form={addCompanyForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="name"
+                label="회사명"
+                rules={[{ required: true, message: '회사명을 입력해주세요' }]}
+              >
+                <Input placeholder="회사명을 입력하세요" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="business_number"
+                label="사업자번호"
+              >
+                <Input placeholder="사업자번호를 입력하세요" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="ceo_name"
+                label="대표자"
+                rules={[{ required: true, message: '대표자명을 입력해주세요' }]}
+              >
+                <Input placeholder="대표자명을 입력하세요" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="plan"
+                label="요금제"
+                initialValue="BASIC"
+              >
+                <Select placeholder="요금제를 선택하세요">
+                  <Select.Option value="BASIC">BASIC</Select.Option>
+                  <Select.Option value="PROFESSIONAL">PROFESSIONAL</Select.Option>
+                  <Select.Option value="ENTERPRISE">ENTERPRISE</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="contact_email"
+                label="이메일"
+                rules={[
+                  { required: true, message: '이메일을 입력해주세요' },
+                  { type: 'email', message: '올바른 이메일 형식을 입력해주세요' }
+                ]}
+              >
+                <Input placeholder="이메일을 입력하세요" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="contact_phone"
+                label="연락처"
+                rules={[{ required: true, message: '연락처를 입력해주세요' }]}
+              >
+                <Input placeholder="연락처를 입력하세요" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="address"
+            label="주소"
+          >
+            <Input placeholder="주소를 입력하세요" />
+          </Form.Item>
+
+          <Form.Item
+            name="address_detail"
+            label="상세주소"
+          >
+            <Input placeholder="상세주소를 입력하세요" />
+          </Form.Item>
+
+          <Form.Item
+            name="industry"
+            label="업종"
+          >
+            <Input placeholder="업종을 입력하세요" />
+          </Form.Item>
+
+          <Form.Item
+            name="description"
+            label="회사소개"
+          >
+            <TextArea rows={4} placeholder="회사소개를 입력하세요" />
           </Form.Item>
         </Form>
       </Modal>

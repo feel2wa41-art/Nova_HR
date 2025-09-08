@@ -229,7 +229,7 @@ export const ReferenceDocumentsPage: React.FC = () => {
           {document.tags.length > 0 && (
             <div className="mb-3">
               {document.tags.map(tag => (
-                <Tag key={tag} size="small" icon={<TagOutlined />}>{tag}</Tag>
+                <Tag key={tag} icon={<TagOutlined />}>{tag}</Tag>
               ))}
             </div>
           )}
@@ -487,7 +487,7 @@ export const ReferenceDocumentsPage: React.FC = () => {
               {selectedDocument.tags.length > 0 && (
                 <div>
                   {selectedDocument.tags.map(tag => (
-                    <Tag key={tag} size="small" icon={<TagOutlined />}>{tag}</Tag>
+                    <Tag key={tag} icon={<TagOutlined />}>{tag}</Tag>
                   ))}
                 </div>
               )}
@@ -504,11 +504,11 @@ export const ReferenceDocumentsPage: React.FC = () => {
               <Text strong>내용:</Text>
               <div className="mt-2 p-4 bg-gray-50 rounded border">
                 {selectedDocument.category?.form_schema ? (
-                  <DynamicFormRenderer
-                    schema={selectedDocument.category.form_schema}
-                    data={selectedDocument.content}
-                    readOnly={true}
-                  />
+                  <div className="text-gray-600">
+                    <pre className="whitespace-pre-wrap font-sans">
+                      {JSON.stringify(selectedDocument.content, null, 2)}
+                    </pre>
+                  </div>
                 ) : (
                   <pre className="whitespace-pre-wrap font-sans">
                     {typeof selectedDocument.content === 'string' 

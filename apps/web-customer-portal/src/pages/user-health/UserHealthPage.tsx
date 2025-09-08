@@ -129,7 +129,7 @@ export const UserHealthPage: React.FC = () => {
                   </div>
                   <Text type="secondary" style={{ fontSize: '12px' }}>{user.title}</Text>
                 </div>
-                <Tag color={getStatusColor(user.status)} size="small">
+                <Tag color={getStatusColor(user.status)}>
                   {getStatusText(user.status)}
                 </Tag>
               </div>

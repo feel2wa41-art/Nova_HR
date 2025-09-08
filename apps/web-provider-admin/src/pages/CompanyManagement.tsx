@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   Table, 
@@ -17,7 +18,8 @@ import {
   EditOutlined,
   BankOutlined,
   UserOutlined,
-  DollarOutlined
+  DollarOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
@@ -27,6 +29,7 @@ const { Title, Text } = Typography;
 
 
 const CompanyManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ['companies'],
     queryFn: companyAPI.getAllCompanies,
@@ -81,7 +84,10 @@ const CompanyManagement: React.FC = () => {
       title: 'Users',
       key: 'userCount',
       render: (record: Company) => (
-        <Badge count={record.userCount || 0} color="#1890ff" />
+        <Space>
+          <TeamOutlined />
+          <Text>{record.userCount || 0}명</Text>
+        </Space>
       ),
     },
     {
@@ -123,13 +129,14 @@ const CompanyManagement: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      render: () => (
+      render: (record: Company) => (
         <Space>
-          <Tooltip title="View Details">
+          <Tooltip title="회사 상세 및 사용자 관리">
             <Button 
               type="text" 
               icon={<EyeOutlined />} 
               size="small"
+              onClick={() => navigate(`/company/${record.id}`)}
             />
           </Tooltip>
           <Tooltip title="Settings">

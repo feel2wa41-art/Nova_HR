@@ -41,19 +41,32 @@ export class LeaveApprovalController {
     @Request() req
   ) {
     const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
 
-    // Get the leave approval category
+    // Get the leave approval category with tenant filtering
     const leaveCategory = await this.prisma.approval_category.findFirst({
-      where: { code: 'LEAVE_REQUEST' }
+      where: { 
+        code: 'LEAVE_REQUEST',
+        OR: [
+          { tenant_id: tenantId },  // Tenant-specific category
+          { tenant_id: null }       // Global/system category
+        ]
+      }
     });
 
     if (!leaveCategory) {
       throw new Error('Leave request category not found. Please contact administrator.');
     }
 
-    // Get leave type to get the code
+    // Get leave type with tenant filtering
     const leaveType = await this.prisma.leave_type.findUnique({
-      where: { id: createDto.leaveTypeId }
+      where: { 
+        id: createDto.leaveTypeId,
+        OR: [
+          { tenant_id: tenantId },  // Tenant-specific leave type
+          { tenant_id: null }       // Global/system leave type
+        ]
+      }
     });
 
     if (!leaveType) {
@@ -95,6 +108,9 @@ export class LeaveApprovalController {
     // Submit the draft automatically
     await this.approvalService.submitDraft(approvalDraft.id, userId);
 
+    // Create automatic approval route for leave request
+    await this.createLeaveApprovalRoute(approvalDraft.id, userId, companyId, createDto.emergency || false);
+
     // Also create a leave_request record for tracking
     await this.prisma.leave_request.create({
       data: {
@@ -128,9 +144,17 @@ export class LeaveApprovalController {
   @Get('types')
   @ApiOperation({ summary: 'Get available leave types' })
   @ApiResponse({ status: 200, description: 'Leave types retrieved successfully' })
-  async getLeaveTypes() {
+  async getLeaveTypes(@Request() req) {
+    const companyId = req.user.tenantId;
+    
     const leaveTypes = await this.prisma.leave_type.findMany({
-      where: { is_active: true },
+      where: { 
+        is_active: true,
+        OR: [
+          { company_id: companyId }, // Company-specific leave types
+          { company_id: null }       // System-wide leave types
+        ]
+      },
       select: {
         id: true,
         name: true,
@@ -206,5 +230,130 @@ export class LeaveApprovalController {
       createdAt: request.created_at.toISOString(),
       approvalStatus: request.approval_draft?.status
     }));
+  }
+
+  private async createLeaveApprovalRoute(draftId: string, requesterId: string, companyId: string, emergency: boolean) {
+    try {
+      // Get the requester's organization info to find their manager
+      const requester = await this.prisma.auth_user.findUnique({
+        where: { id: requesterId },
+        include: {
+          org_unit: {
+            include: {
+              parent: {
+                include: {
+                  members: {
+                    where: {
+                      role: { in: ['MANAGER', 'HR_MANAGER'] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Find HR managers in the company as fallback approvers
+      const hrManagers = await this.prisma.auth_user.findMany({
+        where: {
+          tenant_id: companyId,
+          role: { in: ['HR_MANAGER', 'HR_ADMIN'] }
+        }
+      });
+
+      if (!hrManagers.length) {
+        throw new Error('No HR managers found in the company for approval routing.');
+      }
+
+      // Create approval route
+      const route = await this.prisma.approval_route.create({
+        data: {
+          draft_id: draftId
+        }
+      });
+
+      // Create approval stages based on emergency status
+      if (emergency) {
+        // For emergency leave: Direct HR approval
+        const hrStage = await this.prisma.approval_route_stage.create({
+          data: {
+            route_id: route.id,
+            type: 'APPROVAL',
+            mode: 'SEQUENTIAL',
+            order_index: 1,
+            name: 'HR 긴급 승인',
+            status: 'PENDING'
+          }
+        });
+
+        // Add HR manager as approver
+        await this.prisma.approval_route_approver.create({
+          data: {
+            stage_id: hrStage.id,
+            user_id: hrManagers[0].id,
+            order_index: 1,
+            status: 'PENDING'
+          }
+        });
+      } else {
+        // Regular leave: Manager approval -> HR approval
+        let stageOrder = 1;
+        
+        // Stage 1: Direct Manager Approval (if manager exists)
+        const manager = requester?.org_unit?.parent?.members?.find(
+          member => ['MANAGER', 'HR_MANAGER'].includes(member.role) && member.id !== requesterId
+        );
+
+        if (manager) {
+          const managerStage = await this.prisma.approval_route_stage.create({
+            data: {
+              route_id: route.id,
+              type: 'APPROVAL',
+              mode: 'SEQUENTIAL',
+              order_index: stageOrder++,
+              name: '직속상관 승인',
+              status: 'PENDING'
+            }
+          });
+
+          await this.prisma.approval_route_approver.create({
+            data: {
+              stage_id: managerStage.id,
+              user_id: manager.id,
+              order_index: 1,
+              status: 'PENDING'
+            }
+          });
+        }
+
+        // Stage 2: HR Approval
+        const hrStage = await this.prisma.approval_route_stage.create({
+          data: {
+            route_id: route.id,
+            type: 'APPROVAL',
+            mode: 'SEQUENTIAL',
+            order_index: stageOrder,
+            name: 'HR 최종 승인',
+            status: manager ? 'PENDING' : 'PENDING'
+          }
+        });
+
+        await this.prisma.approval_route_approver.create({
+          data: {
+            stage_id: hrStage.id,
+            user_id: hrManagers[0].id,
+            order_index: 1,
+            status: 'PENDING'
+          }
+        });
+      }
+
+      console.log(`Created approval route for leave request ${draftId} with ${emergency ? 'emergency' : 'regular'} workflow`);
+      
+    } catch (error) {
+      console.error('Failed to create leave approval route:', error);
+      throw error;
+    }
   }
 }

@@ -39,7 +39,7 @@ export class CompanyController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'PROVIDER_ADMIN')
   @ApiOperation({ summary: 'Create new company' })
   async createCompany(@Body() body: {
     name: string;

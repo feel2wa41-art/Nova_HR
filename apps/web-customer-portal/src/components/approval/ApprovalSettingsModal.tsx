@@ -357,7 +357,7 @@ export const ApprovalSettingsModal = ({
       onCancel={onCancel}
       width={900}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="space-y-6">
         {/* Approval Mode Selection */}

@@ -1,63 +1,101 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   Table, 
   Button, 
-  Space, 
   Tag, 
-  Input, 
-  Select, 
+  Space, 
+  Typography, 
+  Tabs, 
   Modal, 
-  Tooltip,
+  Form, 
+  Input,
+  Select,
+  message,
+  Badge,
+  Descriptions,
+  Row,
+  Col,
   Avatar,
-  Typography,
-  App
+  Tooltip
 } from 'antd';
-import { 
-  TeamOutlined, 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  SearchOutlined,
-  UserOutlined,
-  MailOutlined,
-  PhoneOutlined 
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { UserForm } from '../../components/admin/UserForm';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  UserOutlined, 
+  EyeOutlined, 
+  EditOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  TeamOutlined,
+  PlusOutlined,
+  DeleteOutlined
+} from '@ant-design/icons';
+import { UserForm } from '../../components/admin/UserForm';
 import { apiClient } from '../../lib/api';
 
-const { Title } = Typography;
-const { Search } = Input;
+const { Title, Text } = Typography;
+const { TextArea, Search } = Input;
+const { Option } = Select;
 
 interface User {
   id: string;
-  name: string;
   email: string;
+  name: string;
+  title: string;
+  phone: string;
   role: string;
-  title?: string;
-  phone?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
-  createdAt: string;
+  status: string;
+  email_verified: boolean;
+  created_at: string;
   lastLogin?: string;
+  tenant: {
+    id: string;
+    name: string;
+    domain: string;
+  } | null;
+  company: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface PendingUser {
+  id: string;
+  email: string;
+  name: string;
+  title: string;
+  phone: string;
+  status: 'PENDING_EMAIL_VERIFICATION' | 'PENDING_HR_APPROVAL';
+  email_verified: boolean;
+  created_at: string;
+  company_name: string;
 }
 
 export const UserManagement = () => {
-  const { message } = App.useApp();
   const queryClient = useQueryClient();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('users');
+  const [viewModalVisible, setViewModalVisible] = useState(false);
+  const [approvalModalVisible, setApprovalModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [userFormVisible, setUserFormVisible] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | PendingUser | null>(null);
+  const [selectedUserForForm, setSelectedUserForForm] = useState<User | null>(null);
+  const [approvalForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  
+  // Search and filter states
   const [searchText, setSearchText] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
 
-  // Fetch users from API
-  const { data: users = [], isLoading } = useQuery({
-    queryKey: ['users'],
+  // Get all users (company users for customer portal)
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ['admin-users'],
     queryFn: async () => {
-      const response = await apiClient.get('/users');
+      const response = await apiClient.get('/admin/users');
       return response.data.map((user: any) => ({
         id: user.id,
         name: user.name,
@@ -66,10 +104,21 @@ export const UserManagement = () => {
         title: user.title,
         phone: user.phone,
         status: user.status,
-        createdAt: user.created_at,
+        email_verified: user.email_verified,
+        created_at: user.created_at,
         lastLogin: user.last_login,
+        tenant: user.tenant,
+        company: user.company,
       }));
     },
+    enabled: activeTab === 'users',
+  });
+
+  // Get pending users
+  const { data: pendingUsers, isLoading: pendingLoading } = useQuery({
+    queryKey: ['admin-pending-users'],
+    queryFn: () => apiClient.get('/auth/pending-users').then(res => res.data),
+    enabled: activeTab === 'pending',
   });
 
   useEffect(() => {
@@ -77,6 +126,7 @@ export const UserManagement = () => {
   }, [searchText, filterRole, filterStatus, users]);
 
   const filterUsers = () => {
+    if (!users) return;
     let filtered = users;
 
     // Search filter
@@ -101,12 +151,176 @@ export const UserManagement = () => {
     setFilteredUsers(filtered);
   };
 
+  // Approve user
+  const approveUserMutation = useMutation({
+    mutationFn: (data: { userId: string; notes?: string }) =>
+      apiClient.post(`/auth/approve-user/${data.userId}`, { notes: data.notes }),
+    onSuccess: () => {
+      message.success('사용자가 승인되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setApprovalModalVisible(false);
+      setSelectedUser(null);
+      approvalForm.resetFields();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.message || '승인 처리 중 오류가 발생했습니다');
+    },
+  });
+
+  // Reject user
+  const rejectUserMutation = useMutation({
+    mutationFn: (data: { userId: string; notes?: string }) =>
+      apiClient.post(`/auth/reject-user/${data.userId}`, { notes: data.notes }),
+    onSuccess: () => {
+      message.success('사용자가 거부되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-users'] });
+      setApprovalModalVisible(false);
+      setSelectedUser(null);
+      approvalForm.resetFields();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.message || '거부 처리 중 오류가 발생했습니다');
+    },
+  });
+
+  // Update user
+  const updateUserMutation = useMutation({
+    mutationFn: (data: { userId: string; updates: any }) =>
+      apiClient.put(`/auth/users/${data.userId}`, data.updates),
+    onSuccess: () => {
+      message.success('사용자 정보가 업데이트되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setEditModalVisible(false);
+      setSelectedUser(null);
+      editForm.resetFields();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.message || '업데이트 중 오류가 발생했습니다');
+    },
+  });
+
+  // Delete user mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiClient.delete(`/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      message.success('사용자가 삭제되었습니다');
+    },
+    onError: () => {
+      message.error('사용자 삭제에 실패했습니다');
+    },
+  });
+
+  // Create/Update user mutation
+  const saveUserMutation = useMutation({
+    mutationFn: async ({ userData, isEdit }: { userData: any; isEdit: boolean }) => {
+      if (isEdit) {
+        return await apiClient.put(`/admin/users/${selectedUserForForm?.id}`, userData);
+      } else {
+        return await apiClient.post('/admin/users', userData);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      message.success(selectedUserForForm ? '사용자 정보가 업데이트되었습니다' : '새 사용자가 추가되었습니다');
+      setUserFormVisible(false);
+      setSelectedUserForForm(null);
+    },
+    onError: () => {
+      message.error('사용자 정보 저장에 실패했습니다');
+    },
+  });
+
+  const handleApprove = (user: PendingUser) => {
+    setSelectedUser(user);
+    setApprovalModalVisible(true);
+    approvalForm.setFieldValue('action', 'approve');
+  };
+
+  const handleReject = (user: PendingUser) => {
+    setSelectedUser(user);
+    setApprovalModalVisible(true);
+    approvalForm.setFieldValue('action', 'reject');
+  };
+
+  const handleEdit = (user: User) => {
+    setSelectedUser(user);
+    editForm.setFieldsValue({
+      name: user.name,
+      title: user.title,
+      phone: user.phone,
+      role: user.role,
+      status: user.status,
+    });
+    setEditModalVisible(true);
+  };
+
+  const handleAdd = () => {
+    setSelectedUserForForm(null);
+    setUserFormVisible(true);
+  };
+
+  const handleEditForForm = (user: User) => {
+    setSelectedUserForForm(user);
+    setUserFormVisible(true);
+  };
+
+  const handleDelete = (user: User) => {
+    Modal.confirm({
+      title: '사용자 삭제',
+      content: `${user.name} 사용자를 삭제하시겠습니까?`,
+      okText: '삭제',
+      okType: 'danger',
+      cancelText: '취소',
+      onOk: () => deleteMutation.mutate(user.id),
+    });
+  };
+
+  const handleApprovalSubmit = () => {
+    approvalForm.validateFields().then(values => {
+      if (!selectedUser) return;
+
+      const data = {
+        userId: selectedUser.id,
+        notes: values.notes
+      };
+
+      if (values.action === 'approve') {
+        approveUserMutation.mutate(data);
+      } else {
+        rejectUserMutation.mutate(data);
+      }
+    });
+  };
+
+  const handleEditSubmit = () => {
+    editForm.validateFields().then(values => {
+      if (!selectedUser) return;
+
+      updateUserMutation.mutate({
+        userId: selectedUser.id,
+        updates: values
+      });
+    });
+  };
+
+  const handleModalOk = async (userData: any) => {
+    saveUserMutation.mutate({ 
+      userData, 
+      isEdit: !!selectedUserForForm 
+    });
+  };
+
   const getRoleTag = (role: string) => {
     const roleConfig = {
       SUPER_ADMIN: { color: 'red', text: '시스템 관리자' },
-      HR_MANAGER: { color: 'orange', text: 'HR 매니저' },
-      MANAGER: { color: 'blue', text: '매니저' },
-      EMPLOYEE: { color: 'green', text: '직원' },
+      CUSTOMER_ADMIN: { color: 'orange', text: '고객사 관리자' },
+      HR_MANAGER: { color: 'blue', text: 'HR 매니저' },
+      MANAGER: { color: 'green', text: '매니저' },
+      EMPLOYEE: { color: 'default', text: '직원' },
     };
     
     const config = roleConfig[role as keyof typeof roleConfig] || { color: 'default', text: role };
@@ -125,78 +339,17 @@ export const UserManagement = () => {
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 
-  const handleEdit = (user: User) => {
-    setSelectedUser(user);
-    setIsModalOpen(true);
-  };
-
-  const handleAdd = () => {
-    setSelectedUser(null);
-    setIsModalOpen(true);
-  };
-
-  // Delete user mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      await apiClient.delete(`/users/${userId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      message.success('사용자가 삭제되었습니다');
-    },
-    onError: () => {
-      message.error('사용자 삭제에 실패했습니다');
-    },
-  });
-
-  // Create/Update user mutation
-  const saveUserMutation = useMutation({
-    mutationFn: async ({ userData, isEdit }: { userData: any; isEdit: boolean }) => {
-      if (isEdit) {
-        return await apiClient.put(`/users/${selectedUser?.id}`, userData);
-      } else {
-        return await apiClient.post('/users', userData);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      message.success(selectedUser ? '사용자 정보가 업데이트되었습니다' : '새 사용자가 추가되었습니다');
-      setIsModalOpen(false);
-      setSelectedUser(null);
-    },
-    onError: () => {
-      message.error('사용자 정보 저장에 실패했습니다');
-    },
-  });
-
-  const handleDelete = (user: User) => {
-    Modal.confirm({
-      title: '사용자 삭제',
-      content: `${user.name} 사용자를 삭제하시겠습니까?`,
-      okText: '삭제',
-      okType: 'danger',
-      cancelText: '취소',
-      onOk: () => deleteMutation.mutate(user.id),
-    });
-  };
-
-  const handleModalOk = async (userData: any) => {
-    saveUserMutation.mutate({ 
-      userData, 
-      isEdit: !!selectedUser 
-    });
-  };
-
-  const columns: ColumnsType<User> = [
+  const userColumns = [
     {
       title: '사용자',
       key: 'user',
-      render: (_, record) => (
-        <div className="flex items-center gap-3">
-          <Avatar size="default" icon={<UserOutlined />} />
+      render: (record: User) => (
+        <div className="flex items-center space-x-3">
+          <Avatar size="large" icon={<UserOutlined />} />
           <div>
-            <div className="font-medium">{record.name}</div>
-            <div className="text-gray-500 text-sm">{record.title}</div>
+            <Text strong>{record.name}</Text>
+            <br />
+            <Text type="secondary" className="text-xs">{record.email}</Text>
           </div>
         </div>
       ),
@@ -204,7 +357,7 @@ export const UserManagement = () => {
     {
       title: '연락처',
       key: 'contact',
-      render: (_, record) => (
+      render: (record: User) => (
         <div className="space-y-1">
           <div className="flex items-center gap-1 text-sm">
             <MailOutlined className="text-gray-400" />
@@ -220,7 +373,13 @@ export const UserManagement = () => {
       ),
     },
     {
-      title: '권한',
+      title: '직책',
+      dataIndex: 'title',
+      key: 'title',
+      render: (title: string) => title || '-',
+    },
+    {
+      title: '역할',
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => getRoleTag(role),
@@ -229,7 +388,14 @@ export const UserManagement = () => {
       title: '상태',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => getStatusTag(status),
+      render: (status: string, record: User) => (
+        <div>
+          {getStatusTag(status)}
+          {record.email_verified && (
+            <Tag color="blue" className="ml-1">이메일 인증</Tag>
+          )}
+        </div>
+      ),
     },
     {
       title: '최근 로그인',
@@ -240,22 +406,33 @@ export const UserManagement = () => {
     },
     {
       title: '가입일',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (createdAt: string) => new Date(createdAt).toLocaleDateString('ko-KR'),
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date: string) => new Date(date).toLocaleDateString('ko-KR'),
     },
     {
       title: '작업',
       key: 'actions',
       width: 120,
-      render: (_, record) => (
+      render: (record: User) => (
         <Space size="small">
-          <Tooltip title="수정">
-            <Button
-              type="text"
+          <Tooltip title="보기">
+            <Button 
+              type="text" 
+              icon={<EyeOutlined />}
               size="small"
+              onClick={() => {
+                setSelectedUser(record);
+                setViewModalVisible(true);
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="수정">
+            <Button 
+              type="text" 
               icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
+              size="small"
+              onClick={() => handleEditForForm(record)}
             />
           </Tooltip>
           <Tooltip title="삭제">
@@ -272,15 +449,107 @@ export const UserManagement = () => {
     },
   ];
 
+  const pendingColumns = [
+    {
+      title: '사용자',
+      key: 'user',
+      render: (record: PendingUser) => (
+        <div className="flex items-center space-x-3">
+          <Avatar size="large" icon={<UserOutlined />} />
+          <div>
+            <Text strong>{record.name}</Text>
+            <br />
+            <Text type="secondary" className="text-xs">{record.email}</Text>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: '회사명',
+      dataIndex: 'company_name',
+      key: 'company_name',
+      render: (text: string) => text || '-',
+    },
+    {
+      title: '직책',
+      dataIndex: 'title',
+      key: 'title',
+      render: (text: string) => text || '-',
+    },
+    {
+      title: '연락처',
+      dataIndex: 'phone',
+      key: 'phone',
+      render: (phone: string) => phone || '-',
+    },
+    {
+      title: '상태',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string, record: PendingUser) => (
+        <div>
+          <Tag color={status === 'PENDING_EMAIL_VERIFICATION' ? 'orange' : 'processing'}>
+            {status === 'PENDING_EMAIL_VERIFICATION' ? '이메일 인증 대기' : 'HR 승인 대기'}
+          </Tag>
+          {record.email_verified && (
+            <Tag color="blue" className="ml-1">이메일 인증</Tag>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: '신청일',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date: string) => new Date(date).toLocaleDateString('ko-KR'),
+    },
+    {
+      title: '작업',
+      key: 'actions',
+      render: (record: PendingUser) => (
+        <Space>
+          <Button 
+            type="text" 
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setSelectedUser(record);
+              setViewModalVisible(true);
+            }}
+          />
+          {record.status === 'PENDING_HR_APPROVAL' && (
+            <>
+              <Button 
+                type="text" 
+                icon={<CheckOutlined />}
+                className="text-green-600"
+                onClick={() => handleApprove(record)}
+              />
+              <Button 
+                type="text" 
+                icon={<CloseOutlined />}
+                className="text-red-600" 
+                onClick={() => handleReject(record)}
+              />
+            </>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  const pendingUsersCount = pendingUsers?.length || 0;
+  const totalUsers = users?.length || 0;
+  const activeUsers = users?.filter((u: User) => u.status === 'ACTIVE').length || 0;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <Title level={2}>
-            <TeamOutlined className="mr-2" />
+            <TeamOutlined className="mr-3" />
             사용자 관리
           </Title>
-          <p className="text-gray-600">시스템 사용자를 관리하세요</p>
+          <p className="text-gray-600">직원을 관리하고 가입 승인을 처리하세요</p>
         </div>
         <Button
           type="primary"
@@ -292,73 +561,292 @@ export const UserManagement = () => {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <div className="flex flex-wrap gap-4">
-          <Search
-            placeholder="이름, 이메일, 직책으로 검색"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 250 }}
-            allowClear
-          />
-          <Select
-            placeholder="권한 필터"
-            value={filterRole}
-            onChange={setFilterRole}
-            style={{ width: 150 }}
-            options={[
-              { value: 'all', label: '전체 권한' },
-              { value: 'SUPER_ADMIN', label: '시스템 관리자' },
-              { value: 'HR_MANAGER', label: 'HR 매니저' },
-              { value: 'MANAGER', label: '매니저' },
-              { value: 'EMPLOYEE', label: '직원' },
-            ]}
-          />
-          <Select
-            placeholder="상태 필터"
-            value={filterStatus}
-            onChange={setFilterStatus}
-            style={{ width: 120 }}
-            options={[
-              { value: 'all', label: '전체 상태' },
-              { value: 'ACTIVE', label: '활성' },
-              { value: 'INACTIVE', label: '비활성' },
-              { value: 'SUSPENDED', label: '정지' },
-              { value: 'PENDING', label: '승인대기' },
-            ]}
-          />
-        </div>
-      </Card>
+      <Row gutter={16} className="mb-6">
+        <Col span={6}>
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{totalUsers}</div>
+              <div className="text-gray-500">전체 사용자</div>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
+              <div className="text-gray-500">활성 사용자</div>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{pendingUsersCount}</div>
+              <div className="text-gray-500">승인 대기</div>
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {users?.filter((u: User) => u.role === 'HR_MANAGER' || u.role === 'CUSTOMER_ADMIN').length || 0}
+              </div>
+              <div className="text-gray-500">관리자</div>
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
-      {/* Users Table */}
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={filteredUsers}
-          rowKey="id"
-          loading={isLoading || deleteMutation.isPending}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} / 총 ${total}명`,
-          }}
-        />
-      </Card>
+      <Tabs 
+        activeKey={activeTab} 
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'users',
+            label: '직원 관리',
+            children: (
+              <div className="space-y-4">
+                {/* Filters */}
+                <Card>
+                  <div className="flex flex-wrap gap-4">
+                    <Search
+                      placeholder="이름, 이메일, 직책으로 검색"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      style={{ width: 250 }}
+                      allowClear
+                    />
+                    <Select
+                      placeholder="권한 필터"
+                      value={filterRole}
+                      onChange={setFilterRole}
+                      style={{ width: 150 }}
+                      options={[
+                        { value: 'all', label: '전체 권한' },
+                        { value: 'CUSTOMER_ADMIN', label: '고객사 관리자' },
+                        { value: 'HR_MANAGER', label: 'HR 매니저' },
+                        { value: 'MANAGER', label: '매니저' },
+                        { value: 'EMPLOYEE', label: '직원' },
+                      ]}
+                    />
+                    <Select
+                      placeholder="상태 필터"
+                      value={filterStatus}
+                      onChange={setFilterStatus}
+                      style={{ width: 120 }}
+                      options={[
+                        { value: 'all', label: '전체 상태' },
+                        { value: 'ACTIVE', label: '활성' },
+                        { value: 'INACTIVE', label: '비활성' },
+                        { value: 'SUSPENDED', label: '정지' },
+                      ]}
+                    />
+                  </div>
+                </Card>
+
+                <Card>
+                  <Table
+                    columns={userColumns}
+                    dataSource={filteredUsers}
+                    loading={usersLoading}
+                    rowKey="id"
+                    pagination={{
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
+                      showTotal: (total, range) =>
+                        `${range[0]}-${range[1]} / 총 ${total}명`,
+                    }}
+                  />
+                </Card>
+              </div>
+            )
+          },
+          {
+            key: 'pending',
+            label: (
+              <span>
+                가입 승인
+                {pendingUsersCount > 0 && (
+                  <Badge count={pendingUsersCount} offset={[10, -5]} />
+                )}
+              </span>
+            ),
+            children: (
+              <Card>
+                <Table
+                  columns={pendingColumns}
+                  dataSource={pendingUsers}
+                  loading={pendingLoading}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
+            )
+          }
+        ]}
+      />
 
       {/* User Form Modal */}
       <UserForm
-        open={isModalOpen}
-        user={selectedUser}
+        open={userFormVisible}
+        user={selectedUserForForm}
         onOk={handleModalOk}
         onCancel={() => {
-          setIsModalOpen(false);
-          setSelectedUser(null);
+          setUserFormVisible(false);
+          setSelectedUserForForm(null);
         }}
         loading={saveUserMutation.isPending}
       />
+
+      {/* View User Modal */}
+      <Modal
+        title="사용자 상세 정보"
+        open={viewModalVisible}
+        onCancel={() => setViewModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {selectedUser && (
+          <Descriptions column={2} bordered>
+            <Descriptions.Item label="이름">
+              {selectedUser.name}
+            </Descriptions.Item>
+            <Descriptions.Item label="이메일">
+              <div className="flex items-center">
+                <MailOutlined className="mr-2" />
+                {selectedUser.email}
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="전화번호">
+              <div className="flex items-center">
+                <PhoneOutlined className="mr-2" />
+                {selectedUser.phone || '-'}
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="직책">
+              {'title' in selectedUser ? selectedUser.title : '-'}
+            </Descriptions.Item>
+            {'role' in selectedUser && (
+              <Descriptions.Item label="역할">
+                <Tag color="blue">{selectedUser.role}</Tag>
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item label="상태">
+              {'status' in selectedUser ? (
+                <Tag color={selectedUser.status === 'ACTIVE' ? 'green' : 'red'}>
+                  {selectedUser.status}
+                </Tag>
+              ) : (
+                <Tag color="orange">PENDING</Tag>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="이메일 인증">
+              <Tag color={selectedUser.email_verified ? 'green' : 'red'}>
+                {selectedUser.email_verified ? '인증완료' : '미인증'}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="가입일">
+              {new Date(selectedUser.created_at).toLocaleString('ko-KR')}
+            </Descriptions.Item>
+            {'company' in selectedUser && selectedUser.company && (
+              <Descriptions.Item label="소속 회사" span={2}>
+                {selectedUser.company.name}
+              </Descriptions.Item>
+            )}
+            {'company_name' in selectedUser && selectedUser.company_name && (
+              <Descriptions.Item label="희망 회사" span={2}>
+                {selectedUser.company_name}
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        )}
+      </Modal>
+
+      {/* Approval Modal */}
+      <Modal
+        title={approvalForm.getFieldValue('action') === 'approve' ? '사용자 승인' : '사용자 거부'}
+        open={approvalModalVisible}
+        onOk={handleApprovalSubmit}
+        onCancel={() => {
+          setApprovalModalVisible(false);
+          setSelectedUser(null);
+          approvalForm.resetFields();
+        }}
+        confirmLoading={approveUserMutation.isPending || rejectUserMutation.isPending}
+      >
+        <Form form={approvalForm} layout="vertical">
+          <Form.Item name="action" hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="notes"
+            label="처리 의견"
+            help={approvalForm.getFieldValue('action') === 'approve' ? "승인 사유를 입력해주세요" : "거부 사유를 입력해주세요"}
+          >
+            <TextArea rows={4} placeholder="처리 의견을 입력하세요..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal
+        title="사용자 정보 수정"
+        open={editModalVisible}
+        onOk={handleEditSubmit}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setSelectedUser(null);
+          editForm.resetFields();
+        }}
+        confirmLoading={updateUserMutation.isPending}
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            name="name"
+            label="이름"
+            rules={[{ required: true, message: '이름을 입력해주세요' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="title"
+            label="직책"
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="phone"
+            label="전화번호"
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="role"
+            label="역할"
+            rules={[{ required: true, message: '역할을 선택해주세요' }]}
+          >
+            <Select>
+              <Option value="EMPLOYEE">직원</Option>
+              <Option value="MANAGER">매니저</Option>
+              <Option value="HR_MANAGER">HR 매니저</Option>
+              <Option value="CUSTOMER_ADMIN">고객사 관리자</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="status"
+            label="상태"
+            rules={[{ required: true, message: '상태를 선택해주세요' }]}
+          >
+            <Select>
+              <Option value="ACTIVE">활성</Option>
+              <Option value="INACTIVE">비활성</Option>
+              <Option value="SUSPENDED">정지</Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

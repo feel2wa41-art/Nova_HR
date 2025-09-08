@@ -43,9 +43,16 @@ export class UsersService {
     });
   }
 
-  async findById(id: string) {
+  async findById(id: string, tenantId?: string) {
+    const where: any = { id };
+    
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
+
     const user = await this.prisma.auth_user.findUnique({
-      where: { id },
+      where,
       select: {
         id: true,
         email: true,
@@ -106,9 +113,16 @@ export class UsersService {
     role?: string;
     language?: string;
     org_id?: string;
-  }) {
+  }, tenantId?: string) {
+    const where: any = { id };
+    
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
+
     const user = await this.prisma.auth_user.findUnique({
-      where: { id }
+      where
     });
 
     if (!user) {
@@ -133,7 +147,16 @@ export class UsersService {
     });
   }
 
-  async updatePassword(id: string, newPassword: string) {
+  async updatePassword(id: string, newPassword: string, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new NotFoundException('User not found or access denied');
+      }
+    }
     const hashedPassword = await this.hashService.hash(newPassword);
     
     return this.prisma.auth_user.update({
@@ -150,9 +173,16 @@ export class UsersService {
     });
   }
 
-  async deactivateUser(id: string) {
+  async deactivateUser(id: string, tenantId?: string) {
+    const where: any = { id };
+    
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
+
     const user = await this.prisma.auth_user.findUnique({
-      where: { id }
+      where
     });
 
     if (!user) {
@@ -178,9 +208,16 @@ export class UsersService {
     });
   }
 
-  async activateUser(id: string) {
+  async activateUser(id: string, tenantId?: string) {
+    const where: any = { id };
+    
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
+
     const user = await this.prisma.auth_user.findUnique({
-      where: { id }
+      where
     });
 
     if (!user) {
@@ -200,6 +237,101 @@ export class UsersService {
         updated_at: true,
       }
     });
+  }
+
+  async createUser(createData: {
+    email: string;
+    password: string;
+    name: string;
+    title?: string;
+    phone?: string;
+    role: string;
+    org_id?: string;
+    tenant_id: string;
+  }) {
+    // Check if user already exists
+    const existingUser = await this.prisma.auth_user.findUnique({
+      where: { email: createData.email }
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('User with this email already exists');
+    }
+
+    // Hash password
+    const hashedPassword = await this.hashService.hash(createData.password);
+
+    // Create user
+    const user = await this.prisma.auth_user.create({
+      data: {
+        ...createData,
+        password: hashedPassword,
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        title: true,
+        phone: true,
+        avatar_url: true,
+        status: true,
+        role: true,
+        language: true,
+        created_at: true,
+        employee_profile: {
+          select: {
+            emp_no: true,
+            department: true,
+            hire_date: true,
+          }
+        },
+        org_unit: {
+          select: {
+            name: true,
+          }
+        }
+      }
+    });
+
+    return user;
+  }
+
+  async deleteUser(id: string, tenantId?: string) {
+    const where: any = { id };
+    
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
+
+    const user = await this.prisma.auth_user.findUnique({
+      where
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Delete related data first
+    await this.prisma.employee_profile.deleteMany({
+      where: { user_id: id }
+    });
+
+    await this.prisma.leave_balance.deleteMany({
+      where: { user_id: id }
+    });
+
+    await this.prisma.attendance.deleteMany({
+      where: { user_id: id }
+    });
+
+    // Delete the user
+    await this.prisma.auth_user.delete({
+      where: { id }
+    });
+
+    return { success: true, message: 'User deleted successfully' };
   }
 
   async getUserStats(tenantId?: string) {

@@ -11,15 +11,19 @@ import {
 export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async checkIn(userId: string, checkInDto: CheckInDto) {
+  async checkIn(userId: string, checkInDto: CheckInDto, tenantId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Verify user belongs to the correct tenant for security
     const existingAttendance = await this.prisma.attendance.findFirst({
       where: {
         user_id: userId,
         date_key: {
           gte: today,
+        },
+        user: {
+          tenant_id: tenantId  // Tenant isolation security check
         }
       }
     });
@@ -32,9 +36,12 @@ export class AttendanceService {
     let requiresApproval = false;
     let status = 'NORMAL';
 
-    // Get user's base location for verification
+    // Get user's base location for verification with tenant security check
     const user = await this.prisma.auth_user.findUnique({
-      where: { id: userId },
+      where: { 
+        id: userId,
+        tenant_id: tenantId  // Ensure user belongs to correct tenant
+      },
       include: {
         employee_profile: {
           include: {
@@ -103,7 +110,7 @@ export class AttendanceService {
     }
   }
 
-  async checkOut(userId: string, checkOutDto: CheckOutDto) {
+  async checkOut(userId: string, checkOutDto: CheckOutDto, tenantId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -112,6 +119,9 @@ export class AttendanceService {
         user_id: userId,
         date_key: {
           gte: today,
+        },
+        user: {
+          tenant_id: tenantId  // Tenant isolation security check
         }
       }
     });
@@ -176,8 +186,13 @@ export class AttendanceService {
     });
   }
 
-  async getAttendanceHistory(userId: string, historyDto: AttendanceHistoryDto) {
-    const whereClause: any = { user_id: userId };
+  async getAttendanceHistory(userId: string, historyDto: AttendanceHistoryDto, tenantId: string) {
+    const whereClause: any = { 
+      user_id: userId,
+      user: {
+        tenant_id: tenantId  // Tenant isolation security check
+      }
+    };
 
     if (historyDto.startDate && historyDto.endDate) {
       whereClause.date_key = {
@@ -223,7 +238,7 @@ export class AttendanceService {
     };
   }
 
-  async getCurrentAttendanceStatus(userId: string) {
+  async getCurrentAttendanceStatus(userId: string, tenantId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -232,6 +247,9 @@ export class AttendanceService {
         user_id: userId,
         date_key: {
           gte: today,
+        },
+        user: {
+          tenant_id: tenantId  // Tenant isolation security check
         }
       },
       include: {
@@ -259,7 +277,15 @@ export class AttendanceService {
     };
   }
 
-  async createAdjustmentRequest(userId: string, adjustmentDto: AttendanceAdjustmentDto) {
+  async createAdjustmentRequest(userId: string, adjustmentDto: AttendanceAdjustmentDto, tenantId: string) {
+    // Verify user belongs to tenant for security
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new BadRequestException('User not found or access denied');
+    }
+
     return this.prisma.attendance_request.create({
       data: {
         user_id: userId,
@@ -281,8 +307,11 @@ export class AttendanceService {
     });
   }
 
-  async getUserAdjustmentRequests(userId: string, status?: string) {
-    const whereClause: any = { user_id: userId };
+  async getUserAdjustmentRequests(userId: string, status?: string, tenantId?: string) {
+    const whereClause: any = { 
+      user_id: userId,
+      user: tenantId ? { tenant_id: tenantId } : undefined  // Tenant isolation when tenantId provided
+    };
     if (status) {
       whereClause.status = status;
     }
@@ -302,8 +331,10 @@ export class AttendanceService {
     });
   }
 
-  async getAllAdjustmentRequests(status?: string) {
-    const whereClause: any = {};
+  async getAllAdjustmentRequests(status?: string, tenantId?: string) {
+    const whereClause: any = {
+      user: tenantId ? { tenant_id: tenantId } : undefined  // Tenant isolation when tenantId provided
+    };
     if (status) {
       whereClause.status = status;
     }
@@ -380,7 +411,7 @@ export class AttendanceService {
     });
   }
 
-  async getAttendanceStatistics(userId: string, period: string = 'month') {
+  async getAttendanceStatistics(userId: string, period: string = 'month', tenantId?: string) {
     const now = new Date();
     let startDate: Date, endDate: Date;
 
@@ -410,7 +441,8 @@ export class AttendanceService {
         date_key: {
           gte: startDate,
           lte: endDate,
-        }
+        },
+        user: tenantId ? { tenant_id: tenantId } : undefined  // Tenant isolation when tenantId provided
       },
       orderBy: { date_key: 'desc' }
     });

@@ -242,7 +242,6 @@ export function NotificationsPage() {
                               notification.type === 'HR_COMMUNITY_POST' ? 'blue' :
                               notification.type === 'HR_COMMUNITY_COMMENT' ? 'green' : 'orange'
                             }
-                            size="small"
                           >
                             {notification.type === 'HR_COMMUNITY_POST' && '게시글'}
                             {notification.type === 'HR_COMMUNITY_COMMENT' && '댓글'}

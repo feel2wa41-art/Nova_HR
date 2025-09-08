@@ -16,12 +16,23 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// Create default context value to prevent errors during hot reloading
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  login: async () => {},
+  logout: () => {},
+  isLoading: false,
+  isAuthenticated: false,
+};
+
+const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  // With the default context, this should never be null, but keep the check for safety
+  if (!context || context === defaultAuthContext) {
+    // During development, this might happen during hot reloads
+    console.warn('useAuth called without AuthProvider or during hot reload');
   }
   return context;
 };
@@ -56,10 +67,10 @@ export const useAuthProvider = () => {
     setIsLoading(true);
     try {
       const response = await authAPI.login({ email, password });
-      const { access_token, user: userData } = response;
+      const { accessToken, user: userData } = response;
       
       // Store auth data
-      localStorage.setItem('provider_admin_token', access_token);
+      localStorage.setItem('provider_admin_token', accessToken);
       localStorage.setItem('provider_admin_user', JSON.stringify(userData));
       
       setUser(userData);

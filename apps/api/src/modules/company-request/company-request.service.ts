@@ -320,11 +320,16 @@ export class CompanyRequestService {
       throw new BadRequestException('This request has already been processed');
     }
 
+    // Check if user is a provider_admin or a super_admin
+    const providerAdmin = await this.prisma.provider_admin.findUnique({
+      where: { id: providerId }
+    });
+
     const updatedRequest = await this.prisma.company_request.update({
       where: { id },
       data: {
         status: CompanyRequestStatus.REJECTED,
-        reviewed_by: providerId,
+        reviewed_by: providerAdmin?.id || null, // Set to null for SUPER_ADMIN
         reviewed_at: new Date(),
         rejection_reason: dto.rejection_reason,
         notes: dto.notes
@@ -381,5 +386,33 @@ export class CompanyRequestService {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
+  }
+
+  // 기업 직접 생성 (요청 과정 생략하고 바로 승인된 상태로 생성)
+  async directCreateCompany(dto: CreateCompanyRequestDto, providerId: string) {
+    // 1. Create a temporary request record
+    const tempRequest = await this.prisma.company_request.create({
+      data: {
+        company_name: dto.company_name,
+        business_number: dto.business_number,
+        ceo_name: dto.ceo_name,
+        contact_email: dto.contact_email,
+        contact_phone: dto.contact_phone,
+        address: dto.address,
+        description: dto.description,
+        notes: `${dto.notes || ''} - 직접 생성됨`,
+        status: 'PENDING'
+      }
+    });
+
+    // 2. Immediately approve the request using existing logic
+    const result = await this.approveRequest(tempRequest.id, { notes: '직접 생성된 기업' }, providerId);
+
+    // 3. Return the result with additional context
+    return {
+      ...result,
+      message: '기업이 성공적으로 생성되었습니다',
+      creationType: 'DIRECT_CREATE'
+    };
   }
 }

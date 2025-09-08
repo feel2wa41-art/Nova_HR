@@ -62,7 +62,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <Sider width={250} theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
         <div style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
           <h2 style={{ margin: 0, color: '#1890ff', fontWeight: 'bold' }}>
-            Nova HR
+            Reko HR
           </h2>
           <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '12px' }}>
             Provider Admin

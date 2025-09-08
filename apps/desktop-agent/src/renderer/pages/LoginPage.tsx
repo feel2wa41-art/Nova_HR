@@ -57,7 +57,7 @@ export const LoginPage: React.FC = () => {
       const result = await login(formData)
       
       if (result.success) {
-        showNotification('Login Successful', 'Welcome to Nova HR Desktop Agent!', 'success')
+        showNotification('Login Successful', 'Welcome to HR Desktop Agent!', 'success')
       } else {
         showNotification('Login Failed', result.error || 'Invalid credentials', 'error')
       }

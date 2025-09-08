@@ -80,48 +80,11 @@ export const CreateDraftPage = () => {
     retry: false,
   });
 
-  // Get categories list (using temporary mock data)
-  const mockCategories = [
-    {
-      id: '1',
-      name: 'Expense Claim',
-      code: 'REIMBURSEMENT',
-      description: 'Work-related expense reimbursement',
-      icon: '💳',
-      template_content: `<h3>Expense Claim</h3><p><strong>Applicant:</strong> [Applicant Name]</p><p><strong>Application Date:</strong> [Application Date]</p><p><strong>Claim Amount:</strong> [Amount] KRW</p><p><strong>Expense Category:</strong> [Expense Category]</p><p><strong>Usage Details:</strong></p><p>[Please enter detailed usage information]</p><p><strong>Vendor:</strong> [Vendor]</p><p><strong>Receipt Date:</strong> [Receipt Date]</p><br><p>I hereby request approval for the above expense claim.</p>`,
-      is_active: true
-    },
-    {
-      id: '2',
-      name: 'Supply Request',
-      code: 'SUPPLY_REQUEST',
-      description: 'Office supplies and equipment request',
-      icon: '📦',
-      template_content: `<h3>Supply Request</h3><p><strong>Applicant:</strong> [Applicant Name]</p><p><strong>Application Date:</strong> [Application Date]</p><p><strong>Item Name:</strong> [Item Name]</p><p><strong>Quantity:</strong> [Quantity]</p><p><strong>Urgency:</strong> [Urgency Level]</p><p><strong>Request Reason:</strong></p><p>[Please enter the reason for the request]</p><br><p>I hereby request approval for the above supply request.</p>`,
-      is_active: true
-    },
-    {
-      id: '3',
-      name: 'Leave Request',
-      code: 'LEAVE_REQUEST',
-      description: 'Annual leave, sick leave, and other leave requests',
-      icon: '🏖️',
-      template_content: `<h3>Leave Request</h3><p><strong>Applicant:</strong> [Applicant Name]</p><p><strong>Application Date:</strong> [Application Date]</p><p><strong>Leave Type:</strong> [Leave Type]</p><p><strong>Leave Period:</strong> [Start Date] ~ [End Date]</p><p><strong>Reason:</strong></p><p>[Please enter the reason for leave]</p><br><p>I hereby request approval for the above leave request.</p>`,
-      is_active: true
-    }
-  ];
-
+  // Get categories list
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['approval-categories'],
-    queryFn: async () => {
-      try {
-        return await approvalApi.getCategories();
-      } catch (error) {
-        console.warn('API server connection failed, using mock data:', error);
-        return mockCategories;
-      }
-    },
-    retry: false,
+    queryFn: () => approvalApi.getCategories(),
+    retry: 1,
   });
 
   // Get existing data in edit mode
@@ -691,23 +654,6 @@ export const CreateDraftPage = () => {
                 </Select>
               </Form.Item>
 
-              {/* Approval Line Setup - Right after form selection */}
-              {selectedCategoryId && (
-                <Form.Item
-                  label="Approval Line Setup"
-                  extra="Designate people who will participate in the approval process"
-                >
-                  <Button
-                    type={approvalRoute ? "default" : "primary"}
-                    icon={<SendOutlined />}
-                    onClick={() => setApprovalRouteOpen(true)}
-                    block
-                    size="large"
-                  >
-                    {approvalRoute ? 'Edit Approval Line' : 'Set Approval Line'}
-                  </Button>
-                </Form.Item>
-              )}
 
               {selectedCategory && (
                 <>

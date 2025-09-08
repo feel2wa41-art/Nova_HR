@@ -249,12 +249,12 @@ export const DraftListPage = ({ embedded = false }: DraftListPageProps) => {
             }}
           />
 
-          {data && data.pagination.total > 0 && (
+          {data && data.pagination && data.pagination.total > 0 && (
             <div className="flex justify-center mt-4">
               <Pagination
                 current={page}
                 pageSize={pageSize}
-                total={data.pagination.total}
+                total={data?.pagination?.total || 0}
                 onChange={(newPage, newPageSize) => {
                   setPage(newPage);
                   if (newPageSize) setPageSize(newPageSize);

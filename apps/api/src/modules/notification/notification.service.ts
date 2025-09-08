@@ -20,7 +20,17 @@ export class NotificationService {
     message: string;
     type?: string;
     metadata?: any;
+    tenantId?: string;
   }) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (data.tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: data.user_id, tenant_id: data.tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     return this.prisma.notification.create({
       data: {
         user_id: data.user_id,
@@ -32,7 +42,16 @@ export class NotificationService {
     });
   }
 
-  async getNotifications(userId: string, limit = 50) {
+  async getNotifications(userId: string, limit = 50, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     return this.prisma.notification.findMany({
       where: { user_id: userId },
       orderBy: { created_at: 'desc' },
@@ -40,7 +59,16 @@ export class NotificationService {
     });
   }
 
-  async markAsRead(notificationId: string, userId: string) {
+  async markAsRead(notificationId: string, userId: string, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     return this.prisma.notification.updateMany({
       where: {
         id: notificationId,
@@ -53,7 +81,16 @@ export class NotificationService {
     });
   }
 
-  async markAllAsRead(userId: string) {
+  async markAllAsRead(userId: string, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     return this.prisma.notification.updateMany({
       where: {
         user_id: userId,
@@ -66,7 +103,16 @@ export class NotificationService {
     });
   }
 
-  async getUnreadCount(userId: string) {
+  async getUnreadCount(userId: string, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     return this.prisma.notification.count({
       where: {
         user_id: userId,
@@ -75,7 +121,16 @@ export class NotificationService {
     });
   }
 
-  async deleteNotification(notificationId: string, userId: string) {
+  async deleteNotification(notificationId: string, userId: string, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     return this.prisma.notification.deleteMany({
       where: {
         id: notificationId,
@@ -105,7 +160,7 @@ export class NotificationService {
     });
   }
 
-  async createCompanyNotification(companyId: string, data: {
+  async createCompanyNotification(companyId: string, tenantId: string, data: {
     title: string;
     message: string;
     type?: string;
@@ -113,9 +168,16 @@ export class NotificationService {
     roles?: string[];
     departments?: string[];
   }) {
+    // Verify company belongs to tenant
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, tenant_id: tenantId }
+    });
+    if (!company) {
+      throw new Error('Company not found or access denied');
+    }
     // Get users based on filters
     const whereClause: any = {
-      tenant_id: companyId,
+      tenant_id: tenantId,  // Tenant isolation security check
       status: 'ACTIVE',
     };
 
@@ -149,7 +211,16 @@ export class NotificationService {
     return { count: 0 };
   }
 
-  async getNotificationsByType(userId: string, type: string, limit = 20) {
+  async getNotificationsByType(userId: string, type: string, limit = 20, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     return this.prisma.notification.findMany({
       where: {
         user_id: userId,
@@ -160,7 +231,16 @@ export class NotificationService {
     });
   }
 
-  async getNotificationSettings(userId: string) {
+  async getNotificationSettings(userId: string, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     // Return default settings since notification_settings table doesn't exist yet
     return {
       user_id: userId,
@@ -180,7 +260,16 @@ export class NotificationService {
     approval_notifications?: boolean;
     system_announcements?: boolean;
     productivity_reports?: boolean;
-  }) {
+  }, tenantId?: string) {
+    // Verify user belongs to tenant if tenantId is provided
+    if (tenantId) {
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId, tenant_id: tenantId }
+      });
+      if (!user) {
+        throw new Error('User not found or access denied');
+      }
+    }
     // Return updated settings since notification_settings table doesn't exist yet
     return {
       user_id: userId,
@@ -286,13 +375,13 @@ export class NotificationService {
     });
   }
 
-  async sendSystemAnnouncement(companyId: string, data: {
+  async sendSystemAnnouncement(companyId: string, tenantId: string, data: {
     title: string;
     message: string;
     priority?: 'low' | 'normal' | 'high' | 'urgent';
     expiresAt?: Date;
   }) {
-    return this.createCompanyNotification(companyId, {
+    return this.createCompanyNotification(companyId, tenantId, {
       title: data.title,
       message: data.message,
       type: 'SYSTEM_ANNOUNCEMENT',

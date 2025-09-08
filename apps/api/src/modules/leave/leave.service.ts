@@ -18,9 +18,13 @@ import {
 export class LeaveService {
   constructor(private prisma: PrismaService) {}
 
-  async createLeaveRequest(userId: string, createDto: CreateLeaveRequestDto) {
+  async createLeaveRequest(userId: string, createDto: CreateLeaveRequestDto, tenantId: string) {
+    // Verify user belongs to tenant for security
     const user = await this.prisma.auth_user.findUnique({
-      where: { id: userId },
+      where: { 
+        id: userId,
+        tenant_id: tenantId  // Tenant isolation security check
+      },
       include: {
         employee_profile: {
           include: {
@@ -60,10 +64,11 @@ export class LeaveService {
     // TODO: Implement proper leave balance checking
     // const currentBalance = await this.getLeaveBalance(userId, new Date().getFullYear());
 
-    // Check for overlapping leave requests
+    // Check for overlapping leave requests with tenant isolation
     const overlapping = await this.prisma.leave_request.findFirst({
       where: {
         user_id: userId,
+        user: { tenant_id: tenantId },  // Tenant isolation security check
         status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
         OR: [
           {
@@ -80,9 +85,15 @@ export class LeaveService {
       throw new BadRequestException('You have an overlapping leave request for this period');
     }
 
-    // Get leave type
+    // Get leave type with tenant filtering
     const leaveType = await this.prisma.leave_type.findFirst({
-      where: { code: createDto.leave_type }
+      where: { 
+        code: createDto.leave_type,
+        OR: [
+          { tenant_id: tenantId },  // Tenant-specific leave types
+          { tenant_id: null }       // Global/system leave types
+        ]
+      }
     });
     
     if (!leaveType) {
@@ -136,17 +147,21 @@ export class LeaveService {
     return leaveRequest;
   }
 
-  async updateLeaveRequest(id: string, userId: string, updateDto: UpdateLeaveRequestDto) {
+  async updateLeaveRequest(id: string, userId: string, updateDto: UpdateLeaveRequestDto, tenantId: string) {
     const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id },
-      include: { user: true }
+      include: { 
+        user: {
+          where: { tenant_id: tenantId }  // Tenant isolation security check
+        }
+      }
     });
 
     if (!leaveRequest) {
       throw new NotFoundException('Leave request not found');
     }
 
-    if (leaveRequest.user_id !== userId) {
+    if (leaveRequest.user_id !== userId || leaveRequest.user?.tenant_id !== tenantId) {
       throw new ForbiddenException('You can only update your own leave requests');
     }
 
@@ -209,11 +224,13 @@ export class LeaveService {
     return updatedRequest;
   }
 
-  async getLeaveRequests(queryDto: LeaveRequestQueryDto, requestingUserId: string, userRole: string) {
-    const where: any = {};
+  async getLeaveRequests(queryDto: LeaveRequestQueryDto, requestingUserId: string, userRole: string, tenantId: string) {
+    const where: any = {
+      user: { tenant_id: tenantId }  // Tenant isolation security check
+    };
 
     // Non-admin users can only see their own requests
-    if (userRole !== UserRole.HR_ADMIN) {
+    if (userRole !== 'HR_ADMIN') {
       where.user_id = requestingUserId;
     } else if (queryDto.user_id) {
       where.user_id = queryDto.user_id;
@@ -284,14 +301,16 @@ export class LeaveService {
     };
   }
 
-  async getLeaveRequest(id: string, requestingUserId: string, userRole: string) {
+  async getLeaveRequest(id: string, requestingUserId: string, userRole: string, tenantId: string) {
     const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id },
       include: {
         user: {
+          where: { tenant_id: tenantId },  // Tenant isolation security check
           select: {
             name: true,
             email: true,
+            tenant_id: true,
             employee_profile: {
               select: {
                 department: true,
@@ -320,22 +339,31 @@ export class LeaveService {
       throw new NotFoundException('Leave request not found');
     }
 
+    // Tenant isolation and user access control
+    if (!leaveRequest.user || leaveRequest.user.tenant_id !== tenantId) {
+      throw new ForbiddenException('Leave request not found or access denied');
+    }
+    
     // Non-admin users can only see their own requests
-    if (userRole !== UserRole.HR_ADMIN && leaveRequest.user_id !== requestingUserId) {
+    if (userRole !== 'HR_ADMIN' && leaveRequest.user_id !== requestingUserId) {
       throw new ForbiddenException('You can only view your own leave requests');
     }
 
     return leaveRequest;
   }
 
-  async approveLeaveRequest(id: string, approvedById: string, approveDto: ApproveLeaveRequestDto) {
+  async approveLeaveRequest(id: string, approvedById: string, approveDto: ApproveLeaveRequestDto, tenantId: string) {
     const leaveRequest = await this.prisma.leave_request.findUnique({
       where: { id },
-      include: { user: true }
+      include: { 
+        user: {
+          where: { tenant_id: tenantId }  // Tenant isolation security check
+        }
+      }
     });
 
-    if (!leaveRequest) {
-      throw new NotFoundException('Leave request not found');
+    if (!leaveRequest || !leaveRequest.user || leaveRequest.user.tenant_id !== tenantId) {
+      throw new NotFoundException('Leave request not found or access denied');
     }
 
     if (leaveRequest.status !== LeaveStatus.PENDING) {
@@ -498,12 +526,15 @@ export class LeaveService {
     return cancelledRequest;
   }
 
-  async getLeaveBalance(userId: string, year?: number) {
+  async getLeaveBalance(userId: string, tenantId: string, year?: number) {
     const targetYear = year || new Date().getFullYear();
     
-    // Get user's leave settings
+    // Get user's leave settings with tenant validation
     const user = await this.prisma.auth_user.findUnique({
-      where: { id: userId },
+      where: { 
+        id: userId,
+        tenant_id: tenantId  // Tenant isolation security check
+      },
       include: {
         company: {
           include: { leave_settings: true }
@@ -528,6 +559,7 @@ export class LeaveService {
     const approvedLeave = await this.prisma.leave_request.findMany({
       where: {
         user_id: userId,
+        user: { tenant_id: tenantId },  // Tenant isolation security check
         status: LeaveStatus.APPROVED,
         start_date: { gte: startOfYear },
         end_date: { lte: endOfYear }

@@ -1075,7 +1075,7 @@ export const ApprovalRouteModal = ({
       onCancel={onCancel}
       width={800}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="space-y-6">
         {/* Loading State */}

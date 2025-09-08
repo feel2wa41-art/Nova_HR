@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Form, Input, Button, message, Typography } from 'antd';
+import { Card, Form, Input, Button, Typography, App } from 'antd';
 import { UserOutlined, LockOutlined, BankOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -9,6 +9,7 @@ const { Title, Text } = Typography;
 const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { message } = App.useApp();
 
   const handleSubmit = async (values: { email: string; password: string }) => {
     try {
@@ -32,7 +33,7 @@ const LoginPage: React.FC = () => {
       <Card style={{ width: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <BankOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
-          <Title level={2} style={{ margin: '0 0 8px 0' }}>Nova HR</Title>
+          <Title level={2} style={{ margin: '0 0 8px 0' }}>Reko HR</Title>
           <Text type="secondary">Service Provider Management System</Text>
         </div>
 
@@ -83,8 +84,8 @@ const LoginPage: React.FC = () => {
           textAlign: 'center'
         }}>
           <Text type="secondary" style={{ fontSize: '12px' }}>
-            Test Account<br />
-            ID: admin@nova-hr.com<br />
+            Provider Admin Account<br />
+            ID: hr@reko-hr.com<br />
             PW: admin123
           </Text>
         </div>

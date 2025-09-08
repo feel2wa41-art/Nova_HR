@@ -61,7 +61,7 @@ export const PersonalizationSettings: React.FC = () => {
   const defaultSettings: PersonalizationPreferences = {
     theme: 'light',
     primaryColor: '#1890ff',
-    language: user?.language || DEFAULT_LANGUAGE,
+    language: (user?.language as LanguageCode) || DEFAULT_LANGUAGE,
     timezone: 'Asia/Seoul',
     dateFormat: 'YYYY-MM-DD',
     timeFormat: '24h',
@@ -89,7 +89,7 @@ export const PersonalizationSettings: React.FC = () => {
   const saveSettingsMutation = useMutation({
     mutationFn: async (values: PersonalizationPreferences) => {
       // Save language preference separately
-      if (values.language !== user?.language) {
+      if (values.language !== (user?.language as LanguageCode)) {
         await saveLanguageMutation.mutateAsync(values.language);
       }
       

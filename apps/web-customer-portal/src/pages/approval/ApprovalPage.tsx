@@ -168,11 +168,7 @@ export const ApprovalPage = () => {
         <Tabs
           activeKey={location.pathname === '/approval' ? 'drafts' : location.pathname.split('/')[2]}
           onChange={(key) => {
-            if (key === 'drafts') {
-              navigate('/approval/drafts');
-            } else if (key === 'pending') {
-              navigate('/approval/pending');
-            }
+            navigate(`/approval/${key}`);
           }}
           items={[
             {

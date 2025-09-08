@@ -57,7 +57,7 @@ export const UserForm = ({ open, user, onOk, onCancel, loading }: UserFormProps)
       onCancel={onCancel}
       footer={null}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

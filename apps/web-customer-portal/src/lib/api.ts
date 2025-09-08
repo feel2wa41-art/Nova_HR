@@ -581,6 +581,13 @@ export interface CommunityPost {
 }
 
 export const api = {
+  // Basic HTTP methods
+  get: (url: string, config?: any) => apiClient.get(url, config),
+  post: (url: string, data?: any, config?: any) => apiClient.post(url, data, config),
+  put: (url: string, data?: any, config?: any) => apiClient.put(url, data, config),
+  delete: (url: string, config?: any) => apiClient.delete(url, config),
+  patch: (url: string, data?: any, config?: any) => apiClient.patch(url, data, config),
+  
   ...authApi,
   ...attendanceApi,
   ...companyApi,

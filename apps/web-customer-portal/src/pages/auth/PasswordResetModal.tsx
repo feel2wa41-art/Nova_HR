@@ -65,7 +65,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
       onCancel={handleClose}
       footer={null}
       width={500}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="py-4">
         <Steps current={step} items={steps} className="mb-8" />

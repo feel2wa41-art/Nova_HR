@@ -6,11 +6,20 @@ import { CreateDailyReportDto, UpdateDailyReportDto, CreateDailyReportEntryDto }
 export class DailyReportService {
   constructor(private prisma: PrismaService) {}
 
-  async createReport(userId: string, dto: CreateDailyReportDto) {
+  async createReport(userId: string, dto: CreateDailyReportDto, tenantId: string) {
+    // Verify user belongs to tenant
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: userId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
     // Check if report already exists for this date
     const existingReport = await this.prisma.daily_report.findFirst({
       where: {
         user_id: userId,
+        user: { tenant_id: tenantId },  // Tenant isolation security check
         report_date: new Date(dto.report_date)
       }
     });
@@ -52,11 +61,12 @@ export class DailyReportService {
     });
   }
 
-  async updateReport(userId: string, reportId: string, dto: UpdateDailyReportDto) {
+  async updateReport(userId: string, reportId: string, dto: UpdateDailyReportDto, tenantId: string) {
     const report = await this.prisma.daily_report.findFirst({
       where: {
         id: reportId,
-        user_id: userId
+        user_id: userId,
+        user: { tenant_id: tenantId }  // Tenant isolation security check
       }
     });
 
@@ -90,11 +100,12 @@ export class DailyReportService {
     });
   }
 
-  async submitReport(userId: string, reportId: string) {
+  async submitReport(userId: string, reportId: string, tenantId: string) {
     const report = await this.prisma.daily_report.findFirst({
       where: {
         id: reportId,
-        user_id: userId
+        user_id: userId,
+        user: { tenant_id: tenantId }  // Tenant isolation security check
       }
     });
 
@@ -128,12 +139,17 @@ export class DailyReportService {
     });
   }
 
-  async getUserReports(userId: string, page: number = 1, limit: number = 20, status?: string) {
+  async getUserReports(userId: string, page: number = 1, limit: number = 20, status?: string, tenantId?: string) {
     const skip = (page - 1) * limit;
-    const where = {
+    const where: any = {
       user_id: userId,
       ...(status && { status })
     };
+
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.user = { tenant_id: tenantId };  // Tenant isolation security check
+    }
 
     const [reports, total] = await Promise.all([
       this.prisma.daily_report.findMany({
@@ -169,12 +185,19 @@ export class DailyReportService {
     };
   }
 
-  async getReportById(userId: string, reportId: string) {
+  async getReportById(userId: string, reportId: string, tenantId?: string) {
+    const where: any = {
+      id: reportId,
+      user_id: userId
+    };
+
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.user = { tenant_id: tenantId };  // Tenant isolation security check
+    }
+
     const report = await this.prisma.daily_report.findFirst({
-      where: {
-        id: reportId,
-        user_id: userId
-      },
+      where,
       include: {
         entries: {
           include: {
@@ -197,12 +220,19 @@ export class DailyReportService {
     return report;
   }
 
-  async deleteReport(userId: string, reportId: string) {
+  async deleteReport(userId: string, reportId: string, tenantId?: string) {
+    const where: any = {
+      id: reportId,
+      user_id: userId
+    };
+
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.user = { tenant_id: tenantId };  // Tenant isolation security check
+    }
+
     const report = await this.prisma.daily_report.findFirst({
-      where: {
-        id: reportId,
-        user_id: userId
-      }
+      where
     });
 
     if (!report) {
@@ -219,12 +249,19 @@ export class DailyReportService {
   }
 
   // Entry management
-  async addEntry(userId: string, reportId: string, dto: CreateDailyReportEntryDto) {
+  async addEntry(userId: string, reportId: string, dto: CreateDailyReportEntryDto, tenantId?: string) {
+    const where: any = {
+      id: reportId,
+      user_id: userId
+    };
+
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.user = { tenant_id: tenantId };  // Tenant isolation security check
+    }
+
     const report = await this.prisma.daily_report.findFirst({
-      where: {
-        id: reportId,
-        user_id: userId
-      }
+      where
     });
 
     if (!report) {
@@ -251,12 +288,19 @@ export class DailyReportService {
     });
   }
 
-  async updateEntry(userId: string, reportId: string, entryId: string, dto: Partial<CreateDailyReportEntryDto>) {
+  async updateEntry(userId: string, reportId: string, entryId: string, dto: Partial<CreateDailyReportEntryDto>, tenantId?: string) {
+    const where: any = {
+      id: reportId,
+      user_id: userId
+    };
+
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.user = { tenant_id: tenantId };  // Tenant isolation security check
+    }
+
     const report = await this.prisma.daily_report.findFirst({
-      where: {
-        id: reportId,
-        user_id: userId
-      }
+      where
     });
 
     if (!report) {
@@ -287,12 +331,19 @@ export class DailyReportService {
     });
   }
 
-  async deleteEntry(userId: string, reportId: string, entryId: string) {
+  async deleteEntry(userId: string, reportId: string, entryId: string, tenantId?: string) {
+    const where: any = {
+      id: reportId,
+      user_id: userId
+    };
+
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.user = { tenant_id: tenantId };  // Tenant isolation security check
+    }
+
     const report = await this.prisma.daily_report.findFirst({
-      where: {
-        id: reportId,
-        user_id: userId
-      }
+      where
     });
 
     if (!report) {
@@ -320,15 +371,25 @@ export class DailyReportService {
   }
 
   // Manager/Admin functions
-  async getTeamReports(managerId: string, page: number = 1, limit: number = 20, filters?: {
+  async getTeamReports(managerId: string, tenantId: string, page: number = 1, limit: number = 20, filters?: {
     status?: string;
     userId?: string;
     startDate?: string;
     endDate?: string;
   }) {
+    // Verify manager belongs to tenant
+    const manager = await this.prisma.auth_user.findUnique({
+      where: { id: managerId, tenant_id: tenantId }
+    });
+    if (!manager) {
+      throw new NotFoundException('Manager not found or access denied');
+    }
+
     // TODO: Add proper team member validation based on org structure
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: any = {
+      user: { tenant_id: tenantId }  // Critical tenant isolation security check
+    };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -383,9 +444,20 @@ export class DailyReportService {
     };
   }
 
-  async reviewReport(reviewerId: string, reportId: string, status: 'APPROVED' | 'REJECTED') {
-    const report = await this.prisma.daily_report.findUnique({
-      where: { id: reportId }
+  async reviewReport(reviewerId: string, reportId: string, status: 'APPROVED' | 'REJECTED', tenantId: string) {
+    // Verify reviewer belongs to tenant
+    const reviewer = await this.prisma.auth_user.findUnique({
+      where: { id: reviewerId, tenant_id: tenantId }
+    });
+    if (!reviewer) {
+      throw new NotFoundException('Reviewer not found or access denied');
+    }
+
+    const report = await this.prisma.daily_report.findFirst({
+      where: { 
+        id: reportId,
+        user: { tenant_id: tenantId }  // Tenant isolation security check
+      }
     });
 
     if (!report) {

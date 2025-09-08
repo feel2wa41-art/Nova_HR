@@ -45,7 +45,7 @@ export class ApprovalController {
     @Request() req
   ) {
     const userRole = req.user.roles?.[0];
-    const companyId = req.user.companyId;
+    const companyId = req.user.tenantId;
 
     if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can create approval categories');
@@ -62,7 +62,7 @@ export class ApprovalController {
     @Query('includeInactive') includeInactive: boolean = false,
     @Request() req
   ) {
-    const companyId = req.user.companyId;
+    const companyId = req.user.tenantId;
     return this.approvalService.getCategories(companyId, includeInactive);
   }
 
@@ -82,7 +82,7 @@ export class ApprovalController {
     @Request() req
   ) {
     const userRole = req.user.roles?.[0];
-    const companyId = req.user.companyId;
+    const companyId = req.user.tenantId;
 
     if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can update approval categories');
@@ -96,7 +96,7 @@ export class ApprovalController {
   @ApiResponse({ status: 200, description: 'Category deleted successfully' })
   async deleteCategory(@Param('id') id: string, @Request() req) {
     const userRole = req.user.roles?.[0];
-    const companyId = req.user.companyId;
+    const companyId = req.user.tenantId;
 
     if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can delete approval categories');
@@ -186,7 +186,7 @@ export class ApprovalController {
     @Request() req
   ) {
     const userRole = req.user.roles?.[0];
-    const companyId = req.user.companyId;
+    const companyId = req.user.tenantId;
 
     if (userRole !== 'HR_ADMIN') {
       throw new ForbiddenException('Only HR admins can view approval statistics');
@@ -245,5 +245,51 @@ export class ApprovalController {
       message: 'Bulk import functionality will be implemented',
       records: importDto.records.length
     };
+  }
+
+  // Count APIs for MainLayout - Fixed
+  @Get('drafts/count')
+  @ApiOperation({ summary: 'Get draft count for current user' })
+  @ApiResponse({ status: 200, description: 'Draft count retrieved successfully' })
+  async getDraftsCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('drafts', userId, userRole);
+  }
+
+  @Get('inbox/count')
+  @ApiOperation({ summary: 'Get inbox count for current user' })
+  @ApiResponse({ status: 200, description: 'Inbox count retrieved successfully' })
+  async getInboxCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('inbox', userId, userRole);
+  }
+
+  @Get('pending/count')
+  @ApiOperation({ summary: 'Get pending approval count for current user' })
+  @ApiResponse({ status: 200, description: 'Pending count retrieved successfully' })
+  async getPendingCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('pending', userId, userRole);
+  }
+
+  @Get('outbox/count')
+  @ApiOperation({ summary: 'Get outbox count for current user' })
+  @ApiResponse({ status: 200, description: 'Outbox count retrieved successfully' })
+  async getOutboxCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('outbox', userId, userRole);
+  }
+
+  @Get('reference/count')
+  @ApiOperation({ summary: 'Get reference document count for current user' })
+  @ApiResponse({ status: 200, description: 'Reference count retrieved successfully' })
+  async getReferenceCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('reference', userId, userRole);
   }
 }

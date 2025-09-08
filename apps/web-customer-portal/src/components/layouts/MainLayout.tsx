@@ -228,14 +228,36 @@ export const MainLayout = () => {
           label: '관리자',
           children: [
             {
+              key: '/admin/hr-management',
+              icon: <TeamOutlined />,
+              label: 'HR 관리',
+              children: [
+                {
+                  key: '/admin/users',
+                  icon: <UserOutlined />,
+                  label: '직원 관리',
+                },
+                {
+                  key: '/admin/attendance-management',
+                  icon: <ClockCircleOutlined />,
+                  label: '근태 관리',
+                },
+                {
+                  key: '/admin/leave-management',
+                  icon: <CalendarOutlined />,
+                  label: '휴가 관리',
+                },
+                {
+                  key: '/admin/organization',
+                  icon: <TeamOutlined />,
+                  label: '조직도 관리',
+                },
+              ],
+            },
+            {
               key: '/admin/approval-management',
               icon: <FileTextOutlined />,
               label: '전자결재 관리',
-            },
-            {
-              key: '/admin/users',
-              icon: <TeamOutlined />,
-              label: '사용자 관리',
             },
             {
               key: '/admin/company',
@@ -310,9 +332,9 @@ export const MainLayout = () => {
           {!collapsed ? (
             <>
               <Title level={3} className='!mb-0 text-primary-600'>
-                Nova HR
+                Reko HR
               </Title>
-              <p className='text-sm text-gray-500 mt-1'>임직원 포털</p>
+              <p className='text-sm text-gray-500 mt-1'> HR Portal</p>
             </>
           ) : (
             <Title level={4} className='!mb-0 text-primary-600 text-center'>

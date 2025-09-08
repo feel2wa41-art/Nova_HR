@@ -16,6 +16,8 @@ import { UserManagement } from './pages/admin/UserManagement';
 import { CompanySettings } from './pages/admin/CompanySettings';
 import { ApprovalManagement } from './pages/admin/ApprovalManagement';
 import { HRManagement } from './pages/HRManagement';
+import { LeaveManagement } from './pages/admin/LeaveManagement';
+import { AttendanceManagement } from './pages/admin/AttendanceManagement';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { DailyReportPage } from './pages/daily-report/DailyReportPage';
@@ -99,6 +101,10 @@ function App() {
           <Route path='admin/company' element={<CompanySettings />} />
           <Route path='admin/monitoring' element={<LiveMonitoring />} />
           <Route path='admin/attitude-statistics' element={<AttitudeStatistics />} />
+          {/* HR Management Routes */}
+          <Route path='admin/attendance-management' element={<AttendanceManagement />} />
+          <Route path='admin/leave-management' element={<LeaveManagement />} />
+          <Route path='admin/organization' element={<CompanySettings />} />
         </Route>
       </Routes>
     </AntdApp>

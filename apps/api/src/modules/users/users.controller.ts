@@ -1,6 +1,7 @@
 import { 
   Controller, 
   Get, 
+  Post,
   Put,
   Patch, 
   Delete, 
@@ -27,8 +28,9 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN')
   @ApiOperation({ summary: 'Get all users' })
-  @ApiQuery({ name: 'tenantId', required: false })
-  async getAllUsers(@Query('tenantId') tenantId?: string) {
+  async getAllUsers(@Request() req: any) {
+    // Use tenantId from JWT token for security
+    const tenantId = req.user.tenantId;
     return this.usersService.findAll(tenantId);
   }
 
@@ -42,8 +44,9 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN')
   @ApiOperation({ summary: 'Get user statistics' })
-  @ApiQuery({ name: 'tenantId', required: false })
-  async getUserStats(@Query('tenantId') tenantId?: string) {
+  async getUserStats(@Request() req: any) {
+    // Use tenantId from JWT token for security
+    const tenantId = req.user.tenantId;
     return this.usersService.getUserStats(tenantId);
   }
 
@@ -131,5 +134,35 @@ export class UsersController {
   @ApiOperation({ summary: 'Activate user (Admin only)' })
   async activateUser(@Param('id') id: string) {
     return this.usersService.activateUser(id);
+  }
+
+  @Post()
+  @UseGuards(RolesGuard)
+  @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Create new user (Admin only)' })
+  async createUser(
+    @Request() req: any,
+    @Body() body: {
+      email: string;
+      password: string;
+      name: string;
+      title?: string;
+      phone?: string;
+      role: string;
+      org_id?: string;
+    }
+  ) {
+    return this.usersService.createUser({
+      ...body,
+      tenant_id: req.user.tenantId,
+    });
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Delete user (Admin only)' })
+  async deleteUser(@Param('id') id: string) {
+    return this.usersService.deleteUser(id);
   }
 }

@@ -57,7 +57,8 @@ export class AttendanceController {
   })
   async checkIn(@Body(ValidationPipe) checkInDto: CheckInDto, @Request() req) {
     const userId = req.user.sub;
-    return this.attendanceService.checkIn(userId, checkInDto);
+    const tenantId = req.user.tenantId;
+    return this.attendanceService.checkIn(userId, checkInDto, tenantId);
   }
 
   @Post('check-out')
@@ -81,7 +82,8 @@ export class AttendanceController {
   })
   async checkOut(@Body(ValidationPipe) checkOutDto: CheckOutDto, @Request() req) {
     const userId = req.user.sub;
-    return this.attendanceService.checkOut(userId, checkOutDto);
+    const tenantId = req.user.tenantId;
+    return this.attendanceService.checkOut(userId, checkOutDto, tenantId);
   }
 
   @Get('current-status')
@@ -116,7 +118,8 @@ export class AttendanceController {
   })
   async getCurrentStatus(@Request() req) {
     const userId = req.user.sub;
-    return this.attendanceService.getCurrentAttendanceStatus(userId);
+    const tenantId = req.user.tenantId;
+    return this.attendanceService.getCurrentAttendanceStatus(userId, tenantId);
   }
 
   @Get('history')
@@ -168,7 +171,8 @@ export class AttendanceController {
     
     return this.attendanceService.getAttendanceHistory(
       historyDto.userId || userId,
-      historyDto
+      historyDto,
+      req.user.tenantId
     );
   }
 
@@ -180,7 +184,8 @@ export class AttendanceController {
     @Request() req
   ) {
     const userId = req.user.sub;
-    return this.attendanceService.createAdjustmentRequest(userId, adjustmentDto);
+    const tenantId = req.user.tenantId;
+    return this.attendanceService.createAdjustmentRequest(userId, adjustmentDto, tenantId);
   }
 
   @Get('adjustment-requests')
@@ -190,11 +195,12 @@ export class AttendanceController {
   async getAdjustmentRequests(@Query('status') status: string, @Request() req) {
     const userId = req.user.sub;
     const userRole = req.user.roles?.[0];
+    const tenantId = req.user.tenantId;
     
     if (userRole === 'HR_ADMIN') {
-      return this.attendanceService.getAllAdjustmentRequests(status);
+      return this.attendanceService.getAllAdjustmentRequests(status, tenantId);
     } else {
-      return this.attendanceService.getUserAdjustmentRequests(userId, status);
+      return this.attendanceService.getUserAdjustmentRequests(userId, status, tenantId);
     }
   }
 
@@ -249,7 +255,8 @@ export class AttendanceController {
     
     return this.attendanceService.getAttendanceStatistics(
       userId || currentUserId,
-      period
+      period,
+      req.user.tenantId
     );
   }
 }

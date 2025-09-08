@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { apiClient } from '../lib/api';
 
 interface LeaveType {
   id: string;
@@ -156,76 +157,56 @@ const mockLeaveRequests: LeaveRequest[] = [
 ];
 
 // API base URL
-const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
-
 // API functions
 const fetchLeaveTypesApi = async (): Promise<LeaveType[]> => {
-  const token = localStorage.getItem('auth_token');
-  const response = await fetch(`${API_BASE}/api/leave-approval/types`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
+  try {
+    const response = await apiClient.get('/leave-approval/types');
+    const data = response.data;
+    
+    // Transform API response to match interface
+    return data.map((type: any) => ({
+      id: type.id,
+      name: type.name,
+      code: type.code,
+      maxDaysYear: type.max_days_year,
+      requiresApproval: type.requires_approval,
+      deductWeekends: true, // Assume default
+      colorHex: type.color_hex,
+      isPaid: type.is_paid,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch leave types:', error);
     throw new Error('Failed to fetch leave types');
   }
-  
-  const data = await response.json();
-  
-  // Transform API response to match interface
-  return data.map((type: any) => ({
-    id: type.id,
-    name: type.name,
-    code: type.code,
-    maxDaysYear: type.max_days_year,
-    requiresApproval: type.requires_approval,
-    deductWeekends: true, // Assume default
-    colorHex: type.color_hex,
-    isPaid: type.is_paid,
-  }));
 };
 
 const fetchLeaveBalancesApi = async (): Promise<LeaveBalance[]> => {
-  const token = localStorage.getItem('auth_token');
-  const response = await fetch(`${API_BASE}/api/leave-approval/balance`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
+  try {
+    const response = await apiClient.get('/leave-approval/balance');
+    const data = response.data;
+    
+    // Transform API response to match interface
+    return Object.entries(data).map(([leaveType, balance]: [string, any]) => ({
+      leaveType: leaveType.toUpperCase(),
+      allocated: balance.allocated,
+      used: balance.used,
+      pending: balance.pending,
+      remaining: balance.remaining,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch leave balances:', error);
     throw new Error('Failed to fetch leave balances');
   }
-  
-  const data = await response.json();
-  
-  // Transform API response to match interface
-  return Object.entries(data).map(([leaveType, balance]: [string, any]) => ({
-    leaveType: leaveType.toUpperCase(),
-    allocated: balance.allocated,
-    used: balance.used,
-    pending: balance.pending,
-    remaining: balance.remaining,
-  }));
 };
 
 const fetchLeaveRequestsApi = async (): Promise<LeaveRequest[]> => {
-  const token = localStorage.getItem('auth_token');
-  const response = await fetch(`${API_BASE}/api/leave-approval/requests`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
+  try {
+    const response = await apiClient.get('/leave-approval/requests');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch leave requests:', error);
     throw new Error('Failed to fetch leave requests');
   }
-  
-  return await response.json();
 };
 
 const submitLeaveRequestApi = async (request: {
@@ -235,55 +216,40 @@ const submitLeaveRequestApi = async (request: {
   reason?: string;
   emergency?: boolean;
 }): Promise<LeaveRequest> => {
-  const token = localStorage.getItem('auth_token');
-  const response = await fetch(`${API_BASE}/api/leave-approval/submit`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to submit leave request');
+  try {
+    const response = await apiClient.post('/leave-approval/submit', request);
+    const result = response.data;
+    
+    // Return a LeaveRequest-like object (the actual leave request will be fetched later)
+    const startDate = new Date(request.startDate);
+    const endDate = new Date(request.endDate);
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    return {
+      id: result.approvalId,
+      leaveTypeId: request.leaveTypeId,
+      leaveTypeName: result.data.leaveType,
+      startDate: request.startDate,
+      endDate: request.endDate,
+      daysCount: result.data.workingDays || diffDays,
+      reason: request.reason,
+      emergency: result.data.emergency || false,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.error('Failed to submit leave request:', error);
+    throw new Error(error.response?.data?.message || 'Failed to submit leave request');
   }
-  
-  const result = await response.json();
-  
-  // Return a LeaveRequest-like object (the actual leave request will be fetched later)
-  const startDate = new Date(request.startDate);
-  const endDate = new Date(request.endDate);
-  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  
-  return {
-    id: result.approvalId,
-    leaveTypeId: request.leaveTypeId,
-    leaveTypeName: result.data.leaveType,
-    startDate: request.startDate,
-    endDate: request.endDate,
-    daysCount: result.data.workingDays || diffDays,
-    reason: request.reason,
-    emergency: result.data.emergency || false,
-    status: 'PENDING',
-    createdAt: new Date().toISOString(),
-  };
 };
 
 const cancelLeaveRequestApi = async (requestId: string): Promise<void> => {
-  // Note: This endpoint would need to be implemented in the backend
-  const token = localStorage.getItem('auth_token');
-  const response = await fetch(`${API_BASE}/api/leave-approval/cancel/${requestId}`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  if (!response.ok) {
+  try {
+    // Note: This endpoint would need to be implemented in the backend
+    await apiClient.post(`/leave-approval/cancel/${requestId}`);
+  } catch (error) {
+    console.error('Failed to cancel leave request:', error);
     throw new Error('Failed to cancel leave request');
   }
 };

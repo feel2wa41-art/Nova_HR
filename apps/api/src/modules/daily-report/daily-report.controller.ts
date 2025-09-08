@@ -48,18 +48,23 @@ export class DailyReportController {
   @ApiOperation({ summary: 'Create a new daily report' })
   @ApiResponse({ status: 201, description: 'Daily report created successfully' })
   async createReport(@Request() req, @Body() createReportDto: CreateDailyReportDto) {
-    return this.dailyReportService.createReport(req.user.id, createReportDto);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.createReport(userId, createReportDto, tenantId);
   }
 
   @Get('my-reports')
   @ApiOperation({ summary: 'Get current user daily reports' })
   @ApiResponse({ status: 200, description: 'List of user daily reports' })
   async getMyReports(@Request() req, @Query() query: GetReportsQueryDto) {
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
     return this.dailyReportService.getUserReports(
-      req.user.id,
+      userId,
       query.page,
       query.limit,
-      query.status
+      query.status,
+      tenantId
     );
   }
 
@@ -67,7 +72,9 @@ export class DailyReportController {
   @ApiOperation({ summary: 'Get daily report by ID' })
   @ApiResponse({ status: 200, description: 'Daily report details' })
   async getReportById(@Request() req, @Param('id') id: string) {
-    return this.dailyReportService.getReportById(req.user.id, id);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.getReportById(userId, id, tenantId);
   }
 
   @Put(':id')
@@ -78,21 +85,27 @@ export class DailyReportController {
     @Param('id') id: string,
     @Body() updateReportDto: UpdateDailyReportDto
   ) {
-    return this.dailyReportService.updateReport(req.user.id, id, updateReportDto);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.updateReport(userId, id, updateReportDto, tenantId);
   }
 
   @Post(':id/submit')
   @ApiOperation({ summary: 'Submit daily report for review' })
   @ApiResponse({ status: 200, description: 'Daily report submitted successfully' })
   async submitReport(@Request() req, @Param('id') id: string) {
-    return this.dailyReportService.submitReport(req.user.id, id);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.submitReport(userId, id, tenantId);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete daily report' })
   @ApiResponse({ status: 200, description: 'Daily report deleted successfully' })
   async deleteReport(@Request() req, @Param('id') id: string) {
-    return this.dailyReportService.deleteReport(req.user.id, id);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.deleteReport(userId, id, tenantId);
   }
 
   // ====================================
@@ -107,7 +120,9 @@ export class DailyReportController {
     @Param('id') id: string,
     @Body() createEntryDto: CreateDailyReportEntryDto
   ) {
-    return this.dailyReportService.addEntry(req.user.id, id, createEntryDto);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.addEntry(userId, id, createEntryDto, tenantId);
   }
 
   @Put(':id/entries/:entryId')
@@ -119,7 +134,9 @@ export class DailyReportController {
     @Param('entryId') entryId: string,
     @Body() updateEntryDto: Partial<CreateDailyReportEntryDto>
   ) {
-    return this.dailyReportService.updateEntry(req.user.id, id, entryId, updateEntryDto);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.updateEntry(userId, id, entryId, updateEntryDto, tenantId);
   }
 
   @Delete(':id/entries/:entryId')
@@ -130,7 +147,9 @@ export class DailyReportController {
     @Param('id') id: string,
     @Param('entryId') entryId: string
   ) {
-    return this.dailyReportService.deleteEntry(req.user.id, id, entryId);
+    const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.deleteEntry(userId, id, entryId, tenantId);
   }
 
   // ====================================
@@ -143,7 +162,9 @@ export class DailyReportController {
   @ApiOperation({ summary: 'Get team daily reports (Manager/Admin only)' })
   @ApiResponse({ status: 200, description: 'List of team daily reports' })
   async getTeamReports(@Request() req, @Query() query: GetTeamReportsQueryDto) {
-    return this.dailyReportService.getTeamReports(req.user.id, query.page, query.limit, {
+    const managerId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.getTeamReports(managerId, tenantId, query.page, query.limit, {
       status: query.status,
       userId: query.userId,
       startDate: query.startDate,
@@ -161,7 +182,9 @@ export class DailyReportController {
     @Param('id') id: string,
     @Body() reviewDto: ReviewReportDto
   ) {
-    return this.dailyReportService.reviewReport(req.user.id, id, reviewDto.status);
+    const reviewerId = req.user.sub;
+    const tenantId = req.user.tenantId;
+    return this.dailyReportService.reviewReport(reviewerId, id, reviewDto.status, tenantId);
   }
 
   // ====================================

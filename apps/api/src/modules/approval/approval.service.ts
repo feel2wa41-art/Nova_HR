@@ -39,9 +39,15 @@ export class ApprovalService {
     });
   }
 
-  async getCategory(id: string) {
+  async getCategory(id: string, tenantId: string) {
     const category = await this.prisma.approval_category.findUnique({
-      where: { id }
+      where: { 
+        id,
+        OR: [
+          { company_id: tenantId },  // Tenant-specific category
+          { company_id: null }       // Global/system category
+        ]
+      }
     });
     
     if (!category) {
@@ -51,7 +57,20 @@ export class ApprovalService {
     return category;
   }
 
-  async createDraft(createDto: CreateApprovalDraftDto, requesterId: string) {
+  async createDraft(createDto: CreateApprovalDraftDto, requesterId: string, tenantId: string) {
+    // Verify user belongs to tenant and category exists
+    const user = await this.prisma.auth_user.findUnique({
+      where: { id: requesterId, tenant_id: tenantId }
+    });
+    if (!user) {
+      throw new NotFoundException('User not found or access denied');
+    }
+
+    const category = await this.getCategory(createDto.category_id, tenantId);
+    if (!category) {
+      throw new NotFoundException('Category not found or access denied');
+    }
+
     return this.prisma.approval_draft.create({
       data: {
         user_id: requesterId,
@@ -64,24 +83,91 @@ export class ApprovalService {
     });
   }
 
-  async getDrafts(queryDto: any, userId: string, userRole?: string) {
-    const where: any = { user_id: userId };
-    if (queryDto?.status) {
+  async getDrafts(queryDto: any, userId: string, tenantId: string, userRole?: string) {
+    let where: any = {
+      user: { tenant_id: tenantId }  // Critical tenant isolation security check
+    };
+
+    // Handle different views
+    if (queryDto?.view === 'inbox') {
+      // For inbox: show items that need approval from current user (within same tenant)
+      // Find drafts where the user is assigned as an approver in pending/in-review status
+      const approverDrafts = await this.prisma.approval_draft.findMany({
+        where: {
+          status: { in: ['PENDING', 'IN_REVIEW'] },
+          user_id: { not: userId },
+          user: { tenant_id: tenantId },  // Tenant isolation security check
+          route: {
+            stages: {
+              some: {
+                status: { in: ['PENDING', 'IN_PROGRESS'] },
+                approvers: {
+                  some: {
+                    user_id: userId,
+                    status: 'PENDING'
+                  }
+                }
+              }
+            }
+          }
+        },
+        include: {
+          category: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          route: {
+            include: {
+              stages: {
+                include: {
+                  approvers: {
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                          email: true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+
+      return approverDrafts;
+    } else if (queryDto?.view === 'outbox') {
+      // For outbox: show user's submitted items (any status except draft)
+      where = {
+        user_id: userId,
+        status: { not: 'DRAFT' }
+      };
+    } else if (queryDto?.view === 'drafts') {
+      // For drafts: show user's draft items only
+      where = {
+        user_id: userId,
+        status: 'DRAFT'
+      };
+    } else {
+      // Default: show user's own items
+      where = { user_id: userId };
+    }
+
+    // Apply status filter if specified
+    if (queryDto?.status && !queryDto?.view) {
       where.status = queryDto.status;
     }
 
     return this.prisma.approval_draft.findMany({
       where,
-      include: {
-        category: true
-      },
-      orderBy: { created_at: 'desc' }
-    });
-  }
-
-  async getDraft(id: string, userId: string) {
-    const draft = await this.prisma.approval_draft.findUnique({
-      where: { id },
       include: {
         category: true,
         user: {
@@ -90,12 +176,50 @@ export class ApprovalService {
             name: true,
             email: true
           }
+        },
+        route: {
+          include: {
+            stages: {
+              include: {
+                approvers: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+  }
+
+  async getDraft(id: string, userId: string, tenantId: string) {
+    const draft = await this.prisma.approval_draft.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        user: {
+          where: { tenant_id: tenantId },  // Tenant isolation security check
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            tenant_id: true
+          }
         }
       }
     });
 
-    if (!draft) {
-      throw new NotFoundException('Draft not found');
+    if (!draft || !draft.user || draft.user.tenant_id !== tenantId) {
+      throw new NotFoundException('Draft not found or access denied');
     }
 
     return draft;
@@ -152,12 +276,17 @@ export class ApprovalService {
     }
   }
 
-  async updateDraft(id: string, updateDto: UpdateApprovalDraftDto, userId: string) {
+  async updateDraft(id: string, updateDto: UpdateApprovalDraftDto, userId: string, tenantId: string) {
     const draft = await this.prisma.approval_draft.findUnique({
-      where: { id, user_id: userId }
+      where: { id, user_id: userId },
+      include: {
+        user: {
+          where: { tenant_id: tenantId }  // Tenant isolation security check
+        }
+      }
     });
 
-    if (!draft) {
+    if (!draft || !draft.user || draft.user.tenant_id !== tenantId) {
       throw new NotFoundException('Draft not found or access denied');
     }
 
@@ -176,24 +305,40 @@ export class ApprovalService {
     });
   }
 
-  async submitDraft(id: string, userId: string) {
+  async submitDraft(id: string, userId: string, tenantId: string) {
+    // Verify user owns the draft and belongs to tenant
+    const draft = await this.getDraft(id, userId, tenantId);
+    if (draft.user_id !== userId) {
+      throw new NotFoundException('Draft not found or access denied');
+    }
+
     return this.prisma.approval_draft.update({
       where: { id },
       data: { status: 'PENDING', submitted_at: new Date() }
     });
   }
 
-  async processApproval(id: string, processDto: ProcessApprovalDto, approverId: string) {
+  async processApproval(id: string, processDto: ProcessApprovalDto, approverId: string, tenantId: string) {
     const draft = await this.prisma.approval_draft.findUnique({
       where: { id },
       include: {
         category: true,
-        user: true
+        user: {
+          where: { tenant_id: tenantId }  // Tenant isolation security check
+        }
       }
     });
 
-    if (!draft) {
-      throw new NotFoundException('Approval request not found');
+    if (!draft || !draft.user || draft.user.tenant_id !== tenantId) {
+      throw new NotFoundException('Approval request not found or access denied');
+    }
+
+    // Verify approver belongs to the same tenant
+    const approver = await this.prisma.auth_user.findUnique({
+      where: { id: approverId, tenant_id: tenantId }
+    });
+    if (!approver) {
+      throw new NotFoundException('Approver not found or access denied');
     }
 
     // Only process drafts that are in progress
@@ -258,6 +403,71 @@ export class ApprovalService {
     });
 
     return { success: true, message: 'Draft deleted successfully' };
+  }
+
+  async getCount(type: string, userId: string, userRole?: string) {
+    const baseWhere: any = {};
+    
+    switch (type) {
+      case 'drafts':
+        baseWhere.user_id = userId;
+        baseWhere.status = 'DRAFT';
+        break;
+        
+      case 'inbox':
+        // For inbox, count items that need approval from current user
+        // Use the same logic as getDrafts inbox view
+        const inboxCount = await this.prisma.approval_draft.count({
+          where: {
+            status: { in: ['PENDING', 'IN_REVIEW'] },
+            user_id: { not: userId },
+            route: {
+              stages: {
+                some: {
+                  status: { in: ['PENDING', 'IN_PROGRESS'] },
+                  approvers: {
+                    some: {
+                      user_id: userId,
+                      status: 'PENDING'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        return { count: inboxCount };
+        
+      case 'pending':
+        baseWhere.user_id = userId;
+        baseWhere.status = { in: ['PENDING', 'IN_REVIEW'] };
+        break;
+        
+      case 'outbox':
+        // Items submitted by the user (any status except draft)
+        baseWhere.user_id = userId;
+        baseWhere.status = { not: 'DRAFT' };
+        break;
+        
+      case 'reference':
+        // For reference documents, typically approved items for viewing
+        // In a full implementation, this would check reference permissions
+        baseWhere.status = 'APPROVED';
+        if (userRole !== 'HR_ADMIN' && userRole !== 'HR_MANAGER') {
+          baseWhere.user_id = userId;
+        }
+        break;
+        
+      default:
+        return { count: 0 };
+    }
+
+    const count = await this.prisma.approval_draft.count({
+      where: baseWhere
+    });
+
+    return { count };
   }
 
   async getApprovalStatistics(query: ApprovalStatisticsQueryDto, companyId: string) {

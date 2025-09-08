@@ -150,6 +150,45 @@ export class CompanyRequestController {
     const providerId = req.user.id;
     return this.companyRequestService.updateRequestStatus(id, body.status, providerId);
   }
+
+  // 기업 직접 추가 (승인된 상태로 바로 생성) - Updated
+  @Post('direct-create')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PROVIDER_ADMIN', 'PROVIDER_SUPER_ADMIN', 'SUPER_ADMIN')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Directly create and approve company (bypass request process)' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Company created and approved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        tenant: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            domain: { type: 'string' }
+          }
+        },
+        adminUser: {
+          type: 'object',
+          properties: {
+            email: { type: 'string' },
+            tempPassword: { type: 'string' }
+          }
+        }
+      }
+    }
+  })
+  async directCreateCompany(
+    @Body(ValidationPipe) dto: CreateCompanyRequestDto,
+    @Request() req
+  ) {
+    const providerId = req.user.id;
+    return this.companyRequestService.directCreateCompany(dto, providerId);
+  }
 }
 
 // Public auth controller endpoint
