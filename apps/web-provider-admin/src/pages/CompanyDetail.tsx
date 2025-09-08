@@ -355,6 +355,22 @@ const CompanyDetail: React.FC = () => {
       <Card>
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           <TabPane tab="회사 정보" key="info">
+            <Space direction="vertical" style={{ width: '100%' }} size="large">
+              <div>
+                <Space>
+                  <Button 
+                    type="primary" 
+                    onClick={() => navigate(`/company/${companyId}/features`)}
+                  >
+                    기능 설정 관리
+                  </Button>
+                  <Button 
+                    onClick={() => navigate(`/company/${companyId}/permissions`)}
+                  >
+                    권한 설정 관리
+                  </Button>
+                </Space>
+              </div>
             <Descriptions bordered column={2}>
               <Descriptions.Item label="회사명">{company.name}</Descriptions.Item>
               <Descriptions.Item label="사업자등록번호">{company.business_number}</Descriptions.Item>
@@ -382,6 +398,7 @@ const CompanyDetail: React.FC = () => {
                 {new Date(company.updated_at).toLocaleString('ko-KR')}
               </Descriptions.Item>
             </Descriptions>
+            </Space>
           </TabPane>
 
           <TabPane tab={`사용자 관리 (${users.length})`} key="users">

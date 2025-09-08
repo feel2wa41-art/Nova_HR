@@ -2,8 +2,10 @@ import {
   Injectable, 
   NotFoundException, 
   BadRequestException,
-  ConflictException 
+  ConflictException,
+  Logger
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/services/prisma.service';
 import { EmailService } from '../email/email.service';
 import { 
@@ -13,14 +15,18 @@ import {
   CompanyRequestQueryDto,
   CompanyRequestStatus 
 } from './dto/company-request.dto';
+import { PasswordUtil } from '../../shared/utils/password.util';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class CompanyRequestService {
+  private readonly logger = new Logger(CompanyRequestService.name);
+
   constructor(
     private prisma: PrismaService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private configService: ConfigService
   ) {}
 
   // Public endpoint - Create company registration request
@@ -210,7 +216,7 @@ export class CompanyRequestService {
       });
 
       // 3. Generate temporary password
-      const tempPassword = this.generateTempPassword();
+      const tempPassword = PasswordUtil.generateTempPassword();
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
       // 4. Create admin user
@@ -288,8 +294,19 @@ export class CompanyRequestService {
       };
     });
 
-    // TODO: Send email with login credentials
-    console.log('Temporary password for', result.adminUser.email, ':', result.adminUser.tempPassword);
+    // Send welcome email to admin
+    try {
+      await this.emailService.sendAdminWelcomeEmail(result.adminUser.email, {
+        userName: result.adminUser.name,
+        companyName: result.company.name,
+        email: result.adminUser.email,
+        tempPassword: result.adminUser.tempPassword,
+        loginUrl: `${this.configService.get('app.customerPortalUrl')}/login`
+      });
+    } catch (error) {
+      this.logger.error('Failed to send admin welcome email', error);
+      // Continue execution even if email fails
+    }
 
     return {
       message: 'Company request approved successfully',
@@ -379,14 +396,6 @@ export class CompanyRequestService {
     return `${cleanName}-${randomSuffix}.reko-hr.com`;
   }
 
-  private generateTempPassword(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-  }
 
   // 기업 직접 생성 (요청 과정 생략하고 바로 승인된 상태로 생성)
   async directCreateCompany(dto: CreateCompanyRequestDto, providerId: string) {

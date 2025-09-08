@@ -12,7 +12,6 @@ import { ReferenceDocumentModule } from './modules/reference-document/reference-
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { HrCommunityModule } from './modules/hr-community/hr-community.module';
 // Now enabling all modules
-import { UsersModule } from './modules/users/users.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { CompanyModule } from './modules/company/company.module';
 import { ApprovalModule } from './modules/approval/approval.module';
@@ -26,6 +25,8 @@ import awsConfig from './config/aws.config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { FeatureConfigModule } from './feature-config/feature-config.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -60,7 +61,6 @@ import { AppService } from './app.service';
     CalendarModule,
     HrCommunityModule,
     // Advanced modules - now enabled
-    UsersModule,
     AttendanceModule,
     CompanyModule,
     ApprovalModule,
@@ -70,6 +70,8 @@ import { AppService } from './app.service';
     UserHealthModule,
     // LeaveModule,
     LeaveApprovalModule,
+    FeatureConfigModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

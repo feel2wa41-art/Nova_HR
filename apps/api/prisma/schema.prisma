@@ -452,6 +452,8 @@ model company {
   company_announcements company_announcement[]
   hr_community_posts hr_community_post[]
   notification_templates notification_template[]
+  feature_config company_feature_config? @relation("company_features")
+  feature_limits company_feature_limit[] @relation("company_limits")
 
   @@map("companies")
 }
@@ -1628,5 +1630,114 @@ model notification_template {
 
   @@unique([company_id, name, channel])
   @@map("notification_templates")
+}
+
+// Company Feature Configuration
+model company_feature_config {
+  id              String   @id @default(uuid())
+  company_id      String   @unique
+  
+  // Main Modules
+  attendance_enabled      Boolean  @default(true)
+  leave_enabled          Boolean  @default(true)
+  approval_enabled       Boolean  @default(true)
+  hr_community_enabled   Boolean  @default(true)
+  calendar_enabled       Boolean  @default(true)
+  
+  // Attendance Features
+  geofence_enabled       Boolean  @default(true)
+  face_recognition_enabled Boolean @default(false)
+  qr_checkin_enabled     Boolean  @default(false)
+  overtime_enabled       Boolean  @default(true)
+  remote_work_enabled    Boolean  @default(true)
+  
+  // Leave Features
+  annual_leave_enabled   Boolean  @default(true)
+  sick_leave_enabled     Boolean  @default(true)
+  special_leave_enabled  Boolean  @default(true)
+  leave_calendar_enabled Boolean  @default(true)
+  auto_approval_enabled  Boolean  @default(false)
+  
+  // Approval Features
+  dynamic_forms_enabled  Boolean  @default(true)
+  parallel_approval_enabled Boolean @default(false)
+  deputy_approval_enabled Boolean @default(true)
+  bulk_approval_enabled  Boolean  @default(true)
+  
+  // Communication Features
+  company_notice_enabled Boolean  @default(true)
+  team_board_enabled     Boolean  @default(true)
+  survey_enabled         Boolean  @default(true)
+  anonymous_post_enabled Boolean  @default(false)
+  
+  // Advanced Features
+  ai_assistant_enabled   Boolean  @default(false)
+  analytics_enabled      Boolean  @default(true)
+  custom_reports_enabled Boolean  @default(false)
+  api_access_enabled     Boolean  @default(false)
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  // Relations
+  company         company  @relation("company_features", fields: [company_id], references: [id], onDelete: Cascade)
+  menu_permissions company_menu_permission[]
+  
+  @@map("company_feature_configs")
+}
+
+// Menu Permission by Role
+model company_menu_permission {
+  id              String   @id @default(uuid())
+  config_id       String
+  role            String   // ADMIN, HR_MANAGER, TEAM_LEADER, EMPLOYEE
+  menu_key        String   // attendance, leave, approval, hr_community, etc.
+  
+  // Permissions
+  can_view        Boolean  @default(false)
+  can_create      Boolean  @default(false)
+  can_edit        Boolean  @default(false)
+  can_delete      Boolean  @default(false)
+  can_approve     Boolean  @default(false)
+  can_export      Boolean  @default(false)
+  
+  // Additional restrictions
+  scope           String   @default("SELF") // SELF, TEAM, DEPARTMENT, COMPANY
+  custom_rules    Json?    // Additional custom rules
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  // Relations
+  config          company_feature_config @relation(fields: [config_id], references: [id], onDelete: Cascade)
+  
+  @@unique([config_id, role, menu_key])
+  @@map("company_menu_permissions")
+}
+
+// Feature Usage Limit
+model company_feature_limit {
+  id              String   @id @default(uuid())
+  company_id      String
+  feature_key     String   // storage, users, api_calls, etc.
+  
+  // Limits
+  limit_value     Int      // Maximum allowed value
+  current_usage   Int      @default(0)
+  reset_period    String?  // DAILY, WEEKLY, MONTHLY, YEARLY, null for no reset
+  last_reset_at   DateTime?
+  
+  // Notifications
+  warning_threshold Int?   // Send warning at this percentage
+  notification_sent Boolean @default(false)
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  // Relations
+  company         company  @relation("company_limits", fields: [company_id], references: [id], onDelete: Cascade)
+  
+  @@unique([company_id, feature_key])
+  @@map("company_feature_limits")
 }
 

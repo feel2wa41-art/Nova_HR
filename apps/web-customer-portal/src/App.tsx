@@ -20,6 +20,7 @@ import { LeaveManagement } from './pages/admin/LeaveManagement';
 import { AttendanceManagement } from './pages/admin/AttendanceManagement';
 import { LoginPage } from './pages/auth/LoginPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
 import { DailyReportPage } from './pages/daily-report/DailyReportPage';
 import { CreateDailyReportPage } from './pages/daily-report/CreateDailyReportPage';
 import { ViewDailyReportPage } from './pages/daily-report/ViewDailyReportPage';
@@ -95,6 +96,7 @@ function App() {
           <Route path='community/posts/:postId' element={<CommunityPostDetail />} />
           <Route path='community/notifications' element={<NotificationsPage />} />
           <Route path='settings' element={<Settings />} />
+          <Route path='settings/change-password' element={<ChangePasswordPage />} />
           <Route path='hr-management' element={<HRManagement />} />
           <Route path='admin/approval-management' element={<ApprovalManagement />} />
           <Route path='admin/users' element={<UserManagement />} />

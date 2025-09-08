@@ -3,6 +3,8 @@ import Dashboard from './pages/Dashboard';
 import CompanyRequests from './pages/CompanyRequests';
 import CompanyManagement from './pages/CompanyManagement';
 import CompanyDetail from './pages/CompanyDetail';
+import FeatureConfig from './pages/FeatureConfig';
+import MenuPermissions from './pages/MenuPermissions';
 import LoginPage from './pages/LoginPage';
 import MainLayout from './components/layouts/MainLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -22,6 +24,8 @@ function App() {
                 <Route path="/company-requests" element={<CompanyRequests />} />
                 <Route path="/company-management" element={<CompanyManagement />} />
                 <Route path="/company/:companyId" element={<CompanyDetail />} />
+                <Route path="/company/:companyId/features" element={<FeatureConfig />} />
+                <Route path="/company/:companyId/permissions" element={<MenuPermissions />} />
               </Routes>
             </MainLayout>
           </ProtectedRoute>

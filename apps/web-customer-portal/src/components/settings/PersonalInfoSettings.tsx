@@ -1,6 +1,7 @@
 import { Form, Input, Button, Avatar, Upload, message, Row, Col, Card } from 'antd';
-import { UserOutlined, CameraOutlined, SaveOutlined } from '@ant-design/icons';
+import { UserOutlined, CameraOutlined, SaveOutlined, LockOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 interface PersonalInfoFormData {
@@ -18,6 +19,7 @@ export const PersonalInfoSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Initialize form with user data
@@ -216,6 +218,27 @@ export const PersonalInfoSettings = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Card>
+
+      {/* Security Section */}
+      <Card title="보안 설정" size="small">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <h4 className="font-medium text-gray-900">비밀번호 변경</h4>
+              <p className="text-sm text-gray-600">
+                계정 보안을 위해 정기적으로 비밀번호를 변경하세요
+              </p>
+            </div>
+            <Button
+              type="primary"
+              icon={<LockOutlined />}
+              onClick={() => navigate('/settings/change-password')}
+            >
+              비밀번호 변경
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );

@@ -228,31 +228,24 @@ export const MainLayout = () => {
           label: '관리자',
           children: [
             {
-              key: '/admin/hr-management',
+              key: '/admin/users',
+              icon: <UserOutlined />,
+              label: '직원 관리',
+            },
+            {
+              key: '/admin/attendance-management',
+              icon: <ClockCircleOutlined />,
+              label: '근태 관리',
+            },
+            {
+              key: '/admin/leave-management',
+              icon: <CalendarOutlined />,
+              label: '휴가 관리',
+            },
+            {
+              key: '/admin/organization',
               icon: <TeamOutlined />,
-              label: 'HR 관리',
-              children: [
-                {
-                  key: '/admin/users',
-                  icon: <UserOutlined />,
-                  label: '직원 관리',
-                },
-                {
-                  key: '/admin/attendance-management',
-                  icon: <ClockCircleOutlined />,
-                  label: '근태 관리',
-                },
-                {
-                  key: '/admin/leave-management',
-                  icon: <CalendarOutlined />,
-                  label: '휴가 관리',
-                },
-                {
-                  key: '/admin/organization',
-                  icon: <TeamOutlined />,
-                  label: '조직도 관리',
-                },
-              ],
+              label: '조직도 관리',
             },
             {
               key: '/admin/approval-management',

@@ -42,6 +42,24 @@ export interface PasswordResetEmailData {
   expiresAt: Date;
 }
 
+export interface AdminWelcomeEmailData {
+  userName: string;
+  companyName: string;
+  email: string;
+  tempPassword: string;
+  loginUrl: string;
+}
+
+export interface UserInviteEmailData {
+  userName: string;
+  companyName: string;
+  inviterName: string;
+  email: string;
+  tempPassword: string;
+  loginUrl: string;
+  role: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -422,6 +440,237 @@ ${data.resetUrl}
 - 새 비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해주세요.
 
 문제가 있거나 도움이 필요하시면 고객지원팀(support@reko-hr.com)으로 연락해주세요.
+    `;
+
+    await this.sendEmail(userEmail, subject, html, text);
+  }
+
+  // 관리자 계정 생성 환영 이메일
+  async sendAdminWelcomeEmail(
+    adminEmail: string,
+    data: AdminWelcomeEmailData
+  ): Promise<void> {
+    const subject = `[Nova HR] ${data.companyName} 관리자 계정이 생성되었습니다`;
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #059669; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">Nova HR에 오신 것을 환영합니다!</h1>
+        </div>
+        
+        <div style="padding: 30px; background-color: #f9fafb;">
+          <h2 style="color: #1f2937;">안녕하세요, ${data.userName}님!</h2>
+          <p style="color: #374151; line-height: 1.6;">
+            <strong>${data.companyName}</strong>의 Nova HR 시스템 관리자 계정이 생성되었습니다.
+          </p>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669;">
+            <h3 style="color: #059669; margin-top: 0;">로그인 정보</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>이메일:</strong></td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-family: 'Courier New', monospace; background-color: #f3f4f6; padding: 5px;">${data.email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>임시 비밀번호:</strong></td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-family: 'Courier New', monospace; background-color: #f3f4f6; padding: 5px; font-size: 16px; font-weight: bold;">${data.tempPassword}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0;"><strong>권한:</strong></td>
+                <td style="padding: 10px 0;">회사 관리자 (모든 기능 접근 가능)</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.loginUrl}" 
+               style="display: inline-block; background-color: #059669; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+              Nova HR 시스템 접속하기
+            </a>
+          </div>
+          
+          <div style="margin-top: 30px; padding: 20px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-top: 0; font-size: 16px;">보안을 위한 필수 작업</h3>
+            <ul style="color: #92400e; margin: 10px 0; padding-left: 20px;">
+              <li><strong>첫 로그인 후 반드시 비밀번호를 변경해주세요.</strong></li>
+              <li>새 비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.</li>
+              <li>임시 비밀번호는 다른 사람과 공유하지 마세요.</li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 20px; padding: 20px; background-color: #e0f2fe; border-radius: 8px; border-left: 4px solid #0288d1;">
+            <h3 style="color: #01579b; margin-top: 0; font-size: 16px;">관리자 권한 안내</h3>
+            <ul style="color: #01579b; margin: 10px 0; padding-left: 20px;">
+              <li>회사 직원 계정 생성 및 관리</li>
+              <li>출퇴근, 휴가, 결재 시스템 설정</li>
+              <li>조직도 및 부서 관리</li>
+              <li>모든 보고서 및 통계 조회</li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 30px; padding: 15px; background-color: #ecfdf5; border-radius: 6px; border-left: 4px solid #10b981;">
+            <p style="margin: 0; color: #047857; font-size: 14px;">
+              문제가 있거나 도움이 필요하시면 고객지원팀(support@nova-hr.com)으로 연락해주세요.
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #374151; color: white; padding: 20px; text-align: center;">
+          <p style="margin: 0; font-size: 14px;">© 2024 Nova HR. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    const text = `
+Nova HR에 오신 것을 환영합니다!
+
+안녕하세요, ${data.userName}님!
+
+${data.companyName}의 Nova HR 시스템 관리자 계정이 생성되었습니다.
+
+로그인 정보:
+- 이메일: ${data.email}
+- 임시 비밀번호: ${data.tempPassword}
+- 권한: 회사 관리자 (모든 기능 접근 가능)
+
+Nova HR 시스템 접속: ${data.loginUrl}
+
+보안을 위한 필수 작업:
+- 첫 로그인 후 반드시 비밀번호를 변경해주세요.
+- 새 비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.
+- 임시 비밀번호는 다른 사람과 공유하지 마세요.
+
+관리자 권한 안내:
+- 회사 직원 계정 생성 및 관리
+- 출퇴근, 휴가, 결재 시스템 설정
+- 조직도 및 부서 관리
+- 모든 보고서 및 통계 조회
+
+문제가 있거나 도움이 필요하시면 고객지원팀(support@nova-hr.com)으로 연락해주세요.
+    `;
+
+    await this.sendEmail(adminEmail, subject, html, text);
+  }
+
+  // 사용자 초대 이메일
+  async sendUserInviteEmail(
+    userEmail: string,
+    data: UserInviteEmailData
+  ): Promise<void> {
+    const roleNames = {
+      'HR_MANAGER': 'HR 매니저',
+      'TEAM_LEADER': '팀장',
+      'EMPLOYEE': '직원',
+      'CUSTOMER_ADMIN': '관리자'
+    };
+    
+    const roleName = roleNames[data.role] || data.role;
+    const subject = `[Nova HR] ${data.companyName}에서 초대합니다`;
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #3b82f6; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">Nova HR 초대장</h1>
+        </div>
+        
+        <div style="padding: 30px; background-color: #f9fafb;">
+          <h2 style="color: #1f2937;">안녕하세요, ${data.userName}님!</h2>
+          <p style="color: #374151; line-height: 1.6;">
+            <strong>${data.inviterName}님</strong>이 <strong>${data.companyName}</strong>의 Nova HR 시스템에 초대했습니다.
+          </p>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+            <h3 style="color: #3b82f6; margin-top: 0;">계정 정보</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>회사:</strong></td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.companyName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>이메일:</strong></td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-family: 'Courier New', monospace; background-color: #f3f4f6; padding: 5px;">${data.email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>임시 비밀번호:</strong></td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-family: 'Courier New', monospace; background-color: #f3f4f6; padding: 5px; font-size: 16px; font-weight: bold;">${data.tempPassword}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0;"><strong>권한:</strong></td>
+                <td style="padding: 10px 0;">${roleName}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.loginUrl}" 
+               style="display: inline-block; background-color: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+              Nova HR 시작하기
+            </a>
+          </div>
+          
+          <div style="margin-top: 30px; padding: 20px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-top: 0; font-size: 16px;">첫 로그인 안내</h3>
+            <ol style="color: #92400e; margin: 10px 0; padding-left: 20px;">
+              <li>위의 "Nova HR 시작하기" 버튼을 클릭합니다.</li>
+              <li>이메일과 임시 비밀번호로 로그인합니다.</li>
+              <li><strong>보안을 위해 반드시 비밀번호를 변경해주세요.</strong></li>
+              <li>프로필 정보를 업데이트합니다.</li>
+            </ol>
+          </div>
+
+          <div style="margin-top: 20px; padding: 20px; background-color: #e0f2fe; border-radius: 8px; border-left: 4px solid #0288d1;">
+            <h3 style="color: #01579b; margin-top: 0; font-size: 16px;">Nova HR로 할 수 있는 일들</h3>
+            <ul style="color: #01579b; margin: 10px 0; padding-left: 20px;">
+              <li>스마트 출퇴근 관리 (GPS, QR코드, 얼굴인식)</li>
+              <li>간편한 휴가 신청 및 승인</li>
+              <li>디지털 전자결재 시스템</li>
+              <li>팀 소통을 위한 HR 커뮤니티</li>
+              <li>일정 관리 및 회의실 예약</li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 30px; padding: 15px; background-color: #ecfdf5; border-radius: 6px; border-left: 4px solid #10b981;">
+            <p style="margin: 0; color: #047857; font-size: 14px;">
+              문제가 있거나 도움이 필요하시면 고객지원팀(support@nova-hr.com)으로 연락해주세요.
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #374151; color: white; padding: 20px; text-align: center;">
+          <p style="margin: 0; font-size: 14px;">© 2024 Nova HR. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    const text = `
+Nova HR 초대장
+
+안녕하세요, ${data.userName}님!
+
+${data.inviterName}님이 ${data.companyName}의 Nova HR 시스템에 초대했습니다.
+
+계정 정보:
+- 회사: ${data.companyName}
+- 이메일: ${data.email}
+- 임시 비밀번호: ${data.tempPassword}
+- 권한: ${roleName}
+
+Nova HR 시작하기: ${data.loginUrl}
+
+첫 로그인 안내:
+1. 위의 링크를 클릭합니다.
+2. 이메일과 임시 비밀번호로 로그인합니다.
+3. 보안을 위해 반드시 비밀번호를 변경해주세요.
+4. 프로필 정보를 업데이트합니다.
+
+Nova HR로 할 수 있는 일들:
+- 스마트 출퇴근 관리 (GPS, QR코드, 얼굴인식)
+- 간편한 휴가 신청 및 승인
+- 디지털 전자결재 시스템
+- 팀 소통을 위한 HR 커뮤니티
+- 일정 관리 및 회의실 예약
+
+문제가 있거나 도움이 필요하시면 고객지원팀(support@nova-hr.com)으로 연락해주세요.
     `;
 
     await this.sendEmail(userEmail, subject, html, text);

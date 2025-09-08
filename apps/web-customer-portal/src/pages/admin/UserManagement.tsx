@@ -91,27 +91,23 @@ export const UserManagement = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
 
+  // Get current user's company ID
+  const { data: profile } = useQuery({
+    queryKey: ['my-profile'],
+    queryFn: () => apiClient.get('/users/profile').then(res => res.data),
+  });
+
+  const companyId = profile?.org_unit?.company?.id;
+
   // Get all users (company users for customer portal)
   const { data: users, isLoading: usersLoading } = useQuery({
-    queryKey: ['admin-users'],
+    queryKey: ['company-users', companyId],
     queryFn: async () => {
-      const response = await apiClient.get('/admin/users');
-      return response.data.map((user: any) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        title: user.title,
-        phone: user.phone,
-        status: user.status,
-        email_verified: user.email_verified,
-        created_at: user.created_at,
-        lastLogin: user.last_login,
-        tenant: user.tenant,
-        company: user.company,
-      }));
+      if (!companyId) return [];
+      const response = await apiClient.get(`/users/company/${companyId}`);
+      return response.data;
     },
-    enabled: activeTab === 'users',
+    enabled: activeTab === 'users' && !!companyId,
   });
 
   // Get pending users
@@ -184,53 +180,58 @@ export const UserManagement = () => {
     },
   });
 
-  // Update user
-  const updateUserMutation = useMutation({
-    mutationFn: (data: { userId: string; updates: any }) =>
-      apiClient.put(`/auth/users/${data.userId}`, data.updates),
-    onSuccess: () => {
-      message.success('사용자 정보가 업데이트되었습니다');
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setEditModalVisible(false);
-      setSelectedUser(null);
-      editForm.resetFields();
-    },
-    onError: (error: any) => {
-      message.error(error.response?.data?.message || '업데이트 중 오류가 발생했습니다');
-    },
-  });
-
-  // Delete user mutation
+  // Delete user mutation (deactivate user)
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      await apiClient.delete(`/admin/users/${userId}`);
+      await apiClient.delete(`/users/${userId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      message.success('사용자가 삭제되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['company-users', companyId] });
+      message.success('사용자가 비활성화되었습니다');
     },
     onError: () => {
-      message.error('사용자 삭제에 실패했습니다');
+      message.error('사용자 비활성화에 실패했습니다');
     },
   });
 
-  // Create/Update user mutation
-  const saveUserMutation = useMutation({
-    mutationFn: async ({ userData, isEdit }: { userData: any; isEdit: boolean }) => {
-      if (isEdit) {
-        return await apiClient.put(`/admin/users/${selectedUserForForm?.id}`, userData);
-      } else {
-        return await apiClient.post('/admin/users', userData);
-      }
+  // Invite user mutation
+  const inviteUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      if (!companyId) throw new Error('Company ID not found');
+      return await apiClient.post(`/users/company/${companyId}/invite`, userData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      message.success(selectedUserForForm ? '사용자 정보가 업데이트되었습니다' : '새 사용자가 추가되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['company-users', companyId] });
+      message.success('사용자 초대가 완료되었습니다. 이메일을 확인해주세요.');
       setUserFormVisible(false);
       setSelectedUserForForm(null);
     },
-    onError: () => {
-      message.error('사용자 정보 저장에 실패했습니다');
+    onError: (error: any) => {
+      message.error(error.response?.data?.message || '사용자 초대에 실패했습니다');
+    },
+  });
+
+  // Save user mutation (for UserForm - both invite and update)
+  const saveUserMutation = useMutation({
+    mutationFn: async ({ userId, userData }: { userId?: string; userData: any }) => {
+      if (userId) {
+        // Update existing user
+        return await apiClient.put(`/users/${userId}`, userData);
+      } else {
+        // Invite new user
+        if (!companyId) throw new Error('Company ID not found');
+        return await apiClient.post(`/users/company/${companyId}/invite`, userData);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-users', companyId] });
+      message.success(selectedUserForForm ? '사용자 정보가 수정되었습니다' : '사용자 초대가 완료되었습니다');
+      setUserFormVisible(false);
+      setSelectedUserForForm(null);
+    },
+    onError: (error: any) => {
+      const action = selectedUserForForm ? '수정' : '초대';
+      message.error(error.response?.data?.message || `사용자 ${action}에 실패했습니다`);
     },
   });
 
@@ -270,9 +271,9 @@ export const UserManagement = () => {
 
   const handleDelete = (user: User) => {
     Modal.confirm({
-      title: '사용자 삭제',
-      content: `${user.name} 사용자를 삭제하시겠습니까?`,
-      okText: '삭제',
+      title: '사용자 비활성화',
+      content: `${user.name} 사용자를 비활성화하시겠습니까?`,
+      okText: '비활성화',
       okType: 'danger',
       cancelText: '취소',
       onOk: () => deleteMutation.mutate(user.id),
@@ -297,20 +298,15 @@ export const UserManagement = () => {
   };
 
   const handleEditSubmit = () => {
-    editForm.validateFields().then(values => {
-      if (!selectedUser) return;
-
-      updateUserMutation.mutate({
-        userId: selectedUser.id,
-        updates: values
-      });
-    });
+    // This modal is deprecated, use the main UserForm instead
+    message.info('사용자 수정은 메인 수정 버튼을 사용해주세요');
+    setEditModalVisible(false);
   };
 
   const handleModalOk = async (userData: any) => {
     saveUserMutation.mutate({ 
-      userData, 
-      isEdit: !!selectedUserForForm 
+      userId: selectedUserForForm?.id,
+      userData 
     });
   };
 
@@ -435,7 +431,7 @@ export const UserManagement = () => {
               onClick={() => handleEditForForm(record)}
             />
           </Tooltip>
-          <Tooltip title="삭제">
+          <Tooltip title="비활성화">
             <Button
               type="text"
               size="small"
@@ -800,7 +796,7 @@ export const UserManagement = () => {
           setSelectedUser(null);
           editForm.resetFields();
         }}
-        confirmLoading={updateUserMutation.isPending}
+        confirmLoading={false}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
