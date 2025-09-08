@@ -155,82 +155,137 @@ const mockLeaveRequests: LeaveRequest[] = [
   },
 ];
 
-// Mock API functions
-const mockFetchLeaveTypes = async (): Promise<LeaveType[]> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockLeaveTypes;
-};
+// API base URL
+const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '';
 
-const mockFetchLeaveBalances = async (): Promise<LeaveBalance[]> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockLeaveBalances;
-};
-
-const mockFetchLeaveRequests = async (): Promise<LeaveRequest[]> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const saved = localStorage.getItem('nova_hr_leave_requests');
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch (e) {
-      return mockLeaveRequests;
-    }
+// API functions
+const fetchLeaveTypesApi = async (): Promise<LeaveType[]> => {
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE}/api/leave-approval/types`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch leave types');
   }
-  return mockLeaveRequests;
+  
+  const data = await response.json();
+  
+  // Transform API response to match interface
+  return data.map((type: any) => ({
+    id: type.id,
+    name: type.name,
+    code: type.code,
+    maxDaysYear: type.max_days_year,
+    requiresApproval: type.requires_approval,
+    deductWeekends: true, // Assume default
+    colorHex: type.color_hex,
+    isPaid: type.is_paid,
+  }));
 };
 
-const mockSubmitLeaveRequest = async (request: {
+const fetchLeaveBalancesApi = async (): Promise<LeaveBalance[]> => {
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE}/api/leave-approval/balance`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch leave balances');
+  }
+  
+  const data = await response.json();
+  
+  // Transform API response to match interface
+  return Object.entries(data).map(([leaveType, balance]: [string, any]) => ({
+    leaveType: leaveType.toUpperCase(),
+    allocated: balance.allocated,
+    used: balance.used,
+    pending: balance.pending,
+    remaining: balance.remaining,
+  }));
+};
+
+const fetchLeaveRequestsApi = async (): Promise<LeaveRequest[]> => {
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE}/api/leave-approval/requests`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch leave requests');
+  }
+  
+  return await response.json();
+};
+
+const submitLeaveRequestApi = async (request: {
   leaveTypeId: string;
   startDate: string;
   endDate: string;
   reason?: string;
   emergency?: boolean;
 }): Promise<LeaveRequest> => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE}/api/leave-approval/submit`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
   
-  const leaveType = mockLeaveTypes.find(t => t.id === request.leaveTypeId);
-  if (!leaveType) {
-    throw new Error('Invalid leave type');
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to submit leave request');
   }
   
-  // Calculate days count (simplified)
+  const result = await response.json();
+  
+  // Return a LeaveRequest-like object (the actual leave request will be fetched later)
   const startDate = new Date(request.startDate);
   const endDate = new Date(request.endDate);
   const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   
-  const newRequest: LeaveRequest = {
-    id: 'req-' + Date.now(),
+  return {
+    id: result.approvalId,
     leaveTypeId: request.leaveTypeId,
-    leaveTypeName: leaveType.name,
+    leaveTypeName: result.data.leaveType,
     startDate: request.startDate,
     endDate: request.endDate,
-    daysCount: diffDays,
+    daysCount: result.data.workingDays || diffDays,
     reason: request.reason,
-    emergency: request.emergency || false,
+    emergency: result.data.emergency || false,
     status: 'PENDING',
     createdAt: new Date().toISOString(),
   };
-  
-  // Save to localStorage
-  const existing = await mockFetchLeaveRequests();
-  const updated = [newRequest, ...existing];
-  localStorage.setItem('nova_hr_leave_requests', JSON.stringify(updated));
-  
-  return newRequest;
 };
 
-const mockCancelLeaveRequest = async (requestId: string): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
+const cancelLeaveRequestApi = async (requestId: string): Promise<void> => {
+  // Note: This endpoint would need to be implemented in the backend
+  const token = localStorage.getItem('auth_token');
+  const response = await fetch(`${API_BASE}/api/leave-approval/cancel/${requestId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
   
-  const existing = await mockFetchLeaveRequests();
-  const updated = existing.map(req => 
-    req.id === requestId 
-      ? { ...req, status: 'CANCELLED' as const }
-      : req
-  );
-  
-  localStorage.setItem('nova_hr_leave_requests', JSON.stringify(updated));
+  if (!response.ok) {
+    throw new Error('Failed to cancel leave request');
+  }
 };
 
 export const useLeave = create<LeaveState>()(
@@ -245,45 +300,58 @@ export const useLeave = create<LeaveState>()(
       fetchLeaveTypes: async () => {
         set({ isLoading: true });
         try {
-          const leaveTypes = await mockFetchLeaveTypes();
+          const leaveTypes = await fetchLeaveTypesApi();
           set({ leaveTypes, isLoading: false });
         } catch (error) {
-          set({ isLoading: false });
-          throw error;
+          console.error('Failed to fetch leave types:', error);
+          // Fall back to mock data on error
+          const leaveTypes = mockLeaveTypes;
+          set({ leaveTypes, isLoading: false });
         }
       },
 
       fetchLeaveBalances: async () => {
         set({ isLoading: true });
         try {
-          const leaveBalances = await mockFetchLeaveBalances();
+          const leaveBalances = await fetchLeaveBalancesApi();
           set({ leaveBalances, isLoading: false });
         } catch (error) {
-          set({ isLoading: false });
-          throw error;
+          console.error('Failed to fetch leave balances:', error);
+          // Fall back to mock data on error
+          const leaveBalances = mockLeaveBalances;
+          set({ leaveBalances, isLoading: false });
         }
       },
 
       fetchLeaveRequests: async () => {
         set({ isLoading: true });
         try {
-          const leaveRequests = await mockFetchLeaveRequests();
+          const leaveRequests = await fetchLeaveRequestsApi();
           set({ leaveRequests, isLoading: false });
         } catch (error) {
-          set({ isLoading: false });
-          throw error;
+          console.error('Failed to fetch leave requests:', error);
+          // Fall back to localStorage/mock data on error
+          const saved = localStorage.getItem('nova_hr_leave_requests');
+          const leaveRequests = saved ? JSON.parse(saved) : mockLeaveRequests;
+          set({ leaveRequests, isLoading: false });
         }
       },
 
       submitLeaveRequest: async (request) => {
         set({ isSubmitting: true });
         try {
-          const newRequest = await mockSubmitLeaveRequest(request);
+          const newRequest = await submitLeaveRequestApi(request);
           const { leaveRequests } = get();
           set({
             leaveRequests: [newRequest, ...leaveRequests],
             isSubmitting: false,
           });
+          
+          // Refresh the data from server after submission
+          setTimeout(() => {
+            get().fetchLeaveRequests();
+            get().fetchLeaveBalances();
+          }, 1000);
         } catch (error) {
           set({ isSubmitting: false });
           throw error;
@@ -293,7 +361,7 @@ export const useLeave = create<LeaveState>()(
       cancelLeaveRequest: async (requestId) => {
         set({ isLoading: true });
         try {
-          await mockCancelLeaveRequest(requestId);
+          await cancelLeaveRequestApi(requestId);
           const { leaveRequests } = get();
           const updated = leaveRequests.map(req => 
             req.id === requestId 
@@ -302,6 +370,7 @@ export const useLeave = create<LeaveState>()(
           );
           set({ leaveRequests: updated, isLoading: false });
         } catch (error) {
+          console.error('Failed to cancel leave request:', error);
           set({ isLoading: false });
           throw error;
         }

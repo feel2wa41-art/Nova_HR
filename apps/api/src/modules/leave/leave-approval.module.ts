@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AdminController } from './admin.controller';
-import { AdminService } from './admin.service';
+import { LeaveApprovalController } from './leave-approval.controller';
 import { SharedModule } from '../../shared/shared.module';
+import { ApprovalModule } from '../approval/approval.module';
 
 @Module({
   imports: [
-    SharedModule, 
+    SharedModule,
+    ApprovalModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -15,10 +16,8 @@ import { SharedModule } from '../../shared/shared.module';
         signOptions: { expiresIn: '15m' },
       }),
       inject: [ConfigService],
-    })
+    }),
   ],
-  controllers: [AdminController],
-  providers: [AdminService],
-  exports: [AdminService],
+  controllers: [LeaveApprovalController],
 })
-export class AdminModule {}
+export class LeaveApprovalModule {}

@@ -10,7 +10,7 @@ import {
   GetScreenshotGalleryDto,
   LiveMonitoringDto
 } from './dto/attitude.dto';
-// import { uploadFile } from '../../shared/utils/file-upload.util';
+import { uploadFile } from '../../shared/utils/file-upload.util';
 import { 
   startOfDay, 
   endOfDay, 
@@ -33,7 +33,7 @@ export class AttitudeService {
   async submitScreenshot(userId: string, companyId: string, file: Express.Multer.File, dto: SubmitScreenshotDto) {
     try {
       // Upload file to storage
-      const uploadResult = await uploadFile(file, 'screenshots');
+      const uploadResult = await uploadFile(file, 'uploads/screenshots');
 
       // Parse metadata if provided
       let metadata = null;
@@ -73,7 +73,7 @@ export class AttitudeService {
       const screenshot = await this.prisma.attitude_screenshot.create({
         data: {
           session_id: session.id,
-          file_url: uploadResult.path,
+          file_url: uploadResult.url,
           captured_at: new Date(dto.timestamp),
           metadata: metadata as any,
         },

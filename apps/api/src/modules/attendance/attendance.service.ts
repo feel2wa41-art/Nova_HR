@@ -263,10 +263,8 @@ export class AttendanceService {
     return this.prisma.attendance_request.create({
       data: {
         user_id: userId,
-        request_date: new Date(adjustmentDto.date),
+        target_at: new Date(adjustmentDto.date),
         request_type: adjustmentDto.adjustmentType,
-        check_in_time: adjustmentDto.checkInTime ? new Date(adjustmentDto.checkInTime) : null,
-        check_out_time: adjustmentDto.checkOutTime ? new Date(adjustmentDto.checkOutTime) : null,
         reason_text: adjustmentDto.reason,
         attach_urls: adjustmentDto.attachments || [],
         status: 'PENDING',
@@ -338,8 +336,8 @@ export class AttendanceService {
       where: { id: requestId },
       data: {
         status: 'APPROVED',
-        approved_by: adminId,
-        approved_at: new Date(),
+        decided_by: adminId,
+        decided_at: new Date(),
       },
       include: {
         user: {
@@ -366,9 +364,9 @@ export class AttendanceService {
       where: { id: requestId },
       data: {
         status: 'REJECTED',
-        approved_by: adminId,
-        approved_at: new Date(),
-        rejection_reason: reason,
+        decided_by: adminId,
+        decided_at: new Date(),
+        comments: reason,
       },
       include: {
         user: {

@@ -48,3 +48,50 @@ export const multerDocumentOptions = {
     fileSize: MAX_FILE_SIZE,
   },
 };
+
+export interface UploadResult {
+  url: string;
+  filename: string;
+  path?: string;
+  size: number;
+  mimetype: string;
+}
+
+/**
+ * Upload file to storage (local filesystem or S3 based on configuration)
+ * @param file Multer file object
+ * @param folder Optional folder path for organizing files
+ * @returns Promise<UploadResult>
+ */
+export async function uploadFile(file: Express.Multer.File, folder: string = 'uploads'): Promise<UploadResult> {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  
+  try {
+    // Generate unique filename
+    const fileExtName = path.extname(file.originalname);
+    const filename = `${uuidv4()}${fileExtName}`;
+    
+    // Create folder structure
+    const uploadDir = path.join(process.cwd(), folder);
+    await fs.mkdir(uploadDir, { recursive: true });
+    
+    // Full file path
+    const filePath = path.join(uploadDir, filename);
+    
+    // Write file to disk
+    await fs.writeFile(filePath, file.buffer);
+    
+    // Return upload result
+    return {
+      url: `/${folder}/${filename}`,
+      filename: filename,
+      path: filePath,
+      size: file.size,
+      mimetype: file.mimetype
+    };
+  } catch (error) {
+    console.error('File upload error:', error);
+    throw new BadRequestException('Failed to upload file');
+  }
+}

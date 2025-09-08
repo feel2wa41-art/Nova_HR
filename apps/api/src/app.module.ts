@@ -11,6 +11,17 @@ import { WeeklyReportModule } from './modules/weekly-report/weekly-report.module
 import { ReferenceDocumentModule } from './modules/reference-document/reference-document.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { HrCommunityModule } from './modules/hr-community/hr-community.module';
+// Now enabling all modules
+import { UsersModule } from './modules/users/users.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { CompanyModule } from './modules/company/company.module';
+import { ApprovalModule } from './modules/approval/approval.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { AttitudeModule } from './modules/attitude/attitude.module';
+import { UserHealthModule } from './modules/user-health/user-health.module';
+// import { LeaveModule } from './modules/leave/leave.module';
+import { LeaveApprovalModule } from './modules/leave/leave-approval.module';
 import awsConfig from './config/aws.config';
 
 import { AppController } from './app.controller';
@@ -37,9 +48,10 @@ import { AppService } from './app.service';
       }),
     }),
 
-    // Essential modules only
+    // Essential modules
     SharedModule,
     AuthModule,
+    // Core modules
     CompanyRequestModule,
     EmailModule,
     DailyReportModule,
@@ -47,6 +59,17 @@ import { AppService } from './app.service';
     ReferenceDocumentModule,
     CalendarModule,
     HrCommunityModule,
+    // Advanced modules - now enabled
+    UsersModule,
+    AttendanceModule,
+    CompanyModule,
+    ApprovalModule,
+    NotificationModule,
+    AdminModule,
+    AttitudeModule,
+    UserHealthModule,
+    // LeaveModule,
+    LeaveApprovalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

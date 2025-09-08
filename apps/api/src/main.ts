@@ -31,8 +31,10 @@ async function bootstrap() {
   app.use(cookieParser(securityConfig.encryption.cookieSecret));
 
   // Security middleware
-  app.use(new SecurityHeadersMiddleware().use);
-  app.use(new RequestLoggingMiddleware().use);
+  const securityHeadersMiddleware = new SecurityHeadersMiddleware();
+  const requestLoggingMiddleware = new RequestLoggingMiddleware();
+  app.use((req, res, next) => securityHeadersMiddleware.use(req, res, next));
+  app.use((req, res, next) => requestLoggingMiddleware.use(req, res, next));
 
   // Helmet security headers
   app.use(helmet(createHelmetConfig(configService)));

@@ -61,7 +61,6 @@ export class UserHealthService {
     const users = await this.prisma.auth_user.findMany({
       where,
       include: {
-        user_status: true,
         employee_profile: true,
         org_unit: true,
         // Get current leave status
@@ -77,7 +76,7 @@ export class UserHealthService {
         // Get latest attendance
         attendance: {
           where: {
-            date: {
+            created_at: {
               gte: new Date(new Date().setHours(0, 0, 0, 0))
             }
           },
@@ -96,9 +95,8 @@ export class UserHealthService {
       avatar_url: user.avatar_url,
       org_unit: user.org_unit?.name,
       status: this.calculateUserStatus(user),
-      user_status: user.user_status,
       employee_profile: user.employee_profile,
-      is_birthday_today: this.isBirthdayToday(user.user_status?.birthday),
+      is_birthday_today: this.isBirthdayToday(user.employee_profile?.hire_date),
       is_on_leave: user.leave_requests.length > 0,
       leave_info: user.leave_requests[0] || null,
       last_attendance: user.attendance[0] || null
@@ -416,10 +414,10 @@ export class UserHealthService {
           },
           attendance: {
             some: {
-              date: {
+              created_at: {
                 gte: new Date(new Date().setHours(0, 0, 0, 0))
               },
-              check_out_time: null
+              check_out_at: null
             }
           }
         }

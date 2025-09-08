@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: nova-hr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nova_hr
+      POSTGRES_USER: nova_hr
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - nova-hr-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nova-hr-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nova-hr-network
+
+  # MinIO for file storage
+  minio:
+    image: minio/minio:latest
+    container_name: nova-hr-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - nova-hr-network
+    command: server /data --console-address ":9001"
+
+  # MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: nova-hr-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - nova-hr-network
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nova-hr-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nova-hr.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./infra/docker/pgadmin-servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - nova-hr-network
+    depends_on:
+      - postgres
+
+networks:
+  nova-hr-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  pgadmin_data:
+    driver: local

@@ -30,7 +30,7 @@ export class SecurityHeadersMiddleware implements NestMiddleware {
 export class RequestLoggingMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const startTime = Date.now();
-    const { method, url, ip, headers } = req;
+    const { method, url, headers } = req;
     
     // Log request (sanitized)
     const logData = {
@@ -67,8 +67,7 @@ export class RequestLoggingMiddleware implements NestMiddleware {
       req.headers['cf-connecting-ip'] ||
       req.headers['x-real-ip'] ||
       req.headers['x-forwarded-for'] ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
+      req.ip ||
       'unknown'
     ) as string;
   }
@@ -130,8 +129,7 @@ export class RateLimitMiddleware implements NestMiddleware {
       req.headers['cf-connecting-ip'] ||
       req.headers['x-real-ip'] ||
       req.headers['x-forwarded-for'] ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
+      req.ip ||
       'unknown'
     ) as string;
   }
