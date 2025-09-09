@@ -40,21 +40,24 @@ export const LeaveManagement: React.FC = () => {
       );
 
       // Map to expected format
-      return leaveApprovals.map((draft: any) => ({
-        id: draft.id,
-        user: draft.user,
-        leaveType: {
-          name: draft.content?.leave_type_name || 'Unknown',
-          colorHex: '#1890ff',
-        },
-        startDate: draft.content?.start_date,
-        endDate: draft.content?.end_date,
-        daysCount: draft.content?.working_days || draft.content?.total_days || 0,
-        reason: draft.content?.reason || '',
-        emergency: draft.content?.emergency || false,
-        status: draft.status,
-        submittedAt: draft.submitted_at || draft.created_at,
-      }));
+      return leaveApprovals.map((draft: any) => {
+        const formData = draft.form_data || {};
+        return {
+          id: draft.id,
+          user: draft.user,
+          leaveType: {
+            name: formData.leave_type_name || 'Unknown',
+            colorHex: '#1890ff',
+          },
+          startDate: formData.start_date,
+          endDate: formData.end_date,
+          daysCount: formData.working_days || formData.total_days || 0,
+          reason: formData.reason || '',
+          emergency: formData.emergency || false,
+          status: draft.status,
+          submittedAt: draft.submitted_at || draft.created_at,
+        };
+      });
     },
   });
 
@@ -85,18 +88,24 @@ export const LeaveManagement: React.FC = () => {
     },
   });
 
-  // Approve/Reject leave mutation
+  // Approve/Reject leave mutation through approval system
   const processLeaveMutation = useMutation({
     mutationFn: async ({ id, action, comments }: { id: string; action: 'approve' | 'reject'; comments?: string }) => {
-      return apiClient.post(`/admin/leave-requests/${id}/${action}`, { comments });
+      // Process through approval system
+      if (action === 'approve') {
+        return apiClient.post(`/approval/drafts/${id}/approve`, { comments });
+      } else {
+        return apiClient.post(`/approval/drafts/${id}/reject`, { comments });
+      }
     },
     onSuccess: (_, variables) => {
       message.success(variables.action === 'approve' ? '휴가가 승인되었습니다.' : '휴가가 반려되었습니다.');
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
       queryClient.invalidateQueries({ queryKey: ['leave-statistics'] });
     },
-    onError: () => {
-      message.error('처리 중 오류가 발생했습니다.');
+    onError: (error: any) => {
+      console.error('Leave processing error:', error);
+      message.error(error.response?.data?.message || '처리 중 오류가 발생했습니다.');
     },
   });
 
