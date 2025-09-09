@@ -323,6 +323,16 @@ export const MainLayout = () => {
               label: '회사 설정',
             },
             {
+              key: '/admin/common-code',
+              icon: <SettingOutlined />,
+              label: '공통코드 관리',
+            },
+            {
+              key: '/admin/overtime-management',
+              icon: <ClockCircleOutlined />,
+              label: '추가근무 관리',
+            },
+            {
               key: '/admin/screenshot-gallery',
               icon: <EyeOutlined />,
               label: '스크린캡처 관리',

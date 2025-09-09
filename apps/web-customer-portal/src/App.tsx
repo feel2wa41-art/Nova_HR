@@ -31,6 +31,8 @@ import { CalendarPage } from './pages/calendar/CalendarPage';
 import { CommunityPage } from './pages/community/CommunityPage';
 import { CommunityPostDetail } from './pages/community/CommunityPostDetail';
 import { NotificationsPage } from './pages/community/NotificationsPage';
+import { CommonCodeManagement } from './pages/admin/CommonCodeManagement';
+import { OvertimeRequestPage } from './pages/approval/OvertimeRequestPage';
 import { useAuth } from './hooks/useAuth';
 
 const { Content } = Layout;
@@ -104,6 +106,8 @@ function App() {
           <Route path='admin/attendance-management' element={<AttendanceManagement />} />
           <Route path='admin/leave-management' element={<LeaveManagement />} />
           <Route path='admin/organization' element={<CompanySettings />} />
+          <Route path='admin/common-code' element={<CommonCodeManagement />} />
+          <Route path='admin/overtime-management' element={<OvertimeRequestPage />} />
         </Route>
       </Routes>
     </AntdApp>
