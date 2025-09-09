@@ -2,6 +2,9 @@ import {
   Controller,
   Post,
   Get,
+  Put,
+  Delete,
+  Param,
   Body,
   UseGuards,
   Request,
@@ -167,7 +170,16 @@ export class LeaveApprovalController {
       orderBy: { name: 'asc' }
     });
 
-    return leaveTypes;
+    // Transform to match frontend interface expectations
+    return leaveTypes.map(type => ({
+      id: type.id,
+      name: type.name,
+      code: type.code,
+      colorHex: type.color_hex,
+      maxDaysYear: type.max_days_year,
+      isPaid: type.is_paid,
+      requiresApproval: type.requires_approval
+    }));
   }
 
   @Get('balance')
@@ -184,16 +196,30 @@ export class LeaveApprovalController {
       }
     });
 
-    // Transform to expected format
-    const result = balances.reduce((acc, balance) => {
-      acc[balance.leave_type.toLowerCase()] = {
-        allocated: Number(balance.allocated),
-        used: Number(balance.used),
-        pending: Number(balance.pending),
-        remaining: Number(balance.allocated) - Number(balance.used) - Number(balance.pending)
-      };
+    // Get leave types for name mapping
+    const leaveTypes = await this.prisma.leave_type.findMany({
+      where: {
+        OR: [
+          { company_id: req.user.tenantId },
+          { company_id: null }
+        ]
+      }
+    });
+
+    const leaveTypeMap = leaveTypes.reduce((acc, type) => {
+      acc[type.code] = type.name;
       return acc;
     }, {} as any);
+
+    // Transform to expected format - return array instead of object
+    const result = balances.map(balance => ({
+      leaveType: balance.leave_type.toUpperCase(),
+      leaveTypeName: leaveTypeMap[balance.leave_type.toUpperCase()] || balance.leave_type,
+      allocated: Number(balance.allocated),
+      used: Number(balance.used),
+      pending: Number(balance.pending),
+      remaining: Number(balance.allocated) - Number(balance.used) - Number(balance.pending)
+    }));
 
     return result;
   }

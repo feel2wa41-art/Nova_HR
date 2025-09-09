@@ -163,16 +163,10 @@ const fetchLeaveTypesApi = async (): Promise<LeaveType[]> => {
     const response = await apiClient.get('/leave-approval/types');
     const data = response.data;
     
-    // Transform API response to match interface
+    // API now returns data in the correct format
     return data.map((type: any) => ({
-      id: type.id,
-      name: type.name,
-      code: type.code,
-      maxDaysYear: type.max_days_year,
-      requiresApproval: type.requires_approval,
-      deductWeekends: true, // Assume default
-      colorHex: type.color_hex,
-      isPaid: type.is_paid,
+      ...type,
+      deductWeekends: true, // Assume default for now
     }));
   } catch (error) {
     console.error('Failed to fetch leave types:', error);
@@ -185,9 +179,9 @@ const fetchLeaveBalancesApi = async (): Promise<LeaveBalance[]> => {
     const response = await apiClient.get('/leave-approval/balance');
     const data = response.data;
     
-    // Transform API response to match interface
-    return Object.entries(data).map(([leaveType, balance]: [string, any]) => ({
-      leaveType: leaveType.toUpperCase(),
+    // API now returns data in the correct array format
+    return data.map((balance: any) => ({
+      leaveType: balance.leaveType,
       allocated: balance.allocated,
       used: balance.used,
       pending: balance.pending,

@@ -3,6 +3,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LeaveController } from './leave.controller';
 import { LeaveService } from './leave.service';
+import { LeaveApprovalController } from './leave-approval.controller';
+import { LeaveTypesController } from './leave-types.controller';
 import { SharedModule } from '../../shared/shared.module';
 import { ApprovalModule } from '../approval/approval.module';
 
@@ -19,7 +21,7 @@ import { ApprovalModule } from '../approval/approval.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [LeaveController],
+  controllers: [LeaveController, LeaveApprovalController, LeaveTypesController],
   providers: [LeaveService],
   exports: [LeaveService],
 })

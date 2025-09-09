@@ -309,6 +309,11 @@ export const MainLayout = () => {
               label: '휴가 관리',
             },
             {
+              key: '/admin/leave-types',
+              icon: <CalendarOutlined />,
+              label: '휴가 종류 관리',
+            },
+            {
               key: '/admin/organization',
               icon: <TeamOutlined />,
               label: '조직도 관리',

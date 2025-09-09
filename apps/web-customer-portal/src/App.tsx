@@ -33,6 +33,7 @@ import { CommunityPostDetail } from './pages/community/CommunityPostDetail';
 import { NotificationsPage } from './pages/community/NotificationsPage';
 import { CommonCodeManagement } from './pages/admin/CommonCodeManagement';
 import { OvertimeRequestPage } from './pages/approval/OvertimeRequestPage';
+import { LeaveTypeManagement } from './pages/admin/LeaveTypeManagement';
 import { useAuth } from './hooks/useAuth';
 
 const { Content } = Layout;
@@ -108,6 +109,7 @@ function App() {
           <Route path='admin/organization' element={<CompanySettings />} />
           <Route path='admin/common-code' element={<CommonCodeManagement />} />
           <Route path='admin/overtime-management' element={<OvertimeRequestPage />} />
+          <Route path='admin/leave-types' element={<LeaveTypeManagement />} />
         </Route>
       </Routes>
     </AntdApp>
