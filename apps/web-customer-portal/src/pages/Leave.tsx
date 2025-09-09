@@ -10,13 +10,16 @@ const { Title } = Typography;
 
 export const Leave = () => {
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  const { leaveBalances, fetchLeaveBalances } = useLeave();
+  const { leaveBalances, leaveTypes, fetchLeaveBalances, fetchLeaveTypes } = useLeave();
 
   useEffect(() => {
     if (leaveBalances.length === 0) {
       fetchLeaveBalances().catch(console.error);
     }
-  }, [leaveBalances.length, fetchLeaveBalances]);
+    if (leaveTypes.length === 0) {
+      fetchLeaveTypes().catch(console.error);
+    }
+  }, [leaveBalances.length, leaveTypes.length, fetchLeaveBalances, fetchLeaveTypes]);
 
   const handleApplicationSuccess = () => {
     setShowApplicationForm(false);
@@ -102,11 +105,25 @@ export const Leave = () => {
       {/* Detailed Leave Balances */}
       <Card title="휴가 종류별 현황">
         <Row gutter={[16, 16]}>
-          {leaveBalances.map((balance) => (
-            <Col xs={24} sm={12} lg={8} key={balance.leaveType}>
-              <Card size="small" className="bg-gray-50">
-                <div className="space-y-2">
-                  <div className="font-medium text-lg">{balance.leaveType}</div>
+          {leaveBalances.map((balance) => {
+            // Find matching leave type for display name and color
+            const leaveType = leaveTypes.find(
+              type => type.code === balance.leaveType || type.code === balance.leaveType.toUpperCase()
+            );
+            
+            return (
+              <Col xs={24} sm={12} lg={8} key={balance.leaveType}>
+                <Card size="small" className="bg-gray-50">
+                  <div className="space-y-2">
+                    <div className="font-medium text-lg flex items-center gap-2">
+                      {leaveType && (
+                        <span 
+                          className="inline-block w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: leaveType.colorHex || '#3b82f6' }}
+                        />
+                      )}
+                      {balance.leaveTypeName || leaveType?.name || balance.leaveType}
+                    </div>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span>배정:</span>
@@ -136,7 +153,8 @@ export const Leave = () => {
                 </div>
               </Card>
             </Col>
-          ))}
+            );
+          })}
         </Row>
       </Card>
 

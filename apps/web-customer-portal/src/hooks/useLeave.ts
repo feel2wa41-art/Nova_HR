@@ -15,6 +15,7 @@ interface LeaveType {
 
 interface LeaveBalance {
   leaveType: string;
+  leaveTypeName?: string;
   allocated: number;
   used: number;
   pending: number;
@@ -107,6 +108,7 @@ const mockLeaveTypes: LeaveType[] = [
 const mockLeaveBalances: LeaveBalance[] = [
   {
     leaveType: 'ANNUAL',
+    leaveTypeName: '연차',
     allocated: 15,
     used: 2.5,
     pending: 1,
@@ -114,6 +116,7 @@ const mockLeaveBalances: LeaveBalance[] = [
   },
   {
     leaveType: 'SICK',
+    leaveTypeName: '병가',
     allocated: 30,
     used: 0,
     pending: 0,
@@ -121,6 +124,7 @@ const mockLeaveBalances: LeaveBalance[] = [
   },
   {
     leaveType: 'PERSONAL',
+    leaveTypeName: '개인사유',
     allocated: 5,
     used: 1,
     pending: 0,
@@ -183,6 +187,7 @@ const fetchLeaveBalancesApi = async (): Promise<LeaveBalance[]> => {
     // API now returns data in the correct array format
     return data.map((balance: any) => ({
       leaveType: balance.leaveType,
+      leaveTypeName: balance.leaveTypeName,
       allocated: balance.allocated,
       used: balance.used,
       pending: balance.pending,
