@@ -11,87 +11,101 @@ import {
   Divider,
   Select,
   Upload,
-  Avatar
+  Avatar,
+  Space
 } from 'antd';
 import { 
   BankOutlined,
   SaveOutlined,
   UploadOutlined,
-  EditOutlined
+  EditOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
+import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { apiClient } from '../../lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 const { Text, Title } = Typography;
-const { Option } = Select;
-const { TextArea } = Input;
+
+// Helper function to get the correct logo URL
+const getLogoUrl = (logoUrl?: string): string | null => {
+  if (!logoUrl) return null;
+  
+  // If it's already a full URL, return as is
+  if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+    return logoUrl;
+  }
+  
+  // If it's a relative path, prepend the API base URL
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const baseUrl = API_BASE_URL.replace('/api/v1', ''); // Remove /api/v1 if present
+  return `${baseUrl}${logoUrl}`;
+};
 
 interface CompanyInfo {
   id: string;
   name: string;
-  businessNumber: string;
-  representativeName: string;
-  phoneNumber: string;
-  faxNumber?: string;
-  email: string;
-  website?: string;
-  address: string;
-  detailAddress?: string;
-  postalCode: string;
-  industry: string;
-  employeeCount: string;
-  establishedDate: string;
-  logo?: string;
-  description?: string;
+  biz_no?: string;
+  ceo_name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  logo_url?: string;
+  settings?: any;
 }
 
-const mockCompanyInfo: CompanyInfo = {
-  id: '1',
-  name: 'TANK Development',
-  businessNumber: '123-45-67890',
-  representativeName: '김대표',
-  phoneNumber: '02-1234-5678',
-  faxNumber: '02-1234-5679',
-  email: 'contact@tank-dev.com',
-  website: 'https://tank-dev.com',
-  address: '서울특별시 강남구 테헤란로 123',
-  detailAddress: '456빌딩 7층',
-  postalCode: '06234',
-  industry: 'IT서비스업',
-  employeeCount: '50-99명',
-  establishedDate: '2020-01-15',
-  description: '혁신적인 HR 솔루션을 제공하는 IT 전문 기업입니다.',
-};
 
-const industryOptions = [
-  'IT서비스업',
-  '제조업',
-  '금융업',
-  '교육업',
-  '의료업',
-  '건설업',
-  '유통업',
-  '서비스업',
-  '기타',
-];
-
-const employeeCountOptions = [
-  '1-9명',
-  '10-49명',
-  '50-99명',
-  '100-299명',
-  '300-999명',
-  '1000명 이상',
-];
 
 export const CompanyInfoSettings = () => {
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(mockCompanyInfo);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [form] = Form.useForm();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const handleTokenExpired = () => {
+    message.error('로그인이 만료되었습니다. 다시 로그인해주세요.');
+    logout();
+    navigate('/login');
+  };
+
 
   useEffect(() => {
-    form.setFieldsValue(companyInfo);
+    if (companyInfo) {
+      form.setFieldsValue(companyInfo);
+    }
   }, [companyInfo, form]);
+
+  useEffect(() => {
+    fetchCompanyInfo();
+  }, []);
+
+  const fetchCompanyInfo = async () => {
+    if (!user) {
+      message.error('사용자 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Use apiClient to benefit from automatic token refresh
+      const response = await apiClient.get('/company/my-company');
+      setCompanyInfo(response.data);
+    } catch (error: any) {
+      console.error('Error fetching company info:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        handleTokenExpired();
+        return;
+      }
+      message.error('회사 정보를 불러오는데 실패했습니다. 관리자에게 문의하세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -99,49 +113,139 @@ export const CompanyInfoSettings = () => {
 
   const handleCancel = () => {
     setIsEditing(false);
-    form.setFieldsValue(companyInfo);
+    if (companyInfo) {
+      form.setFieldsValue(companyInfo);
+    }
   };
 
-  const handleSubmit = async (values: CompanyInfo) => {
+  if (!companyInfo) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div>회사 정보를 불러오는 중...</div>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (values: any) => {
+    if (!companyInfo) {
+      message.error('회사 정보가 로드되지 않았습니다.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setCompanyInfo({ ...companyInfo, ...values });
+      // Clean up the values - only send fields that exist in the form
+      const cleanedValues = {
+        name: values.name,
+        biz_no: values.biz_no || null,
+        ceo_name: values.ceo_name || null,
+        phone: values.phone || null,
+        email: values.email || null,
+        address: values.address || null,
+      };
+
+      // Use apiClient to benefit from automatic token refresh
+      const response = await apiClient.patch(`/company/${companyInfo.id}`, cleanedValues);
+      setCompanyInfo(response.data);
       setIsEditing(false);
+      
+      // Invalidate React Query cache to update MainLayout immediately
+      queryClient.invalidateQueries({ queryKey: ['company-info'] });
+      
       message.success('회사 정보가 성공적으로 저장되었습니다');
-    } catch (error) {
-      message.error('회사 정보 저장에 실패했습니다');
+    } catch (error: any) {
+      console.error('Error updating company info:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        handleTokenExpired();
+        return;
+      }
+      const errorMessage = error.response?.data?.message || error.message || '알 수 없는 오류가 발생했습니다';
+      message.error(`회사 정보 저장에 실패했습니다: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleLogoUpload = async (file: File) => {
+    if (!companyInfo) {
+      message.error('회사 정보가 로드되지 않았습니다.');
+      return false;
+    }
+
+    // Validate file type and size
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      message.error('JPG, PNG, GIF, WebP 형식의 이미지만 업로드 가능합니다.');
+      return false;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      message.error('파일 크기는 5MB 이하여야 합니다.');
+      return false;
+    }
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      // Use apiClient to benefit from automatic token refresh
+      const response = await apiClient.post(`/company/${companyInfo.id}/logo`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setCompanyInfo(response.data);
+      
+      // Invalidate React Query cache to update MainLayout immediately
+      queryClient.invalidateQueries({ queryKey: ['company-info'] });
+      
+      message.success('로고가 성공적으로 업로드되었습니다');
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        handleTokenExpired();
+        return false;
+      }
+      const errorMessage = error.response?.data?.message || error.message || '알 수 없는 오류가 발생했습니다';
+      message.error(`로고 업로드에 실패했습니다: ${errorMessage}`);
+    }
+
+    return false; // Prevent default upload behavior
+  };
+
+  const handleLogoDelete = async () => {
+    if (!companyInfo) {
+      message.error('회사 정보가 로드되지 않았습니다.');
+      return;
+    }
+
+    try {
+      // Use apiClient to benefit from automatic token refresh
+      const response = await apiClient.delete(`/company/${companyInfo.id}/logo`);
+      setCompanyInfo(response.data);
+      
+      // Invalidate React Query cache to update MainLayout immediately
+      queryClient.invalidateQueries({ queryKey: ['company-info'] });
+      
+      message.success('로고가 삭제되었습니다');
+    } catch (error: any) {
+      console.error('Error deleting logo:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        handleTokenExpired();
+        return;
+      }
+      const errorMessage = error.response?.data?.message || error.message || '알 수 없는 오류가 발생했습니다';
+      message.error(`로고 삭제에 실패했습니다: ${errorMessage}`);
+    }
+  };
+
   const uploadProps: UploadProps = {
     name: 'logo',
-    action: '/api/v1/upload',
-    headers: {
-      authorization: 'authorization-text',
-    },
-    beforeUpload: (file) => {
-      const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
-      if (!isJpgOrPng) {
-        message.error('JPG/PNG 파일만 업로드 가능합니다!');
-      }
-      const isLt2M = file.size / 1024 / 1024 < 2;
-      if (!isLt2M) {
-        message.error('이미지는 2MB보다 작아야 합니다!');
-      }
-      return isJpgOrPng && isLt2M;
-    },
-    onChange: (info) => {
-      if (info.file.status === 'done') {
-        message.success(`${info.file.name} 파일이 성공적으로 업로드되었습니다`);
-      } else if (info.file.status === 'error') {
-        message.error(`${info.file.name} 파일 업로드에 실패했습니다.`);
-      }
-    },
+    beforeUpload: handleLogoUpload,
+    showUploadList: false,
+    accept: 'image/*',
   };
 
   return (
@@ -190,16 +294,28 @@ export const CompanyInfoSettings = () => {
             <Avatar 
               size={80} 
               icon={<BankOutlined />} 
-              src={companyInfo.logo}
+              src={getLogoUrl(companyInfo.logo_url)}
               className="mb-4"
             />
             {isEditing && (
               <div>
-                <Upload {...uploadProps} showUploadList={false}>
-                  <Button icon={<UploadOutlined />} size="small">
-                    로고 변경
-                  </Button>
-                </Upload>
+                <Space>
+                  <Upload {...uploadProps}>
+                    <Button icon={<UploadOutlined />} size="small">
+                      로고 변경
+                    </Button>
+                  </Upload>
+                  {companyInfo.logo_url && (
+                    <Button 
+                      icon={<DeleteOutlined />} 
+                      size="small" 
+                      danger
+                      onClick={handleLogoDelete}
+                    >
+                      삭제
+                    </Button>
+                  )}
+                </Space>
               </div>
             )}
           </div>
@@ -220,9 +336,8 @@ export const CompanyInfoSettings = () => {
             <Col span={12}>
               <Form.Item
                 label="사업자등록번호"
-                name="businessNumber"
+                name="biz_no"
                 rules={[
-                  { required: true, message: '사업자등록번호를 입력해주세요' },
                   { pattern: /^\d{3}-\d{2}-\d{5}$/, message: '올바른 형식으로 입력해주세요 (000-00-00000)' },
                 ]}
               >
@@ -235,23 +350,9 @@ export const CompanyInfoSettings = () => {
             <Col span={12}>
               <Form.Item
                 label="대표자명"
-                name="representativeName"
-                rules={[
-                  { required: true, message: '대표자명을 입력해주세요' },
-                ]}
+                name="ceo_name"
               >
                 <Input size="large" placeholder="대표자명을 입력하세요" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="설립일"
-                name="establishedDate"
-                rules={[
-                  { required: true, message: '설립일을 입력해주세요' },
-                ]}
-              >
-                <Input size="large" type="date" />
               </Form.Item>
             </Col>
           </Row>
@@ -263,18 +364,7 @@ export const CompanyInfoSettings = () => {
             <Col span={12}>
               <Form.Item
                 label="전화번호"
-                name="phoneNumber"
-                rules={[
-                  { required: true, message: '전화번호를 입력해주세요' },
-                ]}
-              >
-                <Input size="large" placeholder="02-0000-0000" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="팩스번호"
-                name="faxNumber"
+                name="phone"
               >
                 <Input size="large" placeholder="02-0000-0000" />
               </Form.Item>
@@ -282,24 +372,15 @@ export const CompanyInfoSettings = () => {
           </Row>
 
           <Row gutter={[16, 0]}>
-            <Col span={12}>
+            <Col span={24}>
               <Form.Item
                 label="이메일"
                 name="email"
                 rules={[
-                  { required: true, message: '이메일을 입력해주세요' },
                   { type: 'email', message: '올바른 이메일 형식으로 입력해주세요' },
                 ]}
               >
                 <Input size="large" placeholder="contact@company.com" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="웹사이트"
-                name="website"
-              >
-                <Input size="large" placeholder="https://company.com" />
               </Form.Item>
             </Col>
           </Row>
@@ -307,85 +388,11 @@ export const CompanyInfoSettings = () => {
           <Divider />
 
           <Title level={5}>주소 정보</Title>
-          <Row gutter={[16, 0]}>
-            <Col span={8}>
-              <Form.Item
-                label="우편번호"
-                name="postalCode"
-                rules={[
-                  { required: true, message: '우편번호를 입력해주세요' },
-                ]}
-              >
-                <Input size="large" placeholder="12345" />
-              </Form.Item>
-            </Col>
-          </Row>
-
           <Form.Item
             label="주소"
             name="address"
-            rules={[
-              { required: true, message: '주소를 입력해주세요' },
-            ]}
           >
-            <Input size="large" placeholder="기본 주소를 입력하세요" />
-          </Form.Item>
-
-          <Form.Item
-            label="상세주소"
-            name="detailAddress"
-          >
-            <Input size="large" placeholder="상세주소를 입력하세요" />
-          </Form.Item>
-
-          <Divider />
-
-          <Title level={5}>사업 정보</Title>
-          <Row gutter={[16, 0]}>
-            <Col span={12}>
-              <Form.Item
-                label="업종"
-                name="industry"
-                rules={[
-                  { required: true, message: '업종을 선택해주세요' },
-                ]}
-              >
-                <Select size="large" placeholder="업종을 선택하세요">
-                  {industryOptions.map(industry => (
-                    <Option key={industry} value={industry}>
-                      {industry}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="직원 수"
-                name="employeeCount"
-                rules={[
-                  { required: true, message: '직원 수를 선택해주세요' },
-                ]}
-              >
-                <Select size="large" placeholder="직원 수를 선택하세요">
-                  {employeeCountOptions.map(count => (
-                    <Option key={count} value={count}>
-                      {count}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            label="회사 소개"
-            name="description"
-          >
-            <TextArea 
-              rows={4} 
-              placeholder="회사에 대한 간단한 소개를 입력하세요" 
-            />
+            <Input size="large" placeholder="주소를 입력하세요" />
           </Form.Item>
 
           {isEditing && (

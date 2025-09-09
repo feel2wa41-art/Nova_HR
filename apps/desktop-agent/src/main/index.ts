@@ -5,6 +5,10 @@ import Store from 'electron-store'
 import { autoUpdater } from 'electron-updater'
 import { ScreenshotService } from './services/ScreenshotService'
 import { ActivityMonitorService } from './services/ActivityMonitorService'
+import { SystemInfoService } from './services/SystemInfoService'
+import { IdleDetectionService } from './services/IdleDetectionService'
+import { AutoLaunchService } from './services/AutoLaunchService'
+import { SecureCredentialService } from './services/SecureCredentialService'
 import { ApiService } from './services/ApiService'
 import { AuthService } from './services/AuthService'
 import { TrayService } from './services/TrayService'
@@ -19,6 +23,10 @@ class DesktopAgent {
   private store: Store
   private screenshotService: ScreenshotService
   private activityMonitorService: ActivityMonitorService
+  private systemInfoService: SystemInfoService
+  private idleDetectionService: IdleDetectionService
+  private autoLaunchService: AutoLaunchService
+  private secureCredentialService: SecureCredentialService
   private apiService: ApiService
   private authService: AuthService
   private trayService: TrayService
@@ -49,14 +57,74 @@ class DesktopAgent {
     this.authService = new AuthService(this.apiService, this.store)
     this.screenshotService = new ScreenshotService(this.apiService, this.store)
     this.activityMonitorService = new ActivityMonitorService(this.apiService, this.store)
+    this.systemInfoService = new SystemInfoService(this.apiService)
+    this.idleDetectionService = new IdleDetectionService(this.apiService, this.systemInfoService)
+    this.autoLaunchService = new AutoLaunchService()
+    this.secureCredentialService = new SecureCredentialService(this.store, this.apiService)
     this.trayService = new TrayService()
 
     this.initializeApp()
   }
 
+  private async handleAppStartup(): Promise<void> {
+    try {
+      console.log('Handling app startup...')
+      
+      // Get startup configuration
+      const startupConfig = this.autoLaunchService.handleAppStartup()
+      
+      // If launched at startup, try auto-login
+      if (startupConfig.shouldAutoLogin) {
+        console.log('App was launched at startup, attempting auto-login...')
+        
+        // Add startup delay if configured
+        if (startupConfig.startupDelay > 0) {
+          console.log(`Waiting ${startupConfig.startupDelay} seconds before auto-login...`)
+          await new Promise(resolve => setTimeout(resolve, startupConfig.startupDelay * 1000))
+        }
+
+        // Attempt auto-login
+        const autoLoginResult = await this.secureCredentialService.attemptAutoLogin()
+        
+        if (autoLoginResult.success && autoLoginResult.user) {
+          console.log('Auto-login successful for:', autoLoginResult.user.email)
+          
+          // Update auth service with the user data
+          // Note: You might need to call the auth service to set the user data
+          
+          // Start monitoring automatically
+          setTimeout(() => {
+            this.startMonitoring()
+          }, 2000) // Small delay to ensure everything is initialized
+        } else if (autoLoginResult.needsReauth) {
+          console.log('Auto-login requires reauthentication')
+          this.showNotification('Authentication Required', 'Please log in to continue monitoring')
+        } else {
+          console.log('Auto-login failed:', autoLoginResult.error)
+        }
+      }
+
+      // Handle window visibility based on startup configuration
+      if (startupConfig.shouldMinimizeToTray && this.mainWindow) {
+        console.log('Minimizing to tray on startup')
+        this.mainWindow.hide()
+      }
+
+      // Setup auto-launch if not already configured
+      const autoLaunchEnabled = await this.autoLaunchService.isAutoLaunchEnabled()
+      if (!autoLaunchEnabled && app.isPackaged) {
+        console.log('Setting up auto-launch for first time')
+        await this.autoLaunchService.enableAutoLaunch()
+      }
+
+    } catch (error) {
+      console.error('Error during app startup:', error)
+    }
+  }
+
   private async initializeApp(): Promise<void> {
     // Handle app ready
-    app.whenReady().then(() => {
+    app.whenReady().then(async () => {
       electronApp.setAppUserModelId('com.nova-hr.desktop-agent')
       
       this.createMainWindow()
@@ -68,6 +136,9 @@ class DesktopAgent {
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) this.createMainWindow()
       })
+
+      // Handle app startup logic
+      await this.handleAppStartup()
 
       // Start monitoring if user is authenticated
       if (this.authService.isAuthenticated()) {
@@ -355,6 +426,153 @@ class DesktopAgent {
       app.relaunch()
       app.exit(0)
     })
+
+    // System Information
+    ipcMain.handle('systemInfo:getProcesses', async () => {
+      return await this.systemInfoService.getRunningProcesses()
+    })
+
+    ipcMain.handle('systemInfo:getNetworkInfo', async () => {
+      return await this.systemInfoService.getNetworkInfo()
+    })
+
+    ipcMain.handle('systemInfo:getSystemStats', async () => {
+      return await this.systemInfoService.getSystemStats()
+    })
+
+    ipcMain.handle('systemInfo:getHealthSummary', async () => {
+      return await this.systemInfoService.getSystemHealthSummary()
+    })
+
+    ipcMain.handle('systemInfo:collectProcesses', async () => {
+      return await this.systemInfoService.collectAndSubmitProcesses()
+    })
+
+    ipcMain.handle('systemInfo:collectNetwork', async () => {
+      return await this.systemInfoService.collectAndSubmitNetworkInfo()
+    })
+
+    ipcMain.handle('systemInfo:startProcessCollection', async (_, intervalMinutes) => {
+      this.systemInfoService.startProcessCollection(intervalMinutes || 10)
+      return { success: true }
+    })
+
+    ipcMain.handle('systemInfo:startNetworkMonitoring', async (_, intervalMinutes) => {
+      this.systemInfoService.startNetworkMonitoring(intervalMinutes || 5)
+      return { success: true }
+    })
+
+    ipcMain.handle('systemInfo:stopAllCollections', async () => {
+      this.systemInfoService.stopAllCollections()
+      return { success: true }
+    })
+
+    // Idle Detection
+    ipcMain.handle('idle:getStatus', () => {
+      return this.idleDetectionService.getIdleStatus()
+    })
+
+    ipcMain.handle('idle:getSystemIdleTime', () => {
+      return this.idleDetectionService.getSystemIdleTime()
+    })
+
+    ipcMain.handle('idle:setThreshold', (_, seconds) => {
+      this.idleDetectionService.setIdleThreshold(seconds)
+      return { success: true }
+    })
+
+    ipcMain.handle('idle:triggerManually', async () => {
+      await this.idleDetectionService.triggerIdleManually()
+      return { success: true }
+    })
+
+    ipcMain.handle('idle:endManually', async () => {
+      await this.idleDetectionService.endIdleManually()
+      return { success: true }
+    })
+
+    ipcMain.handle('idle:getStats', async (_, days) => {
+      return await this.idleDetectionService.getIdleStats(days)
+    })
+
+    ipcMain.handle('idle:captureProcesses', async () => {
+      await this.idleDetectionService.captureProcessesOnIdle()
+      return { success: true }
+    })
+
+    // Auto Launch
+    ipcMain.handle('autoLaunch:isEnabled', async () => {
+      return await this.autoLaunchService.isAutoLaunchEnabled()
+    })
+
+    ipcMain.handle('autoLaunch:enable', async () => {
+      return await this.autoLaunchService.enableAutoLaunch()
+    })
+
+    ipcMain.handle('autoLaunch:disable', async () => {
+      return await this.autoLaunchService.disableAutoLaunch()
+    })
+
+    ipcMain.handle('autoLaunch:getSettings', () => {
+      return this.autoLaunchService.getSettings()
+    })
+
+    ipcMain.handle('autoLaunch:updateSettings', async (_, settings) => {
+      return await this.autoLaunchService.updateSettings(settings)
+    })
+
+    ipcMain.handle('autoLaunch:getInfo', () => {
+      return this.autoLaunchService.getAutoLaunchInfo()
+    })
+
+    ipcMain.handle('autoLaunch:test', async () => {
+      return await this.autoLaunchService.testAutoLaunch()
+    })
+
+    ipcMain.handle('autoLaunch:createDesktopShortcut', async () => {
+      return await this.autoLaunchService.createDesktopShortcut()
+    })
+
+    // Secure Credentials
+    ipcMain.handle('credentials:save', async (_, credentials) => {
+      return await this.secureCredentialService.saveCredentials(credentials)
+    })
+
+    ipcMain.handle('credentials:get', async () => {
+      return await this.secureCredentialService.getStoredCredentials()
+    })
+
+    ipcMain.handle('credentials:autoLogin', async () => {
+      return await this.secureCredentialService.attemptAutoLogin()
+    })
+
+    ipcMain.handle('credentials:validatePassword', async (_, password) => {
+      return await this.secureCredentialService.validateStoredPassword(password)
+    })
+
+    ipcMain.handle('credentials:updateTokens', async (_, apiToken, refreshToken) => {
+      return await this.secureCredentialService.updateStoredTokens(apiToken, refreshToken)
+    })
+
+    ipcMain.handle('credentials:clear', async () => {
+      return await this.secureCredentialService.clearStoredCredentials()
+    })
+
+    ipcMain.handle('credentials:hasStored', async () => {
+      return await this.secureCredentialService.hasStoredCredentials()
+    })
+
+    ipcMain.handle('credentials:getLastLogin', () => {
+      return this.secureCredentialService.getLastLoginInfo()
+    })
+
+    ipcMain.handle('credentials:test', async () => {
+      return await this.secureCredentialService.testCredentialSystem()
+    })
+
+    ipcMain.handle('credentials:getStorageInfo', () => {
+      return this.secureCredentialService.getStorageInfo()
+    })
   }
 
   private setupGlobalShortcuts(): void {
@@ -389,6 +607,13 @@ class DesktopAgent {
       // Start activity monitoring
       await this.activityMonitorService.startMonitoring()
 
+      // Start system info collection
+      this.systemInfoService.startProcessCollection(10) // Every 10 minutes
+      this.systemInfoService.startNetworkMonitoring(5)  // Every 5 minutes
+
+      // Start idle detection (15 minutes = 900 seconds)
+      this.idleDetectionService.startIdleDetection(900)
+
       this.updateTrayMenu()
       this.showNotification('Monitoring Started', 'Nova HR monitoring is now active')
       
@@ -410,6 +635,8 @@ class DesktopAgent {
     // Stop services
     this.screenshotService.stopPeriodicCapture()
     this.activityMonitorService.stopMonitoring()
+    this.systemInfoService.stopAllCollections()
+    this.idleDetectionService.stopIdleDetection()
 
     this.updateTrayMenu()
     this.showNotification('Monitoring Stopped', 'Nova HR monitoring has been stopped')

@@ -1,6 +1,6 @@
-const TOKEN_KEY = 'nova_hr_token';
-const REFRESH_TOKEN_KEY = 'nova_hr_refresh_token';
-const USER_KEY = 'nova_hr_user';
+const TOKEN_KEY = 'reko_hr_token';
+const REFRESH_TOKEN_KEY = 'reko_hr_refresh_token';
+const USER_KEY = 'reko_hr_user';
 
 export const getStoredToken = (): string | null => {
   if (typeof window === 'undefined') return null;

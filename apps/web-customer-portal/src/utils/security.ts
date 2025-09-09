@@ -1,5 +1,5 @@
 /**
- * Frontend Security Utilities for Nova HR
+ * Frontend Security Utilities for Reko HR
  * Implements client-side security best practices
  */
 
@@ -61,7 +61,7 @@ export class XSSProtection {
 
 // CSRF Protection
 export class CSRFProtection {
-  private static readonly TOKEN_KEY = 'nova_hr_csrf_token';
+  private static readonly TOKEN_KEY = 'reko_hr_csrf_token';
   
   static generateToken(): string {
     const array = new Uint8Array(32);
@@ -88,7 +88,7 @@ export class CSRFProtection {
 
 // Secure Storage
 export class SecureStorage {
-  private static readonly ENCRYPTION_KEY_KEY = 'nova_hr_enc_key';
+  private static readonly ENCRYPTION_KEY_KEY = 'reko_hr_enc_key';
   
   private static async generateEncryptionKey(): Promise<CryptoKey> {
     return await crypto.subtle.generateKey(
@@ -289,10 +289,10 @@ export class SessionSecurity {
 
   private static checkMultipleInstances(): void {
     const instanceId = Date.now().toString();
-    sessionStorage.setItem('nova_hr_instance', instanceId);
+    sessionStorage.setItem('reko_hr_instance', instanceId);
 
     setInterval(() => {
-      const currentInstance = sessionStorage.getItem('nova_hr_instance');
+      const currentInstance = sessionStorage.getItem('reko_hr_instance');
       if (currentInstance !== instanceId) {
         console.warn('Multiple instances detected');
         // Handle multiple instance scenario

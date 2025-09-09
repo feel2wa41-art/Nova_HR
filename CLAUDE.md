@@ -1,10 +1,10 @@
-# Nova HR - Claude Development Notes
+# Reko HR - Claude Development Notes
 
 이 파일은 Claude Code가 프로젝트를 이해하고 개발을 지원하기 위한 정보를 담고 있습니다.
 
 ## 프로젝트 개요
 
-Nova HR은 통합 HR 관리 시스템으로, 출퇴근 관리, 휴가 관리, 전자결재 시스템을 포함합니다.
+Reko HR은 통합 HR 관리 시스템으로, 출퇴근 관리, 휴가 관리, 전자결재 시스템을 포함합니다.
 
 ### 아키텍처
 - **모노레포**: pnpm workspace를 사용한 멀티 패키지 구조
@@ -105,9 +105,9 @@ pnpm docker:logs      # 로그 확인
 
 ### 테스트 계정
 ```
-관리자: admin@nova-hr.com / admin123
-HR매니저: hr@nova-hr.com / admin123
-직원: employee@nova-hr.com / admin123
+관리자: admin@reko-hr.com / admin123
+HR매니저: hr@reko-hr.com / admin123
+직원: employee@reko-hr.com / admin123
 ```
 
 ## 개발 가이드

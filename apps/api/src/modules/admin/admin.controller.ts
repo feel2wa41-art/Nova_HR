@@ -101,7 +101,7 @@ export class AdminController {
       req.user.id,
       req.user.companyId,
       dto,
-      req.user.role === 'admin',
+      req.user.role === 'SUPER_ADMIN',
     );
   }
 
@@ -115,7 +115,7 @@ export class AdminController {
       req.user.id,
       req.user.companyId,
       dto,
-      req.user.role === 'admin',
+      req.user.role === 'SUPER_ADMIN',
     );
   }
 
@@ -125,7 +125,7 @@ export class AdminController {
   @ApiResponse({ status: 201, description: 'Company created successfully' })
   @ApiResponse({ status: 403, description: 'Global admin access required' })
   async createCompany(@Request() req: any, @Body() dto: CreateCompanyDto) {
-    return this.adminService.createCompany(dto, req.user.role === 'admin');
+    return this.adminService.createCompany(dto, req.user.role === 'SUPER_ADMIN');
   }
 
   @Get('companies')
@@ -133,7 +133,7 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Company list retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Global admin access required' })
   async getCompanyList(@Request() req: any) {
-    return this.adminService.getCompanyList(req.user.role === 'admin');
+    return this.adminService.getCompanyList(req.user.role === 'SUPER_ADMIN');
   }
 
   @Put('companies/:id')
@@ -146,7 +146,7 @@ export class AdminController {
     @Param('id') companyId: string,
     @Body() dto: UpdateCompanyDto,
   ) {
-    return this.adminService.updateCompany(companyId, dto, req.user.role === 'admin');
+    return this.adminService.updateCompany(companyId, dto, req.user.role === 'SUPER_ADMIN');
   }
 
   // Company Location Management
@@ -162,7 +162,7 @@ export class AdminController {
     return this.adminService.createCompanyLocation(
       companyId,
       dto,
-      req.user.role === 'admin',
+      req.user.role === 'SUPER_ADMIN',
       req.user.companyId,
     );
   }
@@ -175,7 +175,7 @@ export class AdminController {
   async getSystemAnalytics(@Request() req: any, @Query() dto: GetAnalyticsDto) {
     return this.adminService.getSystemAnalytics(
       dto,
-      req.user.role === 'admin',
+      req.user.role === 'SUPER_ADMIN',
       req.user.companyId,
     );
   }
@@ -193,7 +193,7 @@ export class AdminController {
     return this.adminService.updateSystemSettings(
       companyId,
       dto,
-      req.user.role === 'admin',
+      req.user.role === 'SUPER_ADMIN',
       req.user.companyId,
     );
   }
@@ -219,7 +219,7 @@ export class AdminController {
   async getDashboardSummary(@Request() req: any) {
     return this.adminService.getSystemAnalytics(
       { period: 'monthly' as any },
-      req.user.role === 'admin',
+      req.user.role === 'SUPER_ADMIN',
       req.user.companyId,
     );
   }
@@ -255,7 +255,7 @@ export class AdminController {
     const departments = await this.adminService['prisma'].employee_profile.findMany({
       where: {
         user: {
-          tenant_id: req.user.role === 'admin' ? undefined : req.user.tenantId,
+          tenant_id: req.user.role === 'SUPER_ADMIN' ? undefined : req.user.tenantId,
         },
       },
       select: {

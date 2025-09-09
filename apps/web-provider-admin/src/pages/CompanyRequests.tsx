@@ -53,7 +53,7 @@ const CompanyRequests: React.FC = () => {
     console.log('CompanyRequests component mounted');
     console.log('User:', user);
     console.log('Is Authenticated:', isAuthenticated);
-    console.log('Auth token:', localStorage.getItem('provider_admin_token'));
+    console.log('Auth token:', localStorage.getItem('reko_hr_token'));
   }, [user, isAuthenticated]);
 
   const { data: requests = [], isLoading, error } = useQuery({

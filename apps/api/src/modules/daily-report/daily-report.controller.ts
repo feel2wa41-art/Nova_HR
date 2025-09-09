@@ -282,12 +282,8 @@ export class DailyReportController {
 
   // Helper method to get company ID from user
   private async getCompanyIdFromUser(userId: string): Promise<{ companyId: string }> {
-    // This is a simplified implementation - you may need to adjust based on your auth structure
-    // For now, we'll get the company ID from the user's tenant or org_unit relation
-    const { PrismaService } = require('../../shared/services/prisma.service');
-    const prisma = new PrismaService();
-    
-    const user = await prisma.auth_user.findUnique({
+    // Use the injected PrismaService instead of creating a new instance
+    const user = await this.dailyReportService['prisma'].auth_user.findUnique({
       where: { id: userId },
       include: {
         tenant: {

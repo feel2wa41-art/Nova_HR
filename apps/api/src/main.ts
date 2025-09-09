@@ -27,6 +27,9 @@ async function bootstrap() {
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
+  // Serve static files for uploads
+  app.use('/uploads', express.static('uploads'));
+
   // Cookie parser for session management
   app.use(cookieParser(securityConfig.encryption.cookieSecret));
 

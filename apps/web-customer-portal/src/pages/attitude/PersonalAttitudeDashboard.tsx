@@ -229,7 +229,7 @@ const PersonalAttitudeDashboard: React.FC = () => {
   // 에이전트와 토큰 공유 함수
   const shareTokenWithAgent = async () => {
     try {
-      const token = localStorage.getItem('nova_hr_token');
+      const token = localStorage.getItem('reko_hr_token');
       
       if (!token) {
         console.warn('No token found for agent authentication');

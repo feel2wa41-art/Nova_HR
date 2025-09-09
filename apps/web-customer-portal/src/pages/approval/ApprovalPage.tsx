@@ -18,6 +18,7 @@ import {
   CloseCircleOutlined,
   PlusOutlined,
   InboxOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 
@@ -29,6 +30,7 @@ import { DraftDetailPage } from './DraftDetailPage';
 import { InboxPage } from './InboxPage';
 import { OutboxPage } from './OutboxPage';
 import { ReferencePage } from './ReferencePage';
+import { OvertimeRequestPage } from './OvertimeRequestPage';
 
 const { Title } = Typography;
 
@@ -160,6 +162,28 @@ export const ApprovalPage = () => {
               참조문서
             </Button>
           </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Button
+              size="large"
+              block
+              icon={<ClockCircleOutlined />}
+              onClick={() => navigate('/approval/overtime')}
+              style={{ borderColor: '#1890ff', color: '#1890ff' }}
+            >
+              추가근무 신청
+            </Button>
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Button
+              size="large"
+              block
+              icon={<CalendarOutlined />}
+              onClick={() => navigate('/leave')}
+              style={{ borderColor: '#52c41a', color: '#52c41a' }}
+            >
+              휴가 신청
+            </Button>
+          </Col>
         </Row>
       </Card>
 
@@ -216,6 +240,7 @@ export const ApprovalPage = () => {
         <Route path="outbox" element={<OutboxPage />} />
         <Route path="reference" element={<ReferencePage />} />
         <Route path="create" element={<CreateDraftPage />} />
+        <Route path="overtime" element={<OvertimeRequestPage />} />
         <Route path="drafts/:id" element={<DraftDetailPage />} />
         <Route path="document/:id" element={<DraftDetailPage />} />
       </Routes>

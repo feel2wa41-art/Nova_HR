@@ -38,8 +38,8 @@ const AutoLogin: React.FC = () => {
           setStatus('로그인 성공! 대시보드로 이동 중...');
           
           // Save token and user info
-          localStorage.setItem('nova_hr_token', directToken);
-          localStorage.setItem('nova_hr_user', JSON.stringify(data.user));
+          localStorage.setItem('reko_hr_token', directToken);
+          localStorage.setItem('reko_hr_user', JSON.stringify(data.user));
           
           // Update API client
           apiClient.defaults.headers.common['Authorization'] = `Bearer ${directToken}`;
@@ -89,8 +89,8 @@ const AutoLogin: React.FC = () => {
         setStatus('로그인 성공! 대시보드로 이동 중...');
 
         // Save token and user info to localStorage (using correct key names)
-        localStorage.setItem('nova_hr_token', data.access_token);
-        localStorage.setItem('nova_hr_user', JSON.stringify(data.user));
+        localStorage.setItem('reko_hr_token', data.access_token);
+        localStorage.setItem('reko_hr_user', JSON.stringify(data.user));
 
         // Update API client with new token
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;

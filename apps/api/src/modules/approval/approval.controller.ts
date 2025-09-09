@@ -69,8 +69,9 @@ export class ApprovalController {
   @Get('categories/:id')
   @ApiOperation({ summary: 'Get approval category by ID' })
   @ApiResponse({ status: 200, description: 'Category retrieved successfully' })
-  async getCategory(@Param('id') id: string) {
-    return this.approvalService.getCategory(id);
+  async getCategory(@Param('id') id: string, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.approvalService.getCategory(id, tenantId);
   }
 
   @Put('categories/:id')
@@ -105,7 +106,16 @@ export class ApprovalController {
     return this.approvalService.deleteCategory(id, companyId);
   }
 
-  // Draft Management
+  // Draft Management - COUNT ENDPOINTS FIRST
+  @Get('drafts/count')
+  @ApiOperation({ summary: 'Get draft count for current user' })
+  @ApiResponse({ status: 200, description: 'Draft count retrieved successfully' })
+  async getDraftsCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('drafts', userId, userRole);
+  }
+
   @Post('drafts')
   @ApiOperation({ summary: 'Create approval draft' })
   @ApiResponse({ status: 201, description: 'Draft created successfully' })
@@ -114,7 +124,8 @@ export class ApprovalController {
     @Request() req
   ) {
     const userId = req.user.sub;
-    return this.approvalService.createDraft(createDto, userId);
+    const tenantId = req.user.tenantId;
+    return this.approvalService.createDraft(createDto, userId, tenantId);
   }
 
   @Get('drafts')
@@ -125,8 +136,9 @@ export class ApprovalController {
     @Request() req
   ) {
     const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
     const userRole = req.user.roles?.[0];
-    return this.approvalService.getDrafts(queryDto, userId, userRole);
+    return this.approvalService.getDrafts(queryDto, userId, tenantId, userRole);
   }
 
   @Get('drafts/:id')
@@ -134,7 +146,8 @@ export class ApprovalController {
   @ApiResponse({ status: 200, description: 'Draft retrieved successfully' })
   async getDraft(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
-    return this.approvalService.getDraft(id, userId);
+    const tenantId = req.user.tenantId;
+    return this.approvalService.getDraft(id, userId, tenantId);
   }
 
   @Put('drafts/:id')
@@ -146,7 +159,8 @@ export class ApprovalController {
     @Request() req
   ) {
     const userId = req.user.sub;
-    return this.approvalService.updateDraft(id, updateDto, userId);
+    const tenantId = req.user.tenantId;
+    return this.approvalService.updateDraft(id, updateDto, userId, tenantId);
   }
 
   @Post('drafts/:id/submit')
@@ -154,7 +168,8 @@ export class ApprovalController {
   @ApiResponse({ status: 200, description: 'Draft submitted successfully' })
   async submitDraft(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
-    return this.approvalService.submitDraft(id, userId);
+    const tenantId = req.user.tenantId;
+    return this.approvalService.submitDraft(id, userId, tenantId);
   }
 
   @Post('drafts/:id/process')
@@ -166,7 +181,8 @@ export class ApprovalController {
     @Request() req
   ) {
     const userId = req.user.sub;
-    return this.approvalService.processApproval(id, processDto, userId);
+    const tenantId = req.user.tenantId;
+    return this.approvalService.processApproval(id, processDto, userId, tenantId);
   }
 
   @Delete('drafts/:id')
@@ -195,15 +211,34 @@ export class ApprovalController {
     return this.approvalService.getApprovalStatistics(queryDto, companyId);
   }
 
-  // Views for different user contexts
+  // Views for different user contexts - COUNT ENDPOINTS FIRST
+  @Get('inbox/count')
+  @ApiOperation({ summary: 'Get inbox count for current user' })
+  @ApiResponse({ status: 200, description: 'Inbox count retrieved successfully' })
+  async getInboxCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('inbox', userId, userRole);
+  }
+
   @Get('inbox')
   @ApiOperation({ summary: 'Get pending approvals for current user' })
   @ApiResponse({ status: 200, description: 'Inbox items retrieved successfully' })
   async getInbox(@Query() queryDto: ApprovalQueryDto, @Request() req) {
     const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
     const userRole = req.user.roles?.[0];
     const inboxQuery = { ...queryDto, view: 'inbox' as const };
-    return this.approvalService.getDrafts(inboxQuery, userId, userRole);
+    return this.approvalService.getDrafts(inboxQuery, userId, tenantId, userRole);
+  }
+
+  @Get('outbox/count')
+  @ApiOperation({ summary: 'Get outbox count for current user' })
+  @ApiResponse({ status: 200, description: 'Outbox count retrieved successfully' })
+  async getOutboxCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('outbox', userId, userRole);
   }
 
   @Get('outbox')
@@ -211,9 +246,28 @@ export class ApprovalController {
   @ApiResponse({ status: 200, description: 'Outbox items retrieved successfully' })
   async getOutbox(@Query() queryDto: ApprovalQueryDto, @Request() req) {
     const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
     const userRole = req.user.roles?.[0];
     const outboxQuery = { ...queryDto, view: 'outbox' as const };
-    return this.approvalService.getDrafts(outboxQuery, userId, userRole);
+    return this.approvalService.getDrafts(outboxQuery, userId, tenantId, userRole);
+  }
+
+  @Get('pending/count')
+  @ApiOperation({ summary: 'Get pending approval count for current user' })
+  @ApiResponse({ status: 200, description: 'Pending count retrieved successfully' })
+  async getPendingCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('pending', userId, userRole);
+  }
+
+  @Get('reference/count')
+  @ApiOperation({ summary: 'Get reference document count for current user' })
+  @ApiResponse({ status: 200, description: 'Reference count retrieved successfully' })
+  async getReferenceCount(@Request() req) {
+    const userId = req.user.sub;
+    const userRole = req.user.roles?.[0];
+    return this.approvalService.getCount('reference', userId, userRole);
   }
 
   @Get('my-drafts')
@@ -221,9 +275,10 @@ export class ApprovalController {
   @ApiResponse({ status: 200, description: 'Draft documents retrieved successfully' })
   async getMyDrafts(@Query() queryDto: ApprovalQueryDto, @Request() req) {
     const userId = req.user.sub;
+    const tenantId = req.user.tenantId;
     const userRole = req.user.roles?.[0];
     const draftsQuery = { ...queryDto, view: 'drafts' as const };
-    return this.approvalService.getDrafts(draftsQuery, userId, userRole);
+    return this.approvalService.getDrafts(draftsQuery, userId, tenantId, userRole);
   }
 
   @Post('bulk-import')
@@ -247,49 +302,4 @@ export class ApprovalController {
     };
   }
 
-  // Count APIs for MainLayout - Fixed
-  @Get('drafts/count')
-  @ApiOperation({ summary: 'Get draft count for current user' })
-  @ApiResponse({ status: 200, description: 'Draft count retrieved successfully' })
-  async getDraftsCount(@Request() req) {
-    const userId = req.user.sub;
-    const userRole = req.user.roles?.[0];
-    return this.approvalService.getCount('drafts', userId, userRole);
-  }
-
-  @Get('inbox/count')
-  @ApiOperation({ summary: 'Get inbox count for current user' })
-  @ApiResponse({ status: 200, description: 'Inbox count retrieved successfully' })
-  async getInboxCount(@Request() req) {
-    const userId = req.user.sub;
-    const userRole = req.user.roles?.[0];
-    return this.approvalService.getCount('inbox', userId, userRole);
-  }
-
-  @Get('pending/count')
-  @ApiOperation({ summary: 'Get pending approval count for current user' })
-  @ApiResponse({ status: 200, description: 'Pending count retrieved successfully' })
-  async getPendingCount(@Request() req) {
-    const userId = req.user.sub;
-    const userRole = req.user.roles?.[0];
-    return this.approvalService.getCount('pending', userId, userRole);
-  }
-
-  @Get('outbox/count')
-  @ApiOperation({ summary: 'Get outbox count for current user' })
-  @ApiResponse({ status: 200, description: 'Outbox count retrieved successfully' })
-  async getOutboxCount(@Request() req) {
-    const userId = req.user.sub;
-    const userRole = req.user.roles?.[0];
-    return this.approvalService.getCount('outbox', userId, userRole);
-  }
-
-  @Get('reference/count')
-  @ApiOperation({ summary: 'Get reference document count for current user' })
-  @ApiResponse({ status: 200, description: 'Reference count retrieved successfully' })
-  async getReferenceCount(@Request() req) {
-    const userId = req.user.sub;
-    const userRole = req.user.roles?.[0];
-    return this.approvalService.getCount('reference', userId, userRole);
-  }
 }

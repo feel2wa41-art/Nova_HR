@@ -43,8 +43,8 @@ export const useAuthProvider = () => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('provider_admin_token');
-      const storedUser = localStorage.getItem('provider_admin_user');
+      const token = localStorage.getItem('reko_hr_token');
+      const storedUser = localStorage.getItem('reko_hr_user');
 
       if (token && storedUser) {
         try {
@@ -53,8 +53,8 @@ export const useAuthProvider = () => {
           setUser(profile);
         } catch (error) {
           // Token is invalid, clear storage
-          localStorage.removeItem('provider_admin_token');
-          localStorage.removeItem('provider_admin_user');
+          localStorage.removeItem('reko_hr_token');
+          localStorage.removeItem('reko_hr_user');
         }
       }
       setIsLoading(false);
@@ -70,8 +70,8 @@ export const useAuthProvider = () => {
       const { accessToken, user: userData } = response;
       
       // Store auth data
-      localStorage.setItem('provider_admin_token', accessToken);
-      localStorage.setItem('provider_admin_user', JSON.stringify(userData));
+      localStorage.setItem('reko_hr_token', accessToken);
+      localStorage.setItem('reko_hr_user', JSON.stringify(userData));
       
       setUser(userData);
     } finally {
@@ -80,8 +80,8 @@ export const useAuthProvider = () => {
   };
 
   const logout = () => {
-    localStorage.removeItem('provider_admin_token');
-    localStorage.removeItem('provider_admin_user');
+    localStorage.removeItem('reko_hr_token');
+    localStorage.removeItem('reko_hr_user');
     setUser(null);
   };
 

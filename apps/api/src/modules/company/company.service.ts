@@ -5,19 +5,29 @@ import { PrismaService } from '../../shared/services/prisma.service';
 export class CompanyService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getCompanies() {
+  async getCompanies(tenantId?: string) {
+    const where: any = {};
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
     return this.prisma.company.findMany({
+      where,
       orderBy: { name: 'asc' }
     });
   }
 
-  async getCompany(id: string) {
+  async getCompany(id: string, tenantId?: string) {
+    const where: any = { id };
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
+    
     const company = await this.prisma.company.findUnique({
-      where: { id }
+      where
     });
 
     if (!company) {
-      throw new NotFoundException('Company not found');
+      throw new NotFoundException('Company not found or access denied');
     }
 
     return company;
@@ -39,14 +49,25 @@ export class CompanyService {
 
   async updateCompany(id: string, data: {
     name?: string;
+    biz_no?: string;
+    ceo_name?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    logo_url?: string;
     settings?: any;
-  }) {
+  }, tenantId?: string) {
+    const where: any = { id };
+    if (tenantId) {
+      where.tenant_id = tenantId;  // Tenant isolation security check
+    }
+    
     const company = await this.prisma.company.findUnique({
-      where: { id }
+      where
     });
 
     if (!company) {
-      throw new NotFoundException('Company not found');
+      throw new NotFoundException('Company not found or access denied');
     }
 
     return this.prisma.company.update({
@@ -69,7 +90,15 @@ export class CompanyService {
     });
   }
 
-  async getCompanyLocations(companyId: string) {
+  async getCompanyLocations(companyId: string, tenantId?: string) {
+    // First verify company belongs to tenant
+    if (tenantId) {
+      const company = await this.getCompany(companyId, tenantId);
+      if (!company) {
+        throw new NotFoundException('Company not found or access denied');
+      }
+    }
+    
     return this.prisma.company_location.findMany({
       where: { company_id: companyId },
       orderBy: { name: 'asc' }

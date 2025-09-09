@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/services/prisma.service';
+import { ApprovalService } from '../approval/approval.service';
 import { 
   CreateLeaveRequestDto, 
   UpdateLeaveRequestDto,
@@ -16,7 +17,10 @@ import {
 
 @Injectable()
 export class LeaveService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private approvalService: ApprovalService
+  ) {}
 
   async createLeaveRequest(userId: string, createDto: CreateLeaveRequestDto, tenantId: string) {
     // Verify user belongs to tenant for security
@@ -100,35 +104,90 @@ export class LeaveService {
       throw new BadRequestException(`Invalid leave type: ${createDto.leave_type}`);
     }
 
-    // Create leave request
-    const leaveRequest = await this.prisma.leave_request.create({
-      data: {
-        user_id: userId,
-        leave_type_id: leaveType.id,
-        start_date: startDate,
-        end_date: endDate,
-        days_count: days,
-        reason: createDto.reason,
-        duration: createDto.duration || 'FULL_DAY',
-        emergency_contact: createDto.emergency_contact,
-        status: leaveType.requires_approval ? 'PENDING' : 'APPROVED',
-        submitted_at: new Date()
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true
-          }
-        },
-        leave_type: {
-          select: {
-            name: true,
-            code: true,
-            color_hex: true
-          }
-        }
+    // Find leave request approval category
+    const leaveCategory = await this.prisma.approval_category.findFirst({
+      where: {
+        code: 'LEAVE_REQUEST',
+        OR: [
+          { company_id: user.employee_profile?.base_location?.company?.id },
+          { company_id: null }
+        ]
       }
+    });
+
+    if (!leaveCategory) {
+      throw new BadRequestException('Leave request approval category not found');
+    }
+
+    // Create leave request and approval draft in a transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Create leave request
+      const leaveRequest = await tx.leave_request.create({
+        data: {
+          user_id: userId,
+          leave_type_id: leaveType.id,
+          start_date: startDate,
+          end_date: endDate,
+          days_count: days,
+          reason: createDto.reason,
+          duration: createDto.duration || 'FULL_DAY',
+          emergency_contact: createDto.emergency_contact,
+          status: leaveType.requires_approval ? 'PENDING' : 'APPROVED',
+          submitted_at: new Date()
+        }
+      });
+
+      // Create approval draft if approval is required
+      let approvalDraft = null;
+      if (leaveType.requires_approval) {
+        approvalDraft = await tx.approval_draft.create({
+          data: {
+            user_id: userId,
+            category_id: leaveCategory.id,
+            title: `휴가 신청 - ${leaveType.name} (${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()})`,
+            description: `휴가 신청 - ${leaveType.name}`,
+            content: {
+              leave_type: createDto.leave_type,
+              leave_type_name: leaveType.name,
+              start_date: createDto.start_date,
+              end_date: createDto.end_date,
+              duration: createDto.duration || 'FULL_DAY',
+              days_count: days,
+              reason: createDto.reason,
+              emergency_contact: createDto.emergency_contact,
+              leave_request_id: leaveRequest.id
+            },
+            status: 'DRAFT'
+          }
+        });
+
+        // Update leave request with approval draft ID
+        await tx.leave_request.update({
+          where: { id: leaveRequest.id },
+          data: { approval_draft_id: approvalDraft.id }
+        });
+      }
+
+      // Get the complete leave request with relations
+      return await tx.leave_request.findUnique({
+        where: { id: leaveRequest.id },
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true
+            }
+          },
+          leave_type: {
+            select: {
+              name: true,
+              code: true,
+              color_hex: true
+            }
+          },
+          approval_draft: true
+        }
+      });
     });
 
     // Log audit trail
@@ -137,14 +196,14 @@ export class LeaveService {
         user_id: userId,
         action: 'CREATE_LEAVE_REQUEST',
         entity_type: 'leave_request',
-        entity_id: leaveRequest.id,
+        entity_id: result.id,
         changes: { created: createDto },
         ip_address: 'system',
         user_agent: 'system'
       }
     });
 
-    return leaveRequest;
+    return result;
   }
 
   async updateLeaveRequest(id: string, userId: string, updateDto: UpdateLeaveRequestDto, tenantId: string) {

@@ -14,6 +14,8 @@
     "dev:web": "pnpm run --parallel --filter \"web-*\" dev",
     "dev:mobile": "pnpm --filter mobile-app dev",
     "dev:desktop": "pnpm --filter desktop-agent dev",
+    "start:local": "pnpm docker:up && pnpm dev",
+    "start:local:clean": "pnpm docker:down && pnpm docker:up && pnpm migrate:dev && pnpm db:seed && pnpm dev",
     "build": "pnpm run --recursive build",
     "build:dev": "NODE_ENV=development pnpm run --recursive build",
     "build:prod": "NODE_ENV=production pnpm run --recursive build",

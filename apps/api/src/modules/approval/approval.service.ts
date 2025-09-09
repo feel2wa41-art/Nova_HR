@@ -206,15 +206,7 @@ export class ApprovalService {
       where: { id },
       include: {
         category: true,
-        user: {
-          where: { tenant_id: tenantId },  // Tenant isolation security check
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            tenant_id: true
-          }
-        }
+        user: true
       }
     });
 
@@ -280,9 +272,7 @@ export class ApprovalService {
     const draft = await this.prisma.approval_draft.findUnique({
       where: { id, user_id: userId },
       include: {
-        user: {
-          where: { tenant_id: tenantId }  // Tenant isolation security check
-        }
+        user: true
       }
     });
 
@@ -323,9 +313,7 @@ export class ApprovalService {
       where: { id },
       include: {
         category: true,
-        user: {
-          where: { tenant_id: tenantId }  // Tenant isolation security check
-        }
+        user: true
       }
     });
 

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>테스트 이미지 생성기</title>
+</head>
+<body>
+    <h3>추가근무 신청 테스트 이미지</h3>
+    <canvas id="canvas" width="200" height="150"></canvas>
+    <br><br>
+    <button onclick="downloadImage()">이미지 다운로드</button>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 배경색 설정
+        ctx.fillStyle = '#f0f8ff';
+        ctx.fillRect(0, 0, 200, 150);
+        
+        // 테두리 그리기
+        ctx.strokeStyle = '#1890ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(5, 5, 190, 140);
+        
+        // 텍스트 추가
+        ctx.fillStyle = '#1890ff';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('추가근무 신청', 100, 40);
+        
+        ctx.font = '12px Arial';
+        ctx.fillText('테스트 문서', 100, 70);
+        ctx.fillText('2025-09-09', 100, 90);
+        
+        // 아이콘 그리기 (간단한 시계)
+        ctx.strokeStyle = '#52c41a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(100, 120, 15, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // 시계 바늘
+        ctx.beginPath();
+        ctx.moveTo(100, 120);
+        ctx.lineTo(100, 110);
+        ctx.moveTo(100, 120);
+        ctx.lineTo(108, 115);
+        ctx.stroke();
+        
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'test-overtime-request.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>

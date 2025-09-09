@@ -59,7 +59,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get('JWT_SECRET'),
-      expiresIn: this.configService.get('JWT_EXPIRES_IN', '15m'),
+      expiresIn: this.configService.get('JWT_EXPIRES_IN', '24h'),
     });
 
     const refreshToken = this.jwtService.sign(payload, {
@@ -93,7 +93,7 @@ export class AuthService {
       user: userWithoutPassword,
       accessToken,
       refreshToken,
-      expiresIn: 15 * 60, // 15 minutes in seconds
+      expiresIn: 24 * 60 * 60, // 24 hours in seconds
     };
   }
 
@@ -124,12 +124,12 @@ export class AuthService {
 
       const accessToken = this.jwtService.sign(payload, {
         secret: this.configService.get('JWT_SECRET'),
-        expiresIn: this.configService.get('JWT_EXPIRES_IN', '15m'),
+        expiresIn: this.configService.get('JWT_EXPIRES_IN', '24h'),
       });
 
       return {
         accessToken,
-        expiresIn: 15 * 60, // 15 minutes in seconds
+        expiresIn: 24 * 60 * 60, // 24 hours in seconds
       };
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token');

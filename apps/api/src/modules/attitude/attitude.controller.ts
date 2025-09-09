@@ -94,7 +94,7 @@ export class AttitudeController {
       req.user.id,
       req.user.companyId,
       dto,
-      req.user.role === 'admin' || req.user.role === 'hr_manager',
+      ['CUSTOMER_ADMIN', 'HR_MANAGER'].includes(req.user.role),
     );
   }
 
@@ -116,7 +116,7 @@ export class AttitudeController {
 
   // Admin-only endpoints
   @Get('analytics/productivity')
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get productivity analytics (Admin only)' })
   @ApiResponse({ status: 200, description: 'Productivity analytics retrieved successfully' })
@@ -133,7 +133,7 @@ export class AttitudeController {
   }
 
   @Get('screenshots/gallery')
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get screenshot gallery (Admin only)' })
   @ApiResponse({ status: 200, description: 'Screenshot gallery retrieved successfully' })
@@ -150,7 +150,7 @@ export class AttitudeController {
   }
 
   @Put('screenshots/:id/blur')
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Update screenshot blur status (Admin only)' })
   @ApiResponse({ status: 200, description: 'Screenshot blur status updated successfully' })
@@ -169,7 +169,7 @@ export class AttitudeController {
   }
 
   @Get('monitoring/live')
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get live monitoring data (Admin only)' })
   @ApiResponse({ status: 200, description: 'Live monitoring data retrieved successfully' })
@@ -186,7 +186,7 @@ export class AttitudeController {
   }
 
   @Get('reports/weekly')
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get weekly attitude report (Admin only)' })
   @ApiResponse({ status: 200, description: 'Weekly report retrieved successfully' })
@@ -199,7 +199,7 @@ export class AttitudeController {
   }
 
   @Get('reports/monthly')
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get monthly attitude report (Admin only)' })
   @ApiResponse({ status: 200, description: 'Monthly report retrieved successfully' })
@@ -226,7 +226,149 @@ export class AttitudeController {
         startDate: startOfToday.toISOString(),
         endDate: endOfToday.toISOString(),
       },
-      req.user.role === 'admin' || req.user.role === 'hr_manager',
+      ['CUSTOMER_ADMIN', 'HR_MANAGER'].includes(req.user.role),
+    );
+  }
+
+  // New endpoints for enhanced desktop agent features
+  @Post('processes')
+  @ApiOperation({ summary: 'Submit process information' })
+  @ApiResponse({ status: 201, description: 'Process data submitted successfully' })
+  async submitProcessData(
+    @Request() req: any,
+    @Body() data: {
+      processes: any[];
+      systemStats: any;
+      collectedAt: string;
+      collectionType: 'automatic' | 'manual' | 'idle-triggered';
+    },
+  ) {
+    return this.attitudeService.submitProcessData(
+      req.user.id,
+      req.user.companyId,
+      data,
+    );
+  }
+
+  @Post('network')
+  @ApiOperation({ summary: 'Submit network information' })
+  @ApiResponse({ status: 201, description: 'Network data submitted successfully' })
+  async submitNetworkData(
+    @Request() req: any,
+    @Body() data: {
+      networkInfo: any;
+      location: 'OFFICE' | 'REMOTE' | 'UNKNOWN';
+      collectedAt: string;
+    },
+  ) {
+    return this.attitudeService.submitNetworkData(
+      req.user.id,
+      req.user.companyId,
+      data,
+    );
+  }
+
+  @Post('idle-events')
+  @ApiOperation({ summary: 'Submit idle event' })
+  @ApiResponse({ status: 201, description: 'Idle event submitted successfully' })
+  async submitIdleEvent(
+    @Request() req: any,
+    @Body() data: {
+      event: any;
+      sessionId?: string;
+    },
+  ) {
+    return this.attitudeService.submitIdleEvent(
+      req.user.id,
+      req.user.companyId,
+      data,
+    );
+  }
+
+  @Post('idle-sessions')
+  @ApiOperation({ summary: 'Submit idle session data' })
+  @ApiResponse({ status: 201, description: 'Idle session submitted successfully' })
+  async submitIdleSession(
+    @Request() req: any,
+    @Body() data: {
+      action: 'start' | 'end';
+      session: any;
+    },
+  ) {
+    return this.attitudeService.submitIdleSession(
+      req.user.id,
+      req.user.companyId,
+      data,
+    );
+  }
+
+  @Get('idle-stats')
+  @ApiOperation({ summary: 'Get idle statistics' })
+  @ApiResponse({ status: 200, description: 'Idle statistics retrieved successfully' })
+  async getIdleStats(
+    @Request() req: any,
+    @Query('days') days?: number,
+  ) {
+    return this.attitudeService.getIdleStats(
+      req.user.id,
+      req.user.companyId,
+      days || 7,
+    );
+  }
+
+  // Admin endpoints for new features
+  @Get('admin/processes')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Get process usage analytics (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Process analytics retrieved successfully' })
+  async getProcessAnalytics(
+    @Request() req: any,
+    @Query('userId') userId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.attitudeService.getProcessAnalytics(
+      req.user.companyId,
+      userId,
+      startDate,
+      endDate,
+    );
+  }
+
+  @Get('admin/network-usage')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Get network usage analytics (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Network analytics retrieved successfully' })
+  async getNetworkAnalytics(
+    @Request() req: any,
+    @Query('userId') userId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.attitudeService.getNetworkAnalytics(
+      req.user.companyId,
+      userId,
+      startDate,
+      endDate,
+    );
+  }
+
+  @Get('admin/sessions')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Get user sessions for monitoring (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
+  async getAdminSessions(
+    @Request() req: any,
+    @Query('dateFilter') dateFilter?: 'today' | 'week' | 'month',
+    @Query('limit') limit?: number,
+  ) {
+    return this.attitudeService.getAdminSessions(
+      req.user.companyId,
+      dateFilter || 'today',
+      limit || 100,
     );
   }
 }

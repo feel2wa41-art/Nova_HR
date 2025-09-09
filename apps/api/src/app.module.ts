@@ -27,6 +27,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FeatureConfigModule } from './feature-config/feature-config.module';
 import { UsersModule } from './users/users.module';
+import { CommonCodeModule } from './modules/common-code/common-code.module';
+import { OvertimeModule } from './modules/overtime/overtime.module';
 
 @Module({
   imports: [
@@ -72,6 +74,8 @@ import { UsersModule } from './users/users.module';
     LeaveApprovalModule,
     FeatureConfigModule,
     UsersModule,
+    CommonCodeModule,
+    OvertimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

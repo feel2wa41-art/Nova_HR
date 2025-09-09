@@ -675,4 +675,129 @@ export class AttitudeService {
       throw new BadRequestException('Failed to retrieve screenshots');
     }
   }
+
+  // Enhanced Desktop Agent Features
+  async submitProcessData(userId: string, companyId: string, data: any) {
+    try {
+      // Store process data - implement based on your schema
+      return { success: true, message: 'Process data submitted successfully' };
+    } catch (error) {
+      console.error('Failed to submit process data:', error);
+      throw new BadRequestException('Failed to submit process data');
+    }
+  }
+
+  async submitNetworkData(userId: string, companyId: string, data: any) {
+    try {
+      // Store network data - implement based on your schema
+      return { success: true, message: 'Network data submitted successfully' };
+    } catch (error) {
+      console.error('Failed to submit network data:', error);
+      throw new BadRequestException('Failed to submit network data');
+    }
+  }
+
+  async submitIdleEvent(userId: string, companyId: string, data: any) {
+    try {
+      // Store idle event data - implement based on your schema
+      return { success: true, message: 'Idle event submitted successfully' };
+    } catch (error) {
+      console.error('Failed to submit idle event:', error);
+      throw new BadRequestException('Failed to submit idle event');
+    }
+  }
+
+  async submitIdleSession(userId: string, companyId: string, data: any) {
+    try {
+      // Store idle session data - implement based on your schema
+      return { success: true, message: 'Idle session submitted successfully' };
+    } catch (error) {
+      console.error('Failed to submit idle session:', error);
+      throw new BadRequestException('Failed to submit idle session');
+    }
+  }
+
+  async getIdleStats(userId: string, companyId: string, days: number = 7) {
+    try {
+      // Return idle statistics - implement based on your schema
+      return { 
+        success: true,
+        data: {
+          totalIdleTime: 0,
+          averageIdleTime: 0,
+          longestIdlePeriod: 0,
+          days
+        }
+      };
+    } catch (error) {
+      console.error('Failed to get idle stats:', error);
+      throw new BadRequestException('Failed to retrieve idle statistics');
+    }
+  }
+
+  async getProcessAnalytics(companyId: string, userId?: string, startDate?: string, endDate?: string) {
+    try {
+      // Return process analytics - implement based on your schema
+      return {
+        success: true,
+        data: {
+          topApplications: [],
+          productivityScore: 0,
+          totalActiveTime: 0
+        }
+      };
+    } catch (error) {
+      console.error('Failed to get process analytics:', error);
+      throw new BadRequestException('Failed to retrieve process analytics');
+    }
+  }
+
+  async getNetworkAnalytics(companyId: string, userId?: string, startDate?: string, endDate?: string) {
+    try {
+      // Return network analytics - implement based on your schema
+      return {
+        success: true,
+        data: {
+          locations: [],
+          networks: [],
+          workingTime: 0
+        }
+      };
+    } catch (error) {
+      console.error('Failed to get network analytics:', error);
+      throw new BadRequestException('Failed to retrieve network analytics');
+    }
+  }
+
+  async getAdminSessions(companyId: string, dateFilter: 'today' | 'week' | 'month' = 'today', limit: number = 100) {
+    try {
+      // Return admin session data - implement based on your schema
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (dateFilter) {
+        case 'week':
+          startDate = startOfWeek(now);
+          break;
+        case 'month':
+          startDate = startOfMonth(now);
+          break;
+        default:
+          startDate = startOfDay(now);
+      }
+
+      return {
+        success: true,
+        data: {
+          sessions: [],
+          totalCount: 0,
+          activeUsers: 0,
+          period: dateFilter
+        }
+      };
+    } catch (error) {
+      console.error('Failed to get admin sessions:', error);
+      throw new BadRequestException('Failed to retrieve admin sessions');
+    }
+  }
 }

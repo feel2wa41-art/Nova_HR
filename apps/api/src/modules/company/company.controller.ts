@@ -6,8 +6,16 @@ import {
   Delete,
   Param, 
   Body, 
-  UseGuards 
+  Request,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  NotFoundException
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CompanyService } from './company.service';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
@@ -25,16 +33,31 @@ export class CompanyController {
   @UseGuards(RolesGuard)
   @Roles('CUSTOMER_ADMIN', 'SUPER_ADMIN')
   @ApiOperation({ summary: 'Get all companies' })
-  async getCompanies() {
-    return this.companyService.getCompanies();
+  async getCompanies(@Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.companyService.getCompanies(tenantId);
+  }
+
+  @Get('my-company')
+  @UseGuards(RolesGuard)
+  @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN', 'EMPLOYEE')
+  @ApiOperation({ summary: 'Get current user company info' })
+  async getMyCompany(@Request() req) {
+    const tenantId = req.user.tenantId;
+    const companies = await this.companyService.getCompanies(tenantId);
+    if (companies.length === 0) {
+      throw new NotFoundException('Company not found');
+    }
+    return companies[0]; // Return first company for this tenant
   }
 
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN')
   @ApiOperation({ summary: 'Get company by ID' })
-  async getCompany(@Param('id') id: string) {
-    return this.companyService.getCompany(id);
+  async getCompany(@Param('id') id: string, @Request() req) {
+    const tenantId = req.user.tenantId;
+    return this.companyService.getCompany(id, tenantId);
   }
 
   @Post()
@@ -57,6 +80,12 @@ export class CompanyController {
     @Param('id') id: string,
     @Body() body: {
       name?: string;
+      biz_no?: string;
+      ceo_name?: string;
+      phone?: string;
+      email?: string;
+      address?: string;
+      logo_url?: string;
       settings?: any;
     }
   ) {
@@ -165,5 +194,47 @@ export class CompanyController {
   @ApiOperation({ summary: 'Delete organization unit' })
   async deleteOrgUnit(@Param('unitId') unitId: string) {
     return this.companyService.deleteOrgUnit(unitId);
+  }
+
+  @Post(':id/logo')
+  @UseGuards(RolesGuard)
+  @Roles('CUSTOMER_ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Upload company logo' })
+  @UseInterceptors(FileInterceptor('logo', {
+    storage: diskStorage({
+      destination: './uploads/company-logos',
+      filename: (req, file, callback) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        callback(null, `logo-${uniqueSuffix}${extname(file.originalname)}`);
+      },
+    }),
+    fileFilter: (req, file, callback) => {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+        return callback(new BadRequestException('Only image files are allowed'), false);
+      }
+      callback(null, true);
+    },
+    limits: {
+      fileSize: 2 * 1024 * 1024, // 2MB
+    },
+  }))
+  async uploadCompanyLogo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const logoUrl = `/uploads/company-logos/${file.filename}`;
+    return this.companyService.updateCompany(id, { logo_url: logoUrl });
+  }
+
+  @Delete(':id/logo')
+  @UseGuards(RolesGuard)
+  @Roles('CUSTOMER_ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Delete company logo' })
+  async deleteCompanyLogo(@Param('id') id: string) {
+    return this.companyService.updateCompany(id, { logo_url: null });
   }
 }

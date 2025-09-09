@@ -5,10 +5,8 @@ import { useEffect } from 'react';
 import { MainLayout } from './components/layouts/MainLayout';
 import { Dashboard } from './pages/Dashboard';
 import { AttendancePage } from './pages/attendance/AttendancePage';
-import AttitudeDashboard from './pages/attitude/AttitudeDashboard';
-import PersonalAttitudeDashboard from './pages/attitude/PersonalAttitudeDashboard';
-import AttitudeStatistics from './pages/admin/AttitudeStatistics';
-import LiveMonitoring from './pages/admin/LiveMonitoring';
+import ScreenshotGallery from './pages/admin/ScreenshotGallery';
+import DesktopAgentDownload from './pages/admin/DesktopAgentDownload';
 import { Leave } from './pages/Leave';
 import { ApprovalPage } from './pages/approval/ApprovalPage';
 import { Settings } from './pages/Settings';
@@ -78,7 +76,6 @@ function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path='attendance' element={<AttendancePage />} />
-          <Route path='attitude' element={<PersonalAttitudeDashboard />} />
           <Route path='leave' element={<Leave />} />
           <Route path='approval/*' element={<ApprovalPage />} />
           <Route path='daily-report' element={<DailyReportPage />} />
@@ -101,8 +98,8 @@ function App() {
           <Route path='admin/approval-management' element={<ApprovalManagement />} />
           <Route path='admin/users' element={<UserManagement />} />
           <Route path='admin/company' element={<CompanySettings />} />
-          <Route path='admin/monitoring' element={<LiveMonitoring />} />
-          <Route path='admin/attitude-statistics' element={<AttitudeStatistics />} />
+          <Route path='admin/screenshot-gallery' element={<ScreenshotGallery />} />
+          <Route path='admin/desktop-agent' element={<DesktopAgentDownload />} />
           {/* HR Management Routes */}
           <Route path='admin/attendance-management' element={<AttendanceManagement />} />
           <Route path='admin/leave-management' element={<LeaveManagement />} />

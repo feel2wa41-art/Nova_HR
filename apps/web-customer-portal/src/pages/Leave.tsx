@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Card, Row, Col, Button, Typography, Statistic, Space } from 'antd';
-import { CalendarOutlined, PlusOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Typography, Statistic, Space, Alert } from 'antd';
+import { CalendarOutlined, PlusOutlined, ClockCircleOutlined, CheckCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import { LeaveApplicationForm } from '../components/leave/LeaveApplicationForm';
 import { LeaveRequestsList } from '../components/leave/LeaveRequestsList';
 import { useLeave } from '../hooks/useLeave';
@@ -35,14 +35,20 @@ export const Leave = () => {
           <Title level={2}>휴가 관리</Title>
           <p className="text-gray-600">휴가 신청 및 현황을 관리하세요</p>
         </div>
-        <Button
-          type="primary"
-          size="large"
-          icon={<PlusOutlined />}
-          onClick={() => setShowApplicationForm(true)}
-        >
-          휴가 신청
-        </Button>
+        <Space direction="vertical" align="end">
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => setShowApplicationForm(true)}
+          >
+            휴가 신청
+          </Button>
+          <div className="text-xs text-gray-500 flex items-center">
+            <FileTextOutlined className="mr-1" />
+            전자결재 시스템 연동
+          </div>
+        </Space>
       </div>
 
       {/* Leave Balance Overview */}

@@ -100,7 +100,7 @@ export class NotificationController {
   // Admin endpoints
   @Post('bulk')
   @UseGuards(RolesGuard)
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @ApiOperation({ summary: 'Create bulk notifications (Admin only)' })
   @ApiResponse({ status: 201, description: 'Bulk notifications created successfully' })
   @ApiResponse({ status: 403, description: 'Admin access required' })
@@ -119,7 +119,7 @@ export class NotificationController {
 
   @Post('company')
   @UseGuards(RolesGuard)
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @ApiOperation({ summary: 'Create company-wide notification (Admin only)' })
   @ApiResponse({ status: 201, description: 'Company notification created successfully' })
   @ApiResponse({ status: 403, description: 'Admin access required' })
@@ -134,12 +134,12 @@ export class NotificationController {
       departments?: string[];
     },
   ) {
-    return this.notificationService.createCompanyNotification(req.user.companyId, data);
+    return this.notificationService.createCompanyNotification(req.user.companyId, req.user.tenantId, data);
   }
 
   @Post('announcement')
   @UseGuards(RolesGuard)
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @ApiOperation({ summary: 'Send system announcement (Admin only)' })
   @ApiResponse({ status: 201, description: 'System announcement sent successfully' })
   @ApiResponse({ status: 403, description: 'Admin access required' })
@@ -152,24 +152,24 @@ export class NotificationController {
       expiresAt?: Date;
     },
   ) {
-    return this.notificationService.sendSystemAnnouncement(req.user.companyId, data);
+    return this.notificationService.sendSystemAnnouncement(req.user.companyId, req.user.tenantId, data);
   }
 
   @Get('admin/stats')
   @UseGuards(RolesGuard)
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @ApiOperation({ summary: 'Get notification statistics (Admin only)' })
   @ApiResponse({ status: 200, description: 'Notification statistics retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Admin access required' })
   async getNotificationStats(@Request() req: any) {
     return this.notificationService.getSystemNotificationStats(
-      req.user.role === 'admin' ? undefined : req.user.companyId,
+      req.user.role === 'SUPER_ADMIN' ? undefined : req.user.companyId,
     );
   }
 
   @Post('admin/cleanup')
   @UseGuards(RolesGuard)
-  @Roles('admin')
+  @Roles('SUPER_ADMIN')
   @ApiOperation({ summary: 'Cleanup old notifications (Global Admin only)' })
   @ApiResponse({ status: 200, description: 'Old notifications cleaned up successfully' })
   @ApiResponse({ status: 403, description: 'Global admin access required' })
@@ -182,7 +182,7 @@ export class NotificationController {
   // Test endpoints for development
   @Post('test/attendance-reminder')
   @UseGuards(RolesGuard)
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @ApiOperation({ summary: 'Send test attendance reminder (Admin only)' })
   @ApiResponse({ status: 201, description: 'Test reminder sent successfully' })
   @ApiResponse({ status: 403, description: 'Admin access required' })
@@ -195,7 +195,7 @@ export class NotificationController {
 
   @Post('test/productivity-report')
   @UseGuards(RolesGuard)
-  @Roles('admin', 'hr_manager')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
   @ApiOperation({ summary: 'Send test productivity report (Admin only)' })
   @ApiResponse({ status: 201, description: 'Test report sent successfully' })
   @ApiResponse({ status: 403, description: 'Admin access required' })

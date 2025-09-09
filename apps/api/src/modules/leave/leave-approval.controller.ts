@@ -43,13 +43,13 @@ export class LeaveApprovalController {
     const userId = req.user.sub;
     const tenantId = req.user.tenantId;
 
-    // Get the leave approval category with tenant filtering
+    // Get the leave approval category with company filtering
     const leaveCategory = await this.prisma.approval_category.findFirst({
       where: { 
         code: 'LEAVE_REQUEST',
         OR: [
-          { tenant_id: tenantId },  // Tenant-specific category
-          { tenant_id: null }       // Global/system category
+          { company_id: tenantId },  // Company-specific category
+          { company_id: null }       // Global/system category
         ]
       }
     });
@@ -58,13 +58,13 @@ export class LeaveApprovalController {
       throw new Error('Leave request category not found. Please contact administrator.');
     }
 
-    // Get leave type with tenant filtering
-    const leaveType = await this.prisma.leave_type.findUnique({
+    // Get leave type with company filtering
+    const leaveType = await this.prisma.leave_type.findFirst({
       where: { 
         id: createDto.leaveTypeId,
         OR: [
-          { tenant_id: tenantId },  // Tenant-specific leave type
-          { tenant_id: null }       // Global/system leave type
+          { company_id: tenantId },  // Company-specific leave type
+          { company_id: null }       // Global/system leave type
         ]
       }
     });
@@ -103,13 +103,13 @@ export class LeaveApprovalController {
       category_id: leaveCategory.id,
       title: `휴가 신청 - ${leaveType.name} (${createDto.startDate} ~ ${createDto.endDate})`,
       form_data: formData
-    }, userId);
+    }, userId, tenantId);
 
     // Submit the draft automatically
-    await this.approvalService.submitDraft(approvalDraft.id, userId);
+    await this.approvalService.submitDraft(approvalDraft.id, userId, tenantId);
 
     // Create automatic approval route for leave request
-    await this.createLeaveApprovalRoute(approvalDraft.id, userId, companyId, createDto.emergency || false);
+    await this.createLeaveApprovalRoute(approvalDraft.id, userId, tenantId, createDto.emergency || false);
 
     // Also create a leave_request record for tracking
     await this.prisma.leave_request.create({

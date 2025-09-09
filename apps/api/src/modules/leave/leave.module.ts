@@ -4,10 +4,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LeaveController } from './leave.controller';
 import { LeaveService } from './leave.service';
 import { SharedModule } from '../../shared/shared.module';
+import { ApprovalModule } from '../approval/approval.module';
 
 @Module({
   imports: [
     SharedModule,
+    ApprovalModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

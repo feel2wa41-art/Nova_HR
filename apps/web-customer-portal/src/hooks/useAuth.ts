@@ -12,6 +12,10 @@ interface User {
   avatar_url?: string;
   language?: string;
   permissions?: string[];
+  employee_profile?: {
+    department?: string;
+    emp_no?: string;
+  };
 }
 
 interface AuthState {
@@ -42,8 +46,8 @@ export const useAuth = create<AuthState>()(
           const response = await authApi.login({ email, password });
           
           // Store tokens
-          localStorage.setItem('nova_hr_token', response.accessToken);
-          localStorage.setItem('nova_hr_refresh_token', response.refreshToken);
+          localStorage.setItem('reko_hr_token', response.accessToken);
+          localStorage.setItem('reko_hr_refresh_token', response.refreshToken);
           
           set({
             user: response.user,
@@ -61,8 +65,8 @@ export const useAuth = create<AuthState>()(
 
       logout: () => {
         // Clear tokens
-        localStorage.removeItem('nova_hr_token');
-        localStorage.removeItem('nova_hr_refresh_token');
+        localStorage.removeItem('reko_hr_token');
+        localStorage.removeItem('reko_hr_refresh_token');
         
         set({
           user: null,
@@ -72,11 +76,14 @@ export const useAuth = create<AuthState>()(
       },
 
       initializeAuth: async () => {
-        const token = localStorage.getItem('nova_hr_token');
+        const token = localStorage.getItem('reko_hr_token');
+        const refreshToken = localStorage.getItem('reko_hr_refresh_token');
+        
         if (token) {
           try {
             set({ isLoading: true });
             const userProfile = await authApi.getProfile();
+            
             set({
               user: userProfile,
               isAuthenticated: true,
@@ -85,10 +92,32 @@ export const useAuth = create<AuthState>()(
 
             // Update language from user preference
             updateLanguageFromUser(userProfile);
-          } catch (error) {
-            // Token is invalid, clear everything
-            localStorage.removeItem('nova_hr_token');
-            localStorage.removeItem('nova_hr_refresh_token');
+          } catch (error: any) {
+            // Try to refresh token before giving up
+            if (refreshToken) {
+              try {
+                const refreshResponse = await authApi.refresh({ refreshToken });
+                localStorage.setItem('reko_hr_token', refreshResponse.accessToken);
+                
+                // Try profile again with new token
+                const userProfile = await authApi.getProfile();
+                
+                set({
+                  user: userProfile,
+                  isAuthenticated: true,
+                  isLoading: false,
+                });
+
+                updateLanguageFromUser(userProfile);
+                return;
+              } catch (refreshError) {
+                console.error('Token refresh failed:', refreshError);
+              }
+            }
+            
+            // Both profile and refresh failed, clear everything
+            localStorage.removeItem('reko_hr_token');
+            localStorage.removeItem('reko_hr_refresh_token');
             set({
               user: null,
               isAuthenticated: false,
@@ -131,7 +160,7 @@ export const useAuth = create<AuthState>()(
       },
     }),
     {
-      name: 'nova-hr-auth',
+      name: 'reko-hr-auth',
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,

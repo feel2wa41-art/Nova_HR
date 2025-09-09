@@ -76,6 +76,15 @@ model auth_user {
   received_community_notifications hr_community_notification[] @relation("received_community_notifications")
   notification_preferences user_notification_preference? @relation("notification_preferences")
   web_push_subscriptions web_push_subscription[] @relation("web_push_subscriptions")
+  
+  // Common Code Relations
+  positions            user_position[] @relation("user_positions")
+  grades               user_grade[] @relation("user_grades")
+  
+  // Overtime Work Relations
+  overtime_requests    overtime_request[] @relation("user_overtime_requests")
+  approved_overtime_requests overtime_request[] @relation("approved_overtime_requests")
+  uploaded_overtime_attachments overtime_attachment[] @relation("uploaded_overtime_attachments")
 
   @@map("auth_users")
 }
@@ -454,6 +463,14 @@ model company {
   notification_templates notification_template[]
   feature_config company_feature_config? @relation("company_features")
   feature_limits company_feature_limit[] @relation("company_limits")
+  
+  // Common Code Relations
+  code_categories common_code_category[] @relation("company_code_categories")
+  expense_limits expense_limit[] @relation("company_expense_limits")
+  
+  // Overtime Work Relations
+  overtime_requests overtime_request[] @relation("company_overtime_requests")
+  overtime_policies overtime_policy[] @relation("company_overtime_policies")
 
   @@map("companies")
 }
@@ -778,6 +795,7 @@ model approval_draft {
   attachments file_attachment[]
   attendance_records attendance[]
   leave_requests leave_request[]
+  overtime_requests overtime_request[] @relation("overtime_approval_drafts")
 
   @@map("approval_drafts")
 }
@@ -1739,5 +1757,241 @@ model company_feature_limit {
   
   @@unique([company_id, feature_key])
   @@map("company_feature_limits")
+}
+
+// ================================
+// COMMON CODE MANAGEMENT
+// ================================
+
+// Common Code Categories (직급, 등급, 부서, 휴가타입 등)
+model common_code_category {
+  id              String   @id @default(uuid())
+  company_id      String?  // null for system-wide categories
+  category_code   String   // POSITION, GRADE, DEPARTMENT, LEAVE_TYPE, EXPENSE_CATEGORY
+  category_name   String   // 직급, 등급, 부서, 휴가타입, 비용항목
+  description     String?
+  is_system       Boolean  @default(false)  // 시스템 기본 카테고리 여부
+  is_active       Boolean  @default(true)
+  sort_order      Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  company         company?      @relation("company_code_categories", fields: [company_id], references: [id], onDelete: Cascade)
+  codes           common_code[]
+
+  @@unique([company_id, category_code])
+  @@map("common_code_categories")
+}
+
+// Common Codes (각 카테고리의 실제 코드값들)
+model common_code {
+  id              String   @id @default(uuid())
+  category_id     String
+  code            String   // MANAGER, CEO, GRADE_A, IT_DEPT, ANNUAL_LEAVE
+  name            String   // 부장, 대표이사, A등급, IT부서, 연차
+  description     String?
+  parent_code_id  String?  // 상위 코드 (계층구조 지원)
+  extra_data      Json?    // 추가 데이터 (색상, 아이콘, 설정값 등)
+  is_active       Boolean  @default(true)
+  sort_order      Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  category        common_code_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  parent_code     common_code?         @relation("code_hierarchy", fields: [parent_code_id], references: [id])
+  child_codes     common_code[]        @relation("code_hierarchy")
+  
+  // 사용자 직급/등급 연결
+  user_positions  user_position[]
+  user_grades     user_grade[]
+  
+  // 등급별 비용 설정
+  expense_limits  expense_limit[]
+
+  @@unique([category_id, code])
+  @@map("common_codes")
+}
+
+// 사용자 직급 정보
+model user_position {
+  id              String   @id @default(uuid())
+  user_id         String
+  position_code_id String
+  effective_date  DateTime @default(now())
+  end_date        DateTime?
+  is_primary      Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  user            auth_user   @relation("user_positions", fields: [user_id], references: [id], onDelete: Cascade)
+  position_code   common_code @relation(fields: [position_code_id], references: [id])
+
+  @@map("user_positions")
+}
+
+// 사용자 등급 정보
+model user_grade {
+  id              String   @id @default(uuid())
+  user_id         String
+  grade_code_id   String
+  effective_date  DateTime @default(now())
+  end_date        DateTime?
+  is_primary      Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  user            auth_user   @relation("user_grades", fields: [user_id], references: [id], onDelete: Cascade)
+  grade_code      common_code @relation(fields: [grade_code_id], references: [id])
+
+  @@map("user_grades")
+}
+
+// 등급별/직급별 비용 한도 설정
+model expense_limit {
+  id              String   @id @default(uuid())
+  company_id      String
+  grade_code_id   String?  // 등급별 설정
+  position_code_id String? // 직급별 설정 (등급과 직급 중 하나만 설정)
+  expense_category String  // HOTEL, TRANSPORTATION, MEAL, etc.
+  
+  // 비용 한도 설정
+  daily_limit     Decimal? @db.Decimal(12, 2)
+  monthly_limit   Decimal? @db.Decimal(12, 2)
+  yearly_limit    Decimal? @db.Decimal(12, 2)
+  
+  // 추가 규칙
+  currency        String   @default("IDR")
+  approval_required Boolean @default(true)
+  auto_approval_limit Decimal? @db.Decimal(12, 2)
+  
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  company         company     @relation("company_expense_limits", fields: [company_id], references: [id], onDelete: Cascade)
+  grade_code      common_code? @relation(fields: [grade_code_id], references: [id])
+
+  @@unique([company_id, grade_code_id, position_code_id, expense_category])
+  @@map("expense_limits")
+}
+
+// ================================
+// OVERTIME WORK MANAGEMENT
+// ================================
+
+// Overtime Work Requests (추가근무 신청)
+model overtime_request {
+  id                  String   @id @default(uuid())
+  user_id             String
+  company_id          String
+  
+  // 추가근무 기본 정보
+  overtime_type       String   // EVENING (야근), WEEKEND (주말근무), HOLIDAY (특근), EARLY (조기출근)
+  work_date           DateTime // 추가근무 날짜
+  start_time          DateTime // 시작 시간
+  end_time            DateTime // 종료 시간
+  total_hours         Decimal  @db.Decimal(4, 2) // 총 추가근무 시간
+  
+  // 신청 내용
+  title               String   // 신청 제목
+  work_description    String   // 추가근무 내용
+  reason              String   // 추가근무 사유
+  
+  // 결재 정보
+  approval_draft_id   String?  // 연결된 전자결재 문서 ID
+  status              String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  
+  // 승인 정보
+  approved_by         String?
+  approved_at         DateTime?
+  approved_hours      Decimal? @db.Decimal(4, 2) // 승인된 시간 (신청시간과 다를 수 있음)
+  rejection_reason    String?
+  
+  // 급여 정산 정보
+  hourly_rate         Decimal? @db.Decimal(10, 2) // 시간당 수당
+  total_payment       Decimal? @db.Decimal(12, 2) // 총 지급액
+  is_paid             Boolean  @default(false)
+  paid_at             DateTime?
+  
+  // 메타데이터
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  
+  // Relations
+  user                auth_user      @relation("user_overtime_requests", fields: [user_id], references: [id], onDelete: Cascade)
+  company             company        @relation("company_overtime_requests", fields: [company_id], references: [id], onDelete: Cascade)
+  approved_by_user    auth_user?     @relation("approved_overtime_requests", fields: [approved_by], references: [id])
+  approval_draft      approval_draft? @relation("overtime_approval_drafts", fields: [approval_draft_id], references: [id])
+  attachments         overtime_attachment[]
+  
+  @@map("overtime_requests")
+}
+
+// Overtime Attachments (추가근무 첨부파일)
+model overtime_attachment {
+  id                  String   @id @default(uuid())
+  overtime_request_id String
+  
+  // 파일 정보
+  file_name           String
+  file_path           String
+  file_size           Int
+  file_type           String   // application/pdf, image/png, application/vnd.ms-excel, etc.
+  
+  // 업로드 정보
+  uploaded_by         String
+  uploaded_at         DateTime @default(now())
+  
+  // Relations
+  overtime_request    overtime_request @relation(fields: [overtime_request_id], references: [id], onDelete: Cascade)
+  uploaded_by_user    auth_user        @relation("uploaded_overtime_attachments", fields: [uploaded_by], references: [id])
+  
+  @@map("overtime_attachments")
+}
+
+// Overtime Policies (추가근무 정책)
+model overtime_policy {
+  id                    String   @id @default(uuid())
+  company_id            String
+  
+  // 정책 기본 정보
+  policy_name           String
+  overtime_type         String   // EVENING, WEEKEND, HOLIDAY, EARLY
+  
+  // 시간 제한
+  max_daily_hours       Decimal? @db.Decimal(4, 2) // 일일 최대 추가근무 시간
+  max_weekly_hours      Decimal? @db.Decimal(4, 2) // 주간 최대 추가근무 시간
+  max_monthly_hours     Decimal? @db.Decimal(5, 2) // 월간 최대 추가근무 시간
+  
+  // 수당 정보
+  base_hourly_rate      Decimal? @db.Decimal(10, 2) // 기본 시간당 수당
+  rate_multiplier       Decimal  @db.Decimal(3, 2) @default(1.5) // 수당 배율 (1.5배, 2배 등)
+  
+  // 승인 설정
+  requires_approval     Boolean  @default(true)
+  auto_approval_hours   Decimal? @db.Decimal(4, 2) // 자동 승인 가능한 시간
+  advance_notice_hours  Int?     // 사전 신청 필수 시간
+  
+  // 적용 조건
+  applicable_roles      Json?    // 적용 가능한 역할/직급
+  applicable_departments Json?   // 적용 가능한 부서
+  
+  // 상태
+  is_active             Boolean  @default(true)
+  effective_from        DateTime @default(now())
+  effective_until       DateTime?
+  
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  
+  // Relations
+  company               company  @relation("company_overtime_policies", fields: [company_id], references: [id], onDelete: Cascade)
+  
+  @@map("overtime_policies")
 }
 

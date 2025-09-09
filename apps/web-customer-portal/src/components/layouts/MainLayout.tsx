@@ -35,11 +35,66 @@ import NotificationCenter from '../notifications/NotificationCenter';
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
 
+// Helper function to get the correct logo URL
+const getLogoUrl = (logoUrl?: string): string | null => {
+  if (!logoUrl) return null;
+  
+  // If it's already a full URL, return as is
+  if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
+    return logoUrl;
+  }
+  
+  // If it's a relative path, prepend the API base URL
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const baseUrl = API_BASE_URL.replace('/api/v1', ''); // Remove /api/v1 if present
+  return `${baseUrl}${logoUrl}`;
+};
+
+// Logo component with fallback handling
+const CompanyLogo = ({ 
+  logoUrl, 
+  companyName, 
+  size = 'large',
+  onError
+}: { 
+  logoUrl?: string; 
+  companyName?: string; 
+  size?: 'large' | 'small';
+  onError?: () => void;
+}) => {
+  const logoImageUrl = getLogoUrl(logoUrl);
+  const sizeClasses = size === 'large' ? 'w-10 h-10' : 'w-8 h-8';
+  const textSizeClass = size === 'large' ? 'text-lg' : 'text-sm';
+  
+  // If we have a valid logo URL, try to display it
+  if (logoImageUrl) {
+    return (
+      <img 
+        src={logoImageUrl}
+        alt={`${companyName || 'Company'} logo`}
+        className={`${sizeClasses} ${size === 'large' ? 'rounded-lg' : 'rounded'} object-cover flex-shrink-0`}
+        onError={onError}
+        style={{ minWidth: size === 'large' ? '2.5rem' : '2rem' }}
+      />
+    );
+  }
+  
+  // Fallback to company initial or default
+  return (
+    <div className={`${sizeClasses} bg-primary-100 ${size === 'large' ? 'rounded-lg' : 'rounded'} flex items-center justify-center flex-shrink-0 ${size === 'small' ? 'mx-auto' : ''}`}>
+      <span className={`text-primary-600 font-semibold ${textSizeClass}`}>
+        {companyName?.charAt(0) || 'C'}
+      </span>
+    </div>
+  );
+};
+
 export const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, isHRManager, hasPermission, isAuthenticated } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [logoLoadError, setLogoLoadError] = useState(false);
 
   // Get inbox count
   const { data: inboxCount } = useQuery({
@@ -86,6 +141,21 @@ export const MainLayout = () => {
     staleTime: 0, // Always consider stale
   });
 
+  // Get company information for logo and name
+  const { data: companyInfo } = useQuery({
+    queryKey: ['company-info'],
+    queryFn: () => apiClient.get('/company/my-company').then(res => res.data),
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Reset logo error when company info changes
+  useEffect(() => {
+    if (companyInfo?.logo_url) {
+      setLogoLoadError(false);
+    }
+  }, [companyInfo?.logo_url]);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
@@ -110,11 +180,6 @@ export const MainLayout = () => {
             key: '/attendance',
             icon: <ClockCircleOutlined />,
             label: '출퇴근',
-          },
-          {
-            key: '/attitude',
-            icon: <FundProjectionScreenOutlined />,
-            label: '태도',
           },
         ],
       },
@@ -258,14 +323,14 @@ export const MainLayout = () => {
               label: '회사 설정',
             },
             {
-              key: '/admin/monitoring',
+              key: '/admin/screenshot-gallery',
               icon: <EyeOutlined />,
-              label: '실시간 모니터링',
+              label: '스크린캡처 관리',
             },
             {
-              key: '/admin/attitude-statistics',
-              icon: <BarChartOutlined />,
-              label: '태도 통계',
+              key: '/admin/desktop-agent',
+              icon: <FundProjectionScreenOutlined />,
+              label: '데스크톱 에이전트',
             },
           ],
         }
@@ -323,16 +388,31 @@ export const MainLayout = () => {
       >
         <div className={`p-6 ${collapsed ? 'px-3' : ''}`}>
           {!collapsed ? (
-            <>
-              <Title level={3} className='!mb-0 text-primary-600'>
-                Reko HR
-              </Title>
-              <p className='text-sm text-gray-500 mt-1'> HR Portal</p>
-            </>
+            <div className="flex items-center gap-3">
+              <CompanyLogo 
+                key={companyInfo?.logo_url || 'no-logo'} // Force re-render when logo changes
+                logoUrl={!logoLoadError ? companyInfo?.logo_url : undefined}
+                companyName={companyInfo?.name}
+                size="large"
+                onError={() => setLogoLoadError(true)}
+              />
+              <div className="min-w-0 flex-1">
+                <Title level={4} className='!mb-0 text-primary-600 truncate'>
+                  {companyInfo?.name || 'Reko HR'}
+                </Title>
+                <p className='text-sm text-gray-500 mt-1'> HR Portal</p>
+              </div>
+            </div>
           ) : (
-            <Title level={4} className='!mb-0 text-primary-600 text-center'>
-              NH
-            </Title>
+            <div className="text-center">
+              <CompanyLogo 
+                key={companyInfo?.logo_url || 'no-logo'} // Force re-render when logo changes
+                logoUrl={!logoLoadError ? companyInfo?.logo_url : undefined}
+                companyName={companyInfo?.name}
+                size="small"
+                onError={() => setLogoLoadError(true)}
+              />
+            </div>
           )}
         </div>
         <Menu

@@ -61,7 +61,7 @@ export const LeaveApplicationForm = ({
     try {
       const { leaveTypeId, dateRange, reason, emergency } = values;
       
-      await submitLeaveRequest({
+      const result = await submitLeaveRequest({
         leaveTypeId,
         startDate: dateRange[0].format('YYYY-MM-DD'),
         endDate: dateRange[1].format('YYYY-MM-DD'),
@@ -69,7 +69,26 @@ export const LeaveApplicationForm = ({
         emergency,
       });
       
-      message.success('휴가 신청이 완료되었습니다!');
+      // Check if approval draft was created (requires approval)
+      if (result.approval_draft) {
+        message.success(
+          '휴가 신청이 완료되었습니다! 전자결재 시스템을 통해 승인 진행됩니다.',
+          6
+        );
+        // Optional: Show link to approval system
+        Modal.info({
+          title: '전자결재 연동 안내',
+          content: (
+            <div>
+              <p>휴가 신청이 전자결재 시스템에 등록되었습니다.</p>
+              <p>승인 진행 상황은 <strong>전자결재 &gt; 발신함</strong>에서 확인하실 수 있습니다.</p>
+            </div>
+          ),
+        });
+      } else {
+        message.success('휴가 신청이 완료되었습니다!');
+      }
+      
       form.resetFields();
       onSuccess();
     } catch (error: any) {
@@ -135,6 +154,14 @@ export const LeaveApplicationForm = ({
           emergency: false,
         }}
       >
+        <Alert
+          message="전자결재 시스템 연동 안내"
+          description="휴가 신청은 전자결재 시스템을 통해 승인 처리됩니다. 신청 후 진행 상황은 전자결재 발신함에서 확인하실 수 있습니다."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+        
         <Form.Item
           label="휴가 종류"
           name="leaveTypeId"

@@ -12,7 +12,7 @@ export const api = axios.create({
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('provider_admin_token');
+  const token = localStorage.getItem('reko_hr_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -24,8 +24,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('provider_admin_token');
-      localStorage.removeItem('provider_admin_user');
+      localStorage.removeItem('reko_hr_token');
+      localStorage.removeItem('reko_hr_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

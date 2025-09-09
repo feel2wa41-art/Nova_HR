@@ -136,13 +136,33 @@ export class ApiService {
     }
   }
 
-  // Screenshot upload
+  // Screenshot upload with company isolation
   async uploadScreenshot(imageBuffer: Buffer, metadata: any): Promise<ApiResponse> {
     try {
+      const auth = this.store.get('auth') as any
+      if (!auth?.user?.company?.id) {
+        return {
+          success: false,
+          error: 'Company information not found'
+        }
+      }
+
       const formData = new FormData()
       const blob = new Blob([imageBuffer], { type: 'image/png' })
       formData.append('screenshot', blob, `screenshot-${Date.now()}.png`)
-      formData.append('metadata', JSON.stringify(metadata))
+      
+      // Include company ID and user info in metadata for tenant isolation
+      const enrichedMetadata = {
+        ...metadata,
+        companyId: auth.user.company.id,
+        userId: auth.user.id,
+        userName: auth.user.name,
+        userEmail: auth.user.email,
+        department: auth.user.employee_profile?.department,
+        timestamp: new Date().toISOString()
+      }
+      
+      formData.append('metadata', JSON.stringify(enrichedMetadata))
 
       const response = await this.api.post('/attitude/screenshots', formData, {
         headers: {
@@ -159,10 +179,28 @@ export class ApiService {
     }
   }
 
-  // Activity tracking
+  // Activity tracking with company isolation
   async submitActivity(activityData: any): Promise<ApiResponse> {
     try {
-      const response = await this.api.post('/attitude/activity', activityData)
+      const auth = this.store.get('auth') as any
+      if (!auth?.user?.company?.id) {
+        return {
+          success: false,
+          error: 'Company information not found'
+        }
+      }
+
+      // Enrich activity data with company and user info
+      const enrichedActivityData = {
+        ...activityData,
+        companyId: auth.user.company.id,
+        userId: auth.user.id,
+        userName: auth.user.name,
+        department: auth.user.employee_profile?.department,
+        timestamp: new Date().toISOString()
+      }
+
+      const response = await this.api.post('/attitude/activity', enrichedActivityData)
       return { success: true, data: response.data }
     } catch (error: any) {
       return {
@@ -210,10 +248,28 @@ export class ApiService {
     }
   }
 
-  // Attendance
+  // Attendance with company isolation
   async checkIn(locationData: any): Promise<ApiResponse> {
     try {
-      const response = await this.api.post('/attendance/check-in', locationData)
+      const auth = this.store.get('auth') as any
+      if (!auth?.user?.company?.id) {
+        return {
+          success: false,
+          error: 'Company information not found'
+        }
+      }
+
+      // Enrich location data with company info
+      const enrichedLocationData = {
+        ...locationData,
+        companyId: auth.user.company.id,
+        userId: auth.user.id,
+        userName: auth.user.name,
+        department: auth.user.employee_profile?.department,
+        timestamp: new Date().toISOString()
+      }
+
+      const response = await this.api.post('/attendance/check-in', enrichedLocationData)
       return { success: true, data: response.data }
     } catch (error: any) {
       return {
@@ -225,7 +281,25 @@ export class ApiService {
 
   async checkOut(locationData: any): Promise<ApiResponse> {
     try {
-      const response = await this.api.post('/attendance/check-out', locationData)
+      const auth = this.store.get('auth') as any
+      if (!auth?.user?.company?.id) {
+        return {
+          success: false,
+          error: 'Company information not found'
+        }
+      }
+
+      // Enrich location data with company info
+      const enrichedLocationData = {
+        ...locationData,
+        companyId: auth.user.company.id,
+        userId: auth.user.id,
+        userName: auth.user.name,
+        department: auth.user.employee_profile?.department,
+        timestamp: new Date().toISOString()
+      }
+
+      const response = await this.api.post('/attendance/check-out', enrichedLocationData)
       return { success: true, data: response.data }
     } catch (error: any) {
       return {

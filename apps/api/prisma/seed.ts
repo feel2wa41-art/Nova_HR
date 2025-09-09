@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { seedProgramCategories } from './seed-program-categories';
 
 const prisma = new PrismaClient();
 
@@ -464,6 +465,105 @@ async function main() {
       },
       order_index: 5,
       is_active: true,
+    },
+    {
+      name: '추가근무 신청',
+      code: 'OVERTIME_REQUEST',
+      description: '야근, 주말근무, 특근 등 추가근무 신청',
+      icon: '🌙',
+      form_schema: {
+        fields: [
+          { key: 'overtime_type', label: '추가근무 유형', type: 'select', required: true,
+            options: [
+              { label: '야근', value: 'EVENING' },
+              { label: '주말근무', value: 'WEEKEND' },
+              { label: '특근(공휴일)', value: 'HOLIDAY' },
+              { label: '조기출근', value: 'EARLY' }
+            ]
+          },
+          { key: 'work_date', label: '근무일자', type: 'date', required: true },
+          { key: 'start_time', label: '시작시간', type: 'time', required: true },
+          { key: 'end_time', label: '종료시간', type: 'time', required: true },
+          { key: 'total_hours', label: '총 근무시간', type: 'number', required: true,
+            validation: { min: 0.5, max: 12 }, placeholder: '시간 단위로 입력 (0.5~12)'
+          },
+          { key: 'work_description', label: '업무내용', type: 'textarea', required: true,
+            placeholder: '구체적인 추가근무 내용을 작성하세요',
+            validation: { min: 10, max: 1000 }
+          },
+          { key: 'reason', label: '추가근무 사유', type: 'textarea', required: true,
+            placeholder: '추가근무가 필요한 사유를 작성하세요',
+            validation: { min: 10, max: 500 }
+          },
+          { key: 'emergency_level', label: '긴급도', type: 'select', required: true,
+            options: [
+              { label: '낮음', value: 'LOW' },
+              { label: '보통', value: 'NORMAL' },
+              { label: '높음', value: 'HIGH' },
+              { label: '긴급', value: 'URGENT' }
+            ]
+          },
+          { key: 'expected_completion', label: '완료 예상 결과', type: 'textarea', required: false,
+            placeholder: '추가근무를 통해 달성하고자 하는 결과를 간략히 작성하세요',
+            validation: { max: 300 }
+          }
+        ]
+      },
+      order_index: 6,
+      is_active: true,
+    },
+    {
+      name: '지출결의서',
+      code: 'EXPENSE_REQUEST',
+      description: '업무 관련 지출 승인 및 정산 요청',
+      icon: '💰',
+      form_schema: {
+        fields: [
+          { key: 'expense_type', label: '지출 유형', type: 'select', required: true,
+            options: [
+              { label: '교통비', value: 'TRANSPORTATION' },
+              { label: '식비', value: 'MEAL' },
+              { label: '숙박비', value: 'ACCOMMODATION' },
+              { label: '회의비', value: 'MEETING' },
+              { label: '교육비', value: 'EDUCATION' },
+              { label: '사무용품비', value: 'OFFICE_SUPPLIES' },
+              { label: '기타', value: 'OTHER' }
+            ]
+          },
+          { key: 'amount', label: '지출 금액', type: 'number', required: true,
+            validation: { min: 0 }, placeholder: '원 단위로 입력'
+          },
+          { key: 'expense_date', label: '지출 일자', type: 'date', required: true },
+          { key: 'vendor', label: '사용처/업체명', type: 'text', required: true,
+            placeholder: '지출한 업체나 장소를 입력하세요'
+          },
+          { key: 'description', label: '지출 내역', type: 'textarea', required: true,
+            placeholder: '지출의 구체적인 내역과 목적을 설명해주세요',
+            validation: { min: 10, max: 500 }
+          },
+          { key: 'business_purpose', label: '업무 목적', type: 'textarea', required: true,
+            placeholder: '해당 지출이 업무와 어떤 관련이 있는지 설명해주세요',
+            validation: { min: 10, max: 300 }
+          },
+          { key: 'payment_method', label: '결제 방법', type: 'select', required: true,
+            options: [
+              { label: '개인카드 (정산예정)', value: 'PERSONAL_CARD' },
+              { label: '현금', value: 'CASH' },
+              { label: '법인카드', value: 'CORPORATE_CARD' },
+              { label: '계좌이체', value: 'BANK_TRANSFER' }
+            ]
+          },
+          { key: 'receipt_available', label: '영수증 보유', type: 'select', required: true,
+            options: [
+              { label: '있음', value: 'YES' },
+              { label: '없음', value: 'NO' },
+              { label: '분실', value: 'LOST' }
+            ]
+          }
+        ]
+      },
+      order_index: 7,
+      is_active: true,
     }
   ];
 
@@ -689,6 +789,9 @@ async function main() {
   }
 
   console.log('✅ Created sample attendance records');
+
+  // Seed program categories for daily/weekly reports
+  await seedProgramCategories();
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('\n📧 Test accounts:');

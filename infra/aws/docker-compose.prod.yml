@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # API 서버 (EC2 또는 ECS에서 실행)
+  api:
+    build:
+      context: ../../
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      AWS_REGION: ap-southeast-3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      REDIS_URL: ${REDIS_URL}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - nova-hr-network
+
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ../../apps/web-homepage/dist:/usr/share/nginx/html/homepage:ro
+      - ../../apps/web-customer-portal/dist:/usr/share/nginx/html/portal:ro
+      - ../../apps/web-provider-admin/dist:/usr/share/nginx/html/provider:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - nova-hr-network
+
+networks:
+  nova-hr-network:
+    driver: bridge

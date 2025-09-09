@@ -52,7 +52,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') {
-      localStorage.removeItem('provider_admin_token');
+      localStorage.removeItem('reko_hr_token');
       navigate('/login');
     }
   };

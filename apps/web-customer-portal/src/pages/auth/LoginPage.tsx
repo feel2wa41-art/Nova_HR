@@ -61,7 +61,7 @@ export const LoginPage = () => {
       <div className='max-w-md w-full space-y-8'>
         <div className='text-center'>
           <Title level={2} className='text-primary-600'>
-            Nova HR
+            Reko HR
           </Title>
           <Text className='text-gray-600'>임직원 포털에 로그인하세요</Text>
         </div>
@@ -70,9 +70,9 @@ export const LoginPage = () => {
           <div className='mb-4 p-4 bg-blue-50 rounded-lg'>
             <Text className='text-xs text-blue-600 font-medium block mb-2'>테스트 계정</Text>
             <div className='text-xs space-y-1'>
-              <div><strong>직원:</strong> employee@nova-hr.com / admin123</div>
-              <div><strong>HR매니저:</strong> hr@nova-hr.com / admin123</div>
-              <div><strong>관리자:</strong> admin@nova-hr.com / admin123</div>
+              <div><strong>직원:</strong> employee@reko-hr.com / admin123</div>
+              <div><strong>HR매니저:</strong> hr@reko-hr.com / admin123</div>
+              <div><strong>관리자:</strong> admin@reko-hr.com / admin123</div>
             </div>
           </div>
           
@@ -83,7 +83,7 @@ export const LoginPage = () => {
             onFinish={handleSubmit}
             autoComplete='off'
             initialValues={{
-              email: 'employee@nova-hr.com',
+              email: 'employee@reko-hr.com',
               password: 'admin123'
             }}
           >

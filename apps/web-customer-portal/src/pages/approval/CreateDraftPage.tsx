@@ -503,15 +503,15 @@ export const CreateDraftPage = () => {
         description,
         attachmentIds: fileList.map(file => file.response?.id).filter(Boolean),
       } : {
-        // CreateDraftRequest - include categoryId
-        categoryId: selectedCategoryId,
+        // CreateDraftRequest - include category_id
+        category_id: selectedCategoryId,
         title,
-        content: {
+        form_data: {
           ...processedContent,
           __approvalRoute: approvalRoute // Save approval route information in content
         },
-        description,
-        attachmentIds: fileList.map(file => file.response?.id).filter(Boolean),
+        comments: description,
+        attachments: fileList.map(file => file.response?.id).filter(Boolean),
       } as CreateDraftRequest;
 
       console.log('Form values:', values);
