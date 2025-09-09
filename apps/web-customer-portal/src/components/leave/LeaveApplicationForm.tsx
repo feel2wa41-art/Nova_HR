@@ -1,10 +1,11 @@
-import { Modal, Form, Select, DatePicker, Input, Switch, Button, message, Space, Card, Alert } from 'antd';
+import { Modal, Form, Select, DatePicker, Input, Switch, Button, message, Space, Card, Alert, Tag } from 'antd';
 import { CalendarOutlined, ExclamationCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useLeave } from '../../hooks/useLeave';
 import { useAuth } from '../../hooks/useAuth';
 import { ApprovalSettingsModal } from '../approval/ApprovalSettingsModal';
 import { validateLeaveRequest, calculateWorkingDays } from '../../utils/workingDays';
+import { apiClient } from '../../lib/api';
 import dayjs, { Dayjs } from 'dayjs';
 
 const { TextArea } = Input;
@@ -32,6 +33,8 @@ export const LeaveApplicationForm = ({
   const { user } = useAuth();
   const [approvalSettingsOpen, setApprovalSettingsOpen] = useState(false);
   const [approvalSettings, setApprovalSettings] = useState<any>(null);
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
   const {
     leaveTypes,
     leaveBalances,
@@ -49,11 +52,37 @@ export const LeaveApplicationForm = ({
       fetchLeaveBalances().catch(console.error);
     }
     if (open && user?.id) {
-      // Load existing approval settings
-      const stored = localStorage.getItem(`nova_hr_approval_settings_${user.id}_LEAVE`);
-      if (stored) {
-        setApprovalSettings(JSON.parse(stored));
-      }
+      // Load company settings first
+      setLoadingSettings(true);
+      apiClient.get('/company/my-company')
+        .then(res => {
+          setCompanySettings(res.data);
+          console.log('Company settings loaded:', res.data);
+          
+          // Check for company-level approval settings
+          if (res.data.settings?.leave_approval_settings) {
+            setApprovalSettings(res.data.settings.leave_approval_settings);
+            console.log('Using company leave approval settings');
+          } else {
+            // Fallback to user's stored settings
+            const stored = localStorage.getItem(`nova_hr_approval_settings_${user.id}_LEAVE`);
+            if (stored) {
+              setApprovalSettings(JSON.parse(stored));
+              console.log('Using user stored approval settings');
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load company settings:', err);
+          // Fallback to localStorage
+          const stored = localStorage.getItem(`nova_hr_approval_settings_${user.id}_LEAVE`);
+          if (stored) {
+            setApprovalSettings(JSON.parse(stored));
+          }
+        })
+        .finally(() => {
+          setLoadingSettings(false);
+        });
     }
   }, [open, leaveTypes.length, leaveBalances.length, fetchLeaveTypes, fetchLeaveBalances, user?.id]);
 
@@ -61,12 +90,35 @@ export const LeaveApplicationForm = ({
     try {
       const { leaveTypeId, dateRange, reason, emergency } = values;
       
+      // Validate based on leave type settings
+      const selectedType = leaveTypes.find(type => type.id === leaveTypeId);
+      if (!selectedType) {
+        message.error('선택한 휴가 종류를 찾을 수 없습니다.');
+        return;
+      }
+
+      // Check if approval is required
+      if (selectedType.requiresApproval && (!approvalSettings || approvalSettings.steps?.length === 0)) {
+        message.warning('이 휴가 종류는 승인이 필요합니다. 승인자를 설정해주세요.');
+        return;
+      }
+
+      // Log for debugging
+      console.log('Submitting leave request with:', {
+        leaveType: selectedType,
+        companySettings: companySettings,
+        approvalSettings: approvalSettings,
+        dateRange: [dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+        emergency: emergency
+      });
+      
       const result = await submitLeaveRequest({
         leaveTypeId,
         startDate: dateRange[0].format('YYYY-MM-DD'),
         endDate: dateRange[1].format('YYYY-MM-DD'),
         reason,
         emergency,
+        approvalSettings: approvalSettings, // Include approval settings
       });
       
       // Check if approval draft was created (requires approval)
@@ -154,6 +206,24 @@ export const LeaveApplicationForm = ({
           emergency: false,
         }}
       >
+        {/* Company Info and Settings Display */}
+        {companySettings && (
+          <Card size="small" className="mb-4 bg-blue-50">
+            <div className="text-sm">
+              <div className="font-medium mb-2 text-blue-700">회사 정보</div>
+              <div className="space-y-1 text-gray-600">
+                <div>회사명: <span className="font-medium text-gray-800">{companySettings.name}</span></div>
+                {companySettings.settings?.leave_policy && (
+                  <div>휴가 정책: <span className="text-gray-800">{companySettings.settings.leave_policy}</span></div>
+                )}
+                {companySettings.settings?.approval_required && (
+                  <div>승인 필수: <span className="text-gray-800">활성화</span></div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
         <Alert
           message="전자결재 시스템 연동 안내"
           description="휴가 신청은 전자결재 시스템을 통해 승인 처리됩니다. 신청 후 진행 상황은 전자결재 발신함에서 확인하실 수 있습니다."
@@ -192,27 +262,61 @@ export const LeaveApplicationForm = ({
           />
         </Form.Item>
 
-        {leaveTypeBalance && (
-          <div className="bg-blue-50 p-4 rounded-lg mb-4">
-            <div className="text-sm space-y-1">
-              <div className="flex justify-between">
-                <span>배정:</span>
-                <span className="font-medium">{leaveTypeBalance.allocated}일</span>
+        {selectedLeaveTypeData && (
+          <Card size="small" className="mb-4">
+            <div className="space-y-3">
+              {/* Leave Type Details */}
+              <div>
+                <div className="text-sm font-medium text-gray-600 mb-1">선택된 휴가 종류 정보</div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className="inline-block w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: selectedLeaveTypeData.colorHex }}
+                    />
+                    <span className="font-medium">{selectedLeaveTypeData.name}</span>
+                  </div>
+                  <div>
+                    {selectedLeaveTypeData.isPaid ? 
+                      <Tag color="green">유급</Tag> : 
+                      <Tag color="orange">무급</Tag>
+                    }
+                    {selectedLeaveTypeData.requiresApproval ? 
+                      <Tag color="blue">승인필요</Tag> : 
+                      <Tag color="gray">자동승인</Tag>
+                    }
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>사용:</span>
-                <span className="font-medium text-red-600">{leaveTypeBalance.used}일</span>
-              </div>
-              <div className="flex justify-between">
-                <span>대기:</span>
-                <span className="font-medium text-orange-600">{leaveTypeBalance.pending}일</span>
-              </div>
-              <div className="flex justify-between border-t pt-1">
-                <span>잔여:</span>
-                <span className="font-bold text-green-600">{leaveTypeBalance.remaining}일</span>
-              </div>
+
+              {/* Leave Balance */}
+              {leaveTypeBalance && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600 mb-1">휴가 잔여 현황</div>
+                  <div className="bg-blue-50 p-3 rounded">
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span>배정:</span>
+                        <span className="font-medium">{leaveTypeBalance.allocated}일</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>사용:</span>
+                        <span className="font-medium text-red-600">{leaveTypeBalance.used}일</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>대기:</span>
+                        <span className="font-medium text-orange-600">{leaveTypeBalance.pending}일</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1">
+                        <span>잔여:</span>
+                        <span className="font-bold text-green-600">{leaveTypeBalance.remaining}일</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          </Card>
         )}
 
         <Form.Item
@@ -291,6 +395,7 @@ export const LeaveApplicationForm = ({
               size="small"
               icon={<SettingOutlined />}
               onClick={() => setApprovalSettingsOpen(true)}
+              loading={loadingSettings}
             >
               설정
             </Button>

@@ -54,7 +54,8 @@ interface LeaveState {
     endDate: string;
     reason?: string;
     emergency?: boolean;
-  }) => Promise<void>;
+    approvalSettings?: any;
+  }) => Promise<any>;
   cancelLeaveRequest: (requestId: string) => Promise<void>;
   setLoading: (loading: boolean) => void;
 }
@@ -209,9 +210,13 @@ const submitLeaveRequestApi = async (request: {
   endDate: string;
   reason?: string;
   emergency?: boolean;
-}): Promise<LeaveRequest> => {
+  approvalSettings?: any;
+}): Promise<any> => {
   try {
-    const response = await apiClient.post('/leave-approval/submit', request);
+    const response = await apiClient.post('/leave-approval/submit', {
+      ...request,
+      approvalSettings: request.approvalSettings
+    });
     const result = response.data;
     
     // Return a LeaveRequest-like object (the actual leave request will be fetched later)
@@ -300,18 +305,27 @@ export const useLeave = create<LeaveState>()(
       submitLeaveRequest: async (request) => {
         set({ isSubmitting: true });
         try {
-          const newRequest = await submitLeaveRequestApi(request);
+          const result = await submitLeaveRequestApi(request);
           const { leaveRequests } = get();
-          set({
-            leaveRequests: [newRequest, ...leaveRequests],
-            isSubmitting: false,
-          });
+          
+          // Add to local state if we have request data
+          if (result.id) {
+            set({
+              leaveRequests: [result, ...leaveRequests],
+              isSubmitting: false,
+            });
+          } else {
+            set({ isSubmitting: false });
+          }
           
           // Refresh the data from server after submission
           setTimeout(() => {
             get().fetchLeaveRequests();
             get().fetchLeaveBalances();
           }, 1000);
+          
+          // Return the full result for the component to handle
+          return result;
         } catch (error) {
           set({ isSubmitting: false });
           throw error;
