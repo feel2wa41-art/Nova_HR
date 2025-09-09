@@ -210,6 +210,7 @@ export const MainLayout = () => {
         children: [
           {
             key: '/approval/drafts',
+            icon: <FileTextOutlined />,
             label: (
               <div className="flex items-center justify-between w-full">
                 <span>임시보관함</span>
@@ -257,12 +258,12 @@ export const MainLayout = () => {
               </div>
             ),
           },
+          {
+            key: '/reference-documents',
+            icon: <BookOutlined />,
+            label: '참고결재문서',
+          },
         ],
-      },
-      {
-        key: '/reference-documents',
-        icon: <BookOutlined />,
-        label: '참고결재문서',
       },
       {
         key: '/calendar',
