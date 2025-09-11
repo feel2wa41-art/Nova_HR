@@ -6,7 +6,6 @@ import { apiClient } from '../../lib/api';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 export const AttendanceManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs>(dayjs());
@@ -346,11 +345,24 @@ export const AttendanceManagement: React.FC = () => {
           </div>
         }
       >
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="오늘 근태" key="today" />
-          <TabPane tab="정정 요청" key="adjustments" />
-          <TabPane tab="월간 통계" key="monthly" />
-        </Tabs>
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'today',
+              label: '오늘 근태'
+            },
+            {
+              key: 'adjustments',
+              label: '정정 요청'
+            },
+            {
+              key: 'monthly',
+              label: '월간 통계'
+            }
+          ]}
+        />
 
         <div className="mb-4">
           <Space size="middle" wrap>

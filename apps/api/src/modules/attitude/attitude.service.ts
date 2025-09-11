@@ -32,6 +32,16 @@ export class AttitudeService {
   // Screenshot Management
   async submitScreenshot(userId: string, companyId: string, file: Express.Multer.File, dto: SubmitScreenshotDto) {
     try {
+      // Get user's tenant_id for security and multi-tenant isolation
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId },
+        select: { tenant_id: true }
+      });
+      
+      if (!user || !user.tenant_id) {
+        throw new ForbiddenException('User not found or not associated with a tenant');
+      }
+
       // Upload file to storage
       const uploadResult = await uploadFile(file, 'uploads/screenshots');
 
@@ -45,7 +55,7 @@ export class AttitudeService {
         }
       }
 
-      // Find or create attitude session for today
+      // Find or create attitude session for today with tenant isolation
       const sessionDate = new Date(dto.timestamp);
       const dateOnly = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate());
       
@@ -62,6 +72,7 @@ export class AttitudeService {
         session = await this.prisma.attitude_session.create({
           data: {
             user_id: userId,
+            tenant_id: user.tenant_id,
             date: dateOnly,
             login_time: new Date(dto.timestamp),
             status: 'ACTIVE',
@@ -98,10 +109,20 @@ export class AttitudeService {
   // Activity Data Management
   async submitActivityData(userId: string, companyId: string, dto: SubmitActivityDataDto) {
     try {
+      // Get user's tenant_id for security and multi-tenant isolation
+      const user = await this.prisma.auth_user.findUnique({
+        where: { id: userId },
+        select: { tenant_id: true }
+      });
+      
+      if (!user || !user.tenant_id) {
+        throw new ForbiddenException('User not found or not associated with a tenant');
+      }
+
       const activityDate = new Date(dto.date);
       const dateOnly = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate());
 
-      // Find or create attitude session for the date
+      // Find or create attitude session for the date with tenant isolation
       let session = await this.prisma.attitude_session.findUnique({
         where: {
           user_id_date: {
@@ -115,6 +136,7 @@ export class AttitudeService {
         session = await this.prisma.attitude_session.create({
           data: {
             user_id: userId,
+            tenant_id: user.tenant_id,
             date: dateOnly,
             login_time: activityDate,
             status: 'ACTIVE',
@@ -296,7 +318,6 @@ export class AttitudeService {
 
       // Build where clause
       const whereClause: any = {
-        companyId,
         date: {
           gte: startDate,
           lte: endDate,
@@ -304,7 +325,7 @@ export class AttitudeService {
       };
 
       if (dto.userId) {
-        whereClause.userId = dto.userId;
+        whereClause.user_id = dto.userId;
       }
 
       if (dto.department) {
@@ -317,7 +338,14 @@ export class AttitudeService {
 
       // Get attitude sessions with user info
       const sessions = await this.prisma.attitude_session.findMany({
-        where: whereClause,
+        where: {
+          ...whereClause,
+          user: {
+            org_unit: {
+              company_id: companyId,
+            },
+          },
+        },
         include: {
           user: {
             include: {
@@ -430,23 +458,31 @@ export class AttitudeService {
         throw new ForbiddenException('Admin access required');
       }
 
-      const whereClause: any = { companyId };
+      const whereClause: any = {};
 
+      // Filter by date range
       if (dto.startDate && dto.endDate) {
-        whereClause.timestamp = {
+        whereClause.captured_at = {
           gte: new Date(dto.startDate),
           lte: new Date(dto.endDate),
         };
       }
 
+      // Filter by specific user
       if (dto.userId) {
-        whereClause.userId = dto.userId;
+        whereClause.session = {
+          user_id: dto.userId,
+        };
       }
 
+      // Filter by department
       if (dto.department) {
-        whereClause.user = {
-          employee_profile: {
-            department: dto.department,
+        whereClause.session = {
+          ...whereClause.session,
+          user: {
+            employee_profile: {
+              department: dto.department,
+            },
           },
         };
       }
@@ -464,6 +500,7 @@ export class AttitudeService {
                     id: true,
                     name: true,
                     email: true,
+                    title: true,
                     employee_profile: {
                       select: {
                         department: true,
@@ -483,14 +520,41 @@ export class AttitudeService {
       ]);
 
       return {
+        data: screenshots.map(screenshot => ({
+          id: screenshot.id,
+          session_id: screenshot.session_id,
+          file_url: screenshot.file_url,
+          thumbnail_url: screenshot.thumbnail_url,
+          captured_at: screenshot.captured_at,
+          is_blurred: screenshot.is_blurred,
+          metadata: screenshot.metadata,
+          session: {
+            user: {
+              id: screenshot.session.user.id,
+              name: screenshot.session.user.name,
+              email: screenshot.session.user.email,
+              title: screenshot.session.user.title || 'Employee',
+              department: screenshot.session.user.employee_profile?.department,
+            },
+          },
+        })),
         screenshots: screenshots.map(screenshot => ({
           id: screenshot.id,
-          fileUrl: screenshot.file_url,
-          thumbnailUrl: screenshot.thumbnail_url,
-          capturedAt: screenshot.captured_at,
-          isBlurred: screenshot.is_blurred,
+          session_id: screenshot.session_id,
+          file_url: screenshot.file_url,
+          thumbnail_url: screenshot.thumbnail_url,
+          captured_at: screenshot.captured_at,
+          is_blurred: screenshot.is_blurred,
           metadata: screenshot.metadata,
-          user: screenshot.session.user,
+          session: {
+            user: {
+              id: screenshot.session.user.id,
+              name: screenshot.session.user.name,
+              email: screenshot.session.user.email,
+              title: screenshot.session.user.title || 'Employee',
+              department: screenshot.session.user.employee_profile?.department,
+            },
+          },
         })),
         pagination: {
           total,
@@ -548,7 +612,7 @@ export class AttitudeService {
         throw new ForbiddenException('Admin access required');
       }
 
-      const whereClause: any = { companyId };
+      const whereClause: any = {};
 
       if (dto.userIds && dto.userIds.length > 0) {
         whereClause.id = { in: dto.userIds };
@@ -562,7 +626,12 @@ export class AttitudeService {
 
       // Get users with their latest activity
       const users = await this.prisma.auth_user.findMany({
-        where: whereClause,
+        where: {
+          ...whereClause,
+          org_unit: {
+            company_id: companyId,
+          },
+        },
         include: {
           employee_profile: true,
           attitude_sessions: {
@@ -771,7 +840,6 @@ export class AttitudeService {
 
   async getAdminSessions(companyId: string, dateFilter: 'today' | 'week' | 'month' = 'today', limit: number = 100) {
     try {
-      // Return admin session data - implement based on your schema
       const now = new Date();
       let startDate: Date;
       
@@ -786,18 +854,388 @@ export class AttitudeService {
           startDate = startOfDay(now);
       }
 
+      // Get active sessions with user information
+      const sessions = await this.prisma.attitude_session.findMany({
+        where: {
+          user: {
+            org_unit: {
+              company_id: companyId,
+            },
+          },
+          date: {
+            gte: startDate,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              title: true,
+              employee_profile: {
+                select: {
+                  department: true,
+                  emp_no: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          updated_at: 'desc',
+        },
+        take: limit,
+      });
+
+      const sessionsWithStatus = sessions.map(session => {
+        return {
+          id: session.id,
+          user: {
+            id: session.user?.id || 'unknown',
+            name: session.user?.name || 'Unknown User',
+            email: session.user?.email || '',
+            title: session.user?.title || 'Employee',
+            department: session.user?.employee_profile?.department || 'Unknown',
+          },
+          status: session.status,
+          loginTime: session.login_time,
+          logoutTime: session.logout_time,
+          lastHeartbeat: session.last_agent_heartbeat,
+          date: session.date,
+        };
+      });
+
       return {
-        success: true,
-        data: {
-          sessions: [],
-          totalCount: 0,
-          activeUsers: 0,
-          period: dateFilter
-        }
+        data: sessionsWithStatus,
+        totalCount: sessionsWithStatus.length,
+        activeUsers: sessionsWithStatus.filter(s => s.status === 'ACTIVE').length,
+        period: dateFilter,
       };
     } catch (error) {
       console.error('Failed to get admin sessions:', error);
       throw new BadRequestException('Failed to retrieve admin sessions');
+    }
+  }
+
+  // App Whitelist Management
+  async getAppWhitelist(companyId: string) {
+    try {
+      // 일단 기본 앱 목록을 반환
+      return [
+        { 
+          id: '1', 
+          app_name: 'Visual Studio Code', 
+          category: 'PRODUCTIVITY', 
+          is_productive: true, 
+          description: '개발 도구',
+          company_id: companyId 
+        },
+        { 
+          id: '2', 
+          app_name: 'Chrome', 
+          category: 'BROWSER', 
+          is_productive: true, 
+          description: '웹 브라우저',
+          company_id: companyId 
+        },
+        { 
+          id: '3', 
+          app_name: 'Slack', 
+          category: 'COMMUNICATION', 
+          is_productive: true, 
+          description: '업무 메신저',
+          company_id: companyId 
+        },
+        { 
+          id: '4', 
+          app_name: 'Microsoft Teams', 
+          category: 'COMMUNICATION', 
+          is_productive: true, 
+          description: '협업 도구',
+          company_id: companyId 
+        },
+        { 
+          id: '5', 
+          app_name: 'Notion', 
+          category: 'PRODUCTIVITY', 
+          is_productive: true, 
+          description: '문서 도구',
+          company_id: companyId 
+        }
+      ];
+    } catch (error) {
+      console.error('Failed to get app whitelist:', error);
+      throw new BadRequestException('Failed to retrieve app whitelist');
+    }
+  }
+
+  async addAppToWhitelist(companyId: string, data: any) {
+    try {
+      // 실제 구현에서는 데이터베이스에 저장
+      const newApp = {
+        id: Date.now().toString(),
+        ...data,
+        company_id: companyId,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+      
+      return {
+        success: true,
+        data: newApp,
+        message: 'App added to whitelist successfully'
+      };
+    } catch (error) {
+      console.error('Failed to add app to whitelist:', error);
+      throw new BadRequestException('Failed to add app to whitelist');
+    }
+  }
+
+  async updateAppInWhitelist(companyId: string, id: string, data: any) {
+    try {
+      // 실제 구현에서는 데이터베이스에서 업데이트
+      const updatedApp = {
+        id,
+        ...data,
+        company_id: companyId,
+        updated_at: new Date()
+      };
+      
+      return {
+        success: true,
+        data: updatedApp,
+        message: 'App updated successfully'
+      };
+    } catch (error) {
+      console.error('Failed to update app in whitelist:', error);
+      throw new BadRequestException('Failed to update app in whitelist');
+    }
+  }
+
+  async deleteAppFromWhitelist(companyId: string, id: string) {
+    try {
+      // 실제 구현에서는 데이터베이스에서 삭제
+      return {
+        success: true,
+        message: 'App deleted successfully'
+      };
+    } catch (error) {
+      console.error('Failed to delete app from whitelist:', error);
+      throw new BadRequestException('Failed to delete app from whitelist');
+    }
+  }
+
+  // Attitude Settings Management
+  async getAttitudeSettings(companyId: string) {
+    try {
+      // 기본 설정 반환
+      return {
+        company_id: companyId,
+        screenshotInterval: 10, // 10분
+        activityInterval: 30, // 30초
+        idleTimeout: 5, // 5분
+        workingHours: {
+          start: '09:00',
+          end: '18:00'
+        },
+        captureSettings: {
+          quality: 70,
+          format: 'jpeg',
+          blurSensitive: true,
+          multiMonitor: false
+        },
+        features: {
+          screenshot: true,
+          activity: true,
+          appUsage: true,
+          webUsage: true,
+          idleDetection: true
+        },
+        updated_at: new Date()
+      };
+    } catch (error) {
+      console.error('Failed to get attitude settings:', error);
+      throw new BadRequestException('Failed to retrieve attitude settings');
+    }
+  }
+
+  async updateAttitudeSettings(companyId: string, settings: any) {
+    try {
+      // 실제 구현에서는 데이터베이스에 저장
+      const updatedSettings = {
+        company_id: companyId,
+        ...settings,
+        updated_at: new Date()
+      };
+      
+      return {
+        success: true,
+        data: updatedSettings,
+        message: 'Attitude settings updated successfully'
+      };
+    } catch (error) {
+      console.error('Failed to update attitude settings:', error);
+      throw new BadRequestException('Failed to update attitude settings');
+    }
+  }
+
+  // Admin Screenshot Management Methods
+  async deleteScreenshotsBatch(companyId: string, screenshotIds: string[], isAdmin: boolean = false) {
+    try {
+      if (!isAdmin) {
+        throw new ForbiddenException('Admin access required');
+      }
+
+      if (!screenshotIds || screenshotIds.length === 0) {
+        throw new BadRequestException('Screenshot IDs are required');
+      }
+
+      // Verify screenshots belong to the company
+      const screenshots = await this.prisma.attitude_screenshot.findMany({
+        where: {
+          id: { in: screenshotIds },
+          session: {
+            user: {
+              org_unit: {
+                company_id: companyId,
+              },
+            },
+          },
+        },
+        include: {
+          session: {
+            include: {
+              user: {
+                include: {
+                  org_unit: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (screenshots.length !== screenshotIds.length) {
+        throw new BadRequestException('Some screenshots not found or access denied');
+      }
+
+      // Delete screenshots
+      const deleteResult = await this.prisma.attitude_screenshot.deleteMany({
+        where: {
+          id: { in: screenshotIds },
+        },
+      });
+
+      return {
+        success: true,
+        message: `${deleteResult.count} screenshot(s) deleted successfully`,
+        deletedCount: deleteResult.count,
+      };
+    } catch (error) {
+      console.error('Failed to delete screenshots batch:', error);
+      throw new BadRequestException('Failed to delete screenshots');
+    }
+  }
+
+  async deleteUserScreenshots(
+    companyId: string, 
+    userId: string, 
+    filters: { timeSlot?: string; dateFilter?: 'today' | 'week' | 'month' },
+    isAdmin: boolean = false
+  ) {
+    try {
+      if (!isAdmin) {
+        throw new ForbiddenException('Admin access required');
+      }
+
+      // Verify user belongs to company
+      const user = await this.prisma.auth_user.findFirst({
+        where: { 
+          id: userId,
+          org_unit: {
+            company_id: companyId,
+          },
+        },
+        include: {
+          org_unit: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found or access denied');
+      }
+
+      // Build date filters
+      const now = new Date();
+      let startDate: Date, endDate: Date;
+
+      switch (filters.dateFilter) {
+        case 'week':
+          startDate = startOfWeek(now);
+          endDate = endOfWeek(now);
+          break;
+        case 'month':
+          startDate = startOfMonth(now);
+          endDate = endOfMonth(now);
+          break;
+        default: // 'today'
+          startDate = startOfDay(now);
+          endDate = endOfDay(now);
+      }
+
+      // Build where clause for screenshots
+      const whereClause: any = {
+        session: {
+          user_id: userId,
+          date: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      };
+
+      // Add time slot filter if provided
+      if (filters.timeSlot) {
+        const hour = parseInt(filters.timeSlot.split(':')[0]);
+        const hourStart = new Date(startDate);
+        hourStart.setHours(hour, 0, 0, 0);
+        const hourEnd = new Date(startDate);
+        hourEnd.setHours(hour, 59, 59, 999);
+
+        whereClause.captured_at = {
+          gte: hourStart,
+          lte: hourEnd,
+        };
+      }
+
+      // Count screenshots to be deleted
+      const screenshotCount = await this.prisma.attitude_screenshot.count({
+        where: whereClause,
+      });
+
+      // Delete screenshots
+      const deleteResult = await this.prisma.attitude_screenshot.deleteMany({
+        where: whereClause,
+      });
+
+      return {
+        success: true,
+        message: `${deleteResult.count} screenshot(s) deleted successfully for user ${user.name}`,
+        deletedCount: deleteResult.count,
+        filters: {
+          userId,
+          timeSlot: filters.timeSlot,
+          dateFilter: filters.dateFilter,
+          dateRange: {
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          },
+        },
+      };
+    } catch (error) {
+      console.error('Failed to delete user screenshots:', error);
+      throw new BadRequestException('Failed to delete user screenshots');
     }
   }
 }

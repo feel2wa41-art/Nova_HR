@@ -13,6 +13,12 @@ export enum LeaveType {
   HALF_DAY = 'HALF_DAY',
 }
 
+export enum HalfDayType {
+  FULL_DAY = 'FULL_DAY',
+  MORNING = 'MORNING', 
+  AFTERNOON = 'AFTERNOON',
+}
+
 export enum LeaveStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
@@ -23,11 +29,10 @@ export enum LeaveStatus {
 export class CreateLeaveRequestDto {
   @ApiProperty({ 
     example: 'ANNUAL', 
-    description: 'Type of leave',
-    enum: LeaveType
+    description: 'Leave type code'
   })
-  @IsEnum(LeaveType, { message: 'Invalid leave type' })
-  leave_type: LeaveType;
+  @IsString({ message: 'Leave type must be a string' })
+  leave_type: string;
 
   @ApiProperty({ 
     example: '2024-03-15', 
@@ -45,18 +50,20 @@ export class CreateLeaveRequestDto {
 
   @ApiProperty({ 
     example: 'Need time off for personal matters', 
-    description: 'Reason for leave request' 
-  })
-  @IsString({ message: 'Reason must be a string' })
-  reason: string;
-
-  @ApiProperty({ 
-    example: 'morning', 
-    description: 'Half day period (morning/afternoon) - only for HALF_DAY type',
+    description: 'Reason for leave request',
     required: false
   })
   @IsOptional()
-  @IsEnum(['morning', 'afternoon'], { message: 'Half day period must be morning or afternoon' })
+  @IsString({ message: 'Reason must be a string' })
+  reason?: string;
+
+  @ApiProperty({ 
+    example: 'morning', 
+    description: 'Half day period (morning/afternoon)',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
   half_day_period?: string;
 
   @ApiProperty({ 
@@ -91,13 +98,12 @@ export class CreateLeaveRequestDto {
 export class UpdateLeaveRequestDto {
   @ApiProperty({ 
     example: 'ANNUAL', 
-    description: 'Type of leave',
-    enum: LeaveType,
+    description: 'Leave type code',
     required: false
   })
   @IsOptional()
-  @IsEnum(LeaveType, { message: 'Invalid leave type' })
-  leave_type?: LeaveType;
+  @IsString()
+  leave_type?: string;
 
   @ApiProperty({ 
     example: '2024-03-15', 
@@ -128,11 +134,11 @@ export class UpdateLeaveRequestDto {
 
   @ApiProperty({ 
     example: 'morning', 
-    description: 'Half day period (morning/afternoon) - only for HALF_DAY type',
+    description: 'Half day period (morning/afternoon)',
     required: false
   })
   @IsOptional()
-  @IsEnum(['morning', 'afternoon'], { message: 'Half day period must be morning or afternoon' })
+  @IsString()
   half_day_period?: string;
 
   @ApiProperty({ 

@@ -36,7 +36,9 @@ import {
   FolderOpenOutlined,
   DeleteOutlined,
   CheckSquareOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  ReloadOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -156,15 +158,14 @@ const ScreenshotGallery: React.FC = () => {
       if (!selectedUser) return { timeSlots: [] };
       try {
         // 실제 API로 사용자의 스크린샷 가져오기
-        const response = await apiClient.get('/attitude/admin/screenshots', {
+        const response = await apiClient.get('/attitude/screenshots/gallery', {
           params: { 
             userId: selectedUser, 
-            dateFilter,
             limit: 1000 // Get all screenshots to calculate time slots
           }
         });
         
-        const screenshots = response.data?.data || [];
+        const screenshots = response.data?.screenshots || [];
         console.log(`User ${selectedUser} screenshots:`, screenshots);
         
         // 시간대별 개수 계산
@@ -202,10 +203,9 @@ const ScreenshotGallery: React.FC = () => {
       if (!selectedUser || !selectedTimeSlot) return { data: [] };
       try {
         // 실제 API로 스크린샷 데이터 가져오기
-        const response = await apiClient.get('/attitude/admin/screenshots', {
+        const response = await apiClient.get('/attitude/screenshots/gallery', {
           params: { 
             userId: selectedUser, 
-            dateFilter,
             page: 1,
             limit: 100
           }
@@ -495,7 +495,13 @@ const ScreenshotGallery: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2}>📷 스크린샷 갤러리 (관리용)</Title>
+        <div>
+          <Title level={2} style={{ marginBottom: 8 }}>📷 스크린샷 갤러리 (관리용)</Title>
+          <Text type="secondary">
+            <InfoCircleOutlined style={{ marginRight: 4 }} />
+            데스크톱 에이전트를 통해 수집된 스크린샷을 관리하고 검토할 수 있습니다.
+          </Text>
+        </div>
         <Space>
           <Select
             value={dateFilter}
@@ -506,6 +512,16 @@ const ScreenshotGallery: React.FC = () => {
             <Option value="week">1주일</Option>
             <Option value="month">1개월</Option>
           </Select>
+          
+          <Button 
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              window.location.reload();
+            }}
+            title="새로고침"
+          >
+            새로고침
+          </Button>
           
           {/* 삭제 모드 버튼 - 3단계에서만 표시 */}
           {step === 3 && screenshots.length > 0 && (
@@ -562,7 +578,7 @@ const ScreenshotGallery: React.FC = () => {
               <TeamOutlined /> 1단계: 활성 세션 사용자 선택
             </Title>
             <Text type="secondary" className="block mb-4">
-              현재 세션이 활성화된 사용자만 표시됩니다. 사용자를 선택하면 해당 사용자의 시간대별 스크린샷 개수를 확인할 수 있습니다.
+              데스크톱 에이전트가 실행 중인 사용자의 스크린샷을 관리할 수 있습니다. 사용자를 선택하면 해당 사용자의 시간대별 스크린샷 개수를 확인할 수 있습니다.
             </Text>
             
             <Spin spinning={usersLoading}>
@@ -801,13 +817,18 @@ const ScreenshotGallery: React.FC = () => {
                                 const hasValidImage = screenshot.thumbnail_url && (
                                   screenshot.thumbnail_url.startsWith('data:image/png;base64,') ||
                                   screenshot.thumbnail_url.startsWith('data:image/jpeg;base64,') ||
-                                  (screenshot.thumbnail_url.startsWith('http') && !screenshot.thumbnail_url.includes('svg'))
+                                  screenshot.thumbnail_url.startsWith('data:image/jpg;base64,') ||
+                                  (screenshot.thumbnail_url.startsWith('http') && 
+                                    !screenshot.thumbnail_url.includes('svg') && 
+                                    (screenshot.thumbnail_url.includes('.jpg') || 
+                                     screenshot.thumbnail_url.includes('.jpeg') || 
+                                     screenshot.thumbnail_url.includes('.png')))
                                 );
                                 
                                 if (hasValidImage) {
                                   return (
                                     <img
-                                      src={screenshot.thumbnail_url}
+                                      src={screenshot.thumbnail_url || screenshot.file_url}
                                       alt="스크린샷"
                                       style={{ 
                                         width: '100%', 
@@ -820,23 +841,34 @@ const ScreenshotGallery: React.FC = () => {
                                         console.error('Thumbnail load error:', screenshot.thumbnail_url);
                                         const target = e.target as HTMLImageElement;
                                         target.style.display = 'none';
+                                        // Try to show fallback placeholder
+                                        const parent = target.parentElement;
+                                        if (parent) {
+                                          parent.innerHTML = `
+                                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:#f5f5f5;border-radius:4px;">
+                                              <div style="font-size:24px;color:#999;margin-bottom:8px;">📷</div>
+                                              <div style="font-size:12px;color:#999;">이미지 로드 실패</div>
+                                              <div style="font-size:10px;color:#ccc;margin-top:4px;">데스크톱 에이전트 연결 확인</div>
+                                            </div>
+                                          `;
+                                        }
                                       }}
                                     />
                                   );
                                 } else {
                                   return (
-                                    <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#f5f5f5', borderRadius: 4 }}>
-                                      <CameraOutlined style={{ fontSize: 24, color: '#999' }} />
-                                      <div style={{ fontSize: 12, color: '#999', marginTop: 8 }}>
+                                    <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#f5f5f5', borderRadius: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                      <CameraOutlined style={{ fontSize: 24, color: '#999', marginBottom: 8 }} />
+                                      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>
                                         {screenshot.thumbnail_url?.includes('svg') 
                                           ? '스크린샷 캡처 실패' 
                                           : screenshot.file_url
                                           ? '이미지 처리 중...'
-                                          : '이미지 없음'
+                                          : '스크린샷 없음'
                                         }
                                       </div>
-                                      <div style={{ fontSize: 10, color: '#ccc', marginTop: 4 }}>
-                                        {screenshot.thumbnail_url ? '데스크톱 에이전트 확인 필요' : '스크린샷 데이터가 없습니다'}
+                                      <div style={{ fontSize: 10, color: '#ccc' }}>
+                                        {screenshot.thumbnail_url ? '데스크톱 에이전트 확인 필요' : '데이터가 업로드되지 않았습니다'}
                                       </div>
                                     </div>
                                   );

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Card, Tree, Avatar, Tag, Space, Tooltip, Input, Button, Modal, Form, Select, message, Divider, Table } from 'antd';
-import { UserOutlined, SearchOutlined, TeamOutlined, CrownOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DragOutlined } from '@ant-design/icons';
+import { UserOutlined, SearchOutlined, TeamOutlined, CrownOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DragOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode as TreeDataNode } from 'antd/es/tree';
+import { api, apiClient } from '../../lib/api';
+import { useQuery } from '@tanstack/react-query';
 
 const { Search } = Input;
 
@@ -48,11 +50,31 @@ export const EnhancedOrganizationChart = () => {
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [orgForm] = Form.useForm();
 
+  // Get current user's profile to get company ID
+  const { data: profile } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: () => apiClient.get('/users/profile').then(res => res.data),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const companyId = profile?.org_unit?.company?.id;
+
+  // Get company users
+  const { data: companyUsers } = useQuery({
+    queryKey: ['company-users', companyId],
+    queryFn: () => {
+      if (!companyId) return [];
+      return apiClient.get(`/users/company/${companyId}`).then(res => res.data || []);
+    },
+    enabled: !!companyId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Mock organization data
   const mockOrganizations: Organization[] = [
     {
       id: 'org_1',
-      name: 'Nova HR',
+      name: 'Reko HR',
       level: 0,
       order: 0,
       description: '본사',
@@ -172,31 +194,88 @@ export const EnhancedOrganizationChart = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    // Load from localStorage or use mock data
-    const storedOrgs = localStorage.getItem('nova_hr_organizations');
-    const storedEmps = localStorage.getItem('nova_hr_employees');
-    
-    const orgs = storedOrgs ? JSON.parse(storedOrgs) : mockOrganizations;
-    const emps = storedEmps ? JSON.parse(storedEmps) : mockEmployees;
-    
-    setOrganizations(orgs);
-    setEmployees(emps);
-    
-    // Save to localStorage if not exists
-    if (!storedOrgs) {
-      localStorage.setItem('nova_hr_organizations', JSON.stringify(mockOrganizations));
+  // Reload data when company users change
+  useEffect(() => {
+    if (companyUsers) {
+      loadData();
     }
-    if (!storedEmps) {
-      localStorage.setItem('nova_hr_employees', JSON.stringify(mockEmployees));
+  }, [companyUsers]);
+
+  const loadData = async () => {
+    try {
+      // Load organization structure from localStorage or use mock data
+      const storedOrgs = localStorage.getItem('reko_hr_organizations');
+      const orgs = storedOrgs ? JSON.parse(storedOrgs) : mockOrganizations;
+      
+      // Use company users if available, otherwise fallback to all users
+      const realUsers = companyUsers && companyUsers.length > 0 ? companyUsers : await api.getUsers();
+      
+      // Convert real users to Employee format for organization chart
+      const employees: Employee[] = realUsers.map((user: any, index: number) => ({
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        title: user.title || user.role,
+        organizationId: getOrganizationIdForUser(user), // Helper function to assign organization
+        managerId: undefined, // Could be enhanced with manager relationships
+        order: index,
+        avatar: user.profile_picture_url
+      }));
+      
+      setOrganizations(orgs);
+      setEmployees(employees);
+      
+      // Save organizations to localStorage if not exists (keep mock structure)
+      if (!storedOrgs) {
+        localStorage.setItem('reko_hr_organizations', JSON.stringify(mockOrganizations));
+      }
+      
+      const organizationTree = buildOrganizationTree(orgs, employees);
+      setOrgData(organizationTree);
+      
+      // Auto expand all nodes initially
+      const allKeys = getAllNodeKeys(organizationTree);
+      setExpandedKeys(allKeys);
+    } catch (error) {
+      console.error('Error loading organization data:', error);
+      message.error('조직도 데이터를 불러오는데 실패했습니다.');
+      
+      // Fallback to mock data
+      const storedOrgs = localStorage.getItem('reko_hr_organizations');
+      const orgs = storedOrgs ? JSON.parse(storedOrgs) : mockOrganizations;
+      const emps = mockEmployees;
+      
+      setOrganizations(orgs);
+      setEmployees(emps);
+      
+      const organizationTree = buildOrganizationTree(orgs, emps);
+      setOrgData(organizationTree);
+      
+      // Auto expand all nodes initially
+      const allKeys = getAllNodeKeys(organizationTree);
+      setExpandedKeys(allKeys);
     }
+  };
+
+  // Helper function to assign users to appropriate organizations
+  const getOrganizationIdForUser = (user: any): string => {
+    // You can customize this logic based on user properties
+    // Map users to actual organization IDs from mockOrganizations
     
-    const organizationTree = buildOrganizationTree(orgs, emps);
-    setOrgData(organizationTree);
-    
-    // Auto expand all nodes initially
-    const allKeys = getAllNodeKeys(organizationTree);
-    setExpandedKeys(allKeys);
+    if (user.role?.includes('HR') || user.email?.includes('hr')) {
+      return 'org_3'; // HR팀
+    } else if (user.role?.includes('Dev') || user.role?.includes('Engineer') || user.role?.includes('개발')) {
+      return 'org_4'; // 개발팀
+    } else if (user.role?.includes('Design') || user.role?.includes('디자인')) {
+      return 'org_5'; // 디자인팀
+    } else if (user.role?.includes('Sales') || user.role?.includes('영업') || user.role?.includes('Marketing')) {
+      return 'org_6'; // 영업팀
+    } else if (user.role?.includes('Admin') || user.role?.includes('Manager') || user.role?.includes('관리자')) {
+      return 'org_1'; // 본사 (경영진)
+    } else {
+      return 'org_2'; // IT팀 (기본값)
+    }
   };
 
   const saveData = (orgs: Organization[], emps: Employee[]) => {
@@ -557,6 +636,21 @@ export const EnhancedOrganizationChart = () => {
             enterButton
           />
           <Button
+            icon={<ReloadOutlined />}
+            onClick={loadData}
+            title="실제 직원 데이터 새로고침"
+          >
+            새로고침
+          </Button>
+          <Button
+            type="primary"
+            icon={<UserOutlined />}
+            onClick={() => window.location.href = '/admin/user-management'}
+            title="직원 관리 페이지로 이동"
+          >
+            직원 관리
+          </Button>
+          <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => handleOrgEdit()}
@@ -689,6 +783,69 @@ export const EnhancedOrganizationChart = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Employee List */}
+      <Card title={`직원 목록 (${employees.length}명)`}>
+        <Table
+          columns={[
+            {
+              title: '이름',
+              dataIndex: 'name',
+              key: 'name',
+              render: (name, record: Employee) => (
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    size="small"
+                    src={record.avatar}
+                    icon={<UserOutlined />}
+                  />
+                  <div>
+                    <div className="font-medium">{name}</div>
+                    <div className="text-sm text-gray-500">{record.email}</div>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              title: '직책',
+              dataIndex: 'title',
+              key: 'title',
+              render: (title) => <Tag color="blue">{title}</Tag>,
+            },
+            {
+              title: '소속 부서',
+              dataIndex: 'organizationId',
+              key: 'organizationId',
+              render: (orgId) => {
+                const org = organizations.find(o => o.id === orgId);
+                return org ? <Tag color="green">{org.name}</Tag> : '-';
+              },
+            },
+            {
+              title: '권한',
+              dataIndex: 'role',
+              key: 'role',
+              render: (role) => {
+                const roleColors: Record<string, string> = {
+                  'SYSTEM_ADMIN': 'purple',
+                  'HR_MANAGER': 'blue',
+                  'EMPLOYEE': 'default'
+                };
+                const roleLabels: Record<string, string> = {
+                  'SYSTEM_ADMIN': '시스템 관리자',
+                  'HR_MANAGER': 'HR 관리자',
+                  'EMPLOYEE': '직원'
+                };
+                return <Tag color={roleColors[role] || 'default'}>{roleLabels[role] || role}</Tag>;
+              },
+            },
+          ]}
+          dataSource={employees}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+          size="middle"
+        />
+      </Card>
 
       {/* Legend */}
       <Card title="범례" size="small">

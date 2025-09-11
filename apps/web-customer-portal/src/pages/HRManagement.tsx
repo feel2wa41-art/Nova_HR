@@ -5,7 +5,6 @@ import { AttendanceManagement } from '../components/hr/AttendanceManagement';
 import { EnhancedOrganizationChart } from '../components/hr/EnhancedOrganizationChart';
 import { MenuPermissionManagement } from '../components/hr/MenuPermissionManagement';
 import { DetailedPermissionManagement } from '../components/hr/DetailedPermissionManagement';
-import { UserManagement } from './admin/UserManagement';
 import { useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
@@ -13,7 +12,7 @@ const { Title } = Typography;
 
 export const HRManagement = () => {
   const location = useLocation();
-  const [activeKey, setActiveKey] = useState('attendance');
+  const [activeKey, setActiveKey] = useState('organization');
 
   useEffect(() => {
     // Handle URL query parameters for direct navigation
@@ -25,6 +24,16 @@ export const HRManagement = () => {
   }, [location]);
 
   const tabItems = [
+    {
+      key: 'organization',
+      label: (
+        <span>
+          <TeamOutlined />
+          조직도 관리
+        </span>
+      ),
+      children: <EnhancedOrganizationChart />,
+    },
     {
       key: 'attendance',
       label: (
@@ -44,26 +53,6 @@ export const HRManagement = () => {
         </span>
       ),
       children: <ApprovalManagement />,
-    },
-    {
-      key: 'organization',
-      label: (
-        <span>
-          <TeamOutlined />
-          조직도
-        </span>
-      ),
-      children: <EnhancedOrganizationChart />,
-    },
-    {
-      key: 'users',
-      label: (
-        <span>
-          <UserOutlined />
-          사용자 관리
-        </span>
-      ),
-      children: <UserManagement />,
     },
     {
       key: 'menu-permissions',

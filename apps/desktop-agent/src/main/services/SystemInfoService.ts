@@ -16,7 +16,7 @@ export interface NetworkInfo {
     ssid?: string
     bssid?: string
     signalLevel?: number
-    security?: string[]
+    security?: string
     channel?: number
     timestamp: string
   }
@@ -78,7 +78,7 @@ export class SystemInfoService {
           name: proc.name,
           pid: proc.pid,
           cpu: parseFloat((proc.cpu || 0).toFixed(1)),
-          memory: parseFloat(((proc.mem_rss || 0) / 1024 / 1024).toFixed(1)),
+          memory: parseFloat(((proc.memRss || 0) / 1024 / 1024).toFixed(1)),
           started: proc.started ? new Date(proc.started).toLocaleString('ko-KR') : '',
           command: proc.command || undefined,
           priority: proc.priority || undefined
@@ -112,7 +112,7 @@ export class SystemInfoService {
           ssid: currentWifi?.ssid,
           bssid: currentWifi?.bssid,
           signalLevel: currentWifi?.signalLevel,
-          security: currentWifi?.security,
+          security: Array.isArray(currentWifi?.security) ? currentWifi?.security.join(',') : currentWifi?.security,
           channel: currentWifi?.channel,
           timestamp: new Date().toISOString()
         },
@@ -158,7 +158,7 @@ export class SystemInfoService {
           brand: cpu.brand,
           speed: cpu.speed,
           cores: cpu.cores,
-          load: parseFloat((currentLoad.currentload || 0).toFixed(1))
+          load: parseFloat((currentLoad.currentLoad || 0).toFixed(1))
         },
         memory: {
           total: Math.round(mem.total / 1024 / 1024), // MB

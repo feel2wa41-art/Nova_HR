@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotification } from '../contexts/NotificationContext'
+import logoSrc from '../../logo/logo.png'
 
 export const LoginPage: React.FC = () => {
   const { login, loading } = useAuth()
@@ -81,8 +82,20 @@ export const LoginPage: React.FC = () => {
         boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <img 
+              src={logoSrc} 
+              alt="Reko HR Logo" 
+              style={{ 
+                width: '80px', 
+                height: '80px', 
+                objectFit: 'contain',
+                borderRadius: '8px'
+              }} 
+            />
+          </div>
           <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2c3e50', marginBottom: '8px' }}>
-            Nova HR
+            Reko HR
           </div>
           <div style={{ fontSize: '16px', color: '#6c757d' }}>
             Desktop Agent Login
@@ -143,8 +156,8 @@ export const LoginPage: React.FC = () => {
 
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '12px', color: '#6c757d' }}>
           <div>Test Accounts:</div>
-          <div>admin@nova-hr.com / admin123</div>
-          <div>employee@nova-hr.com / admin123</div>
+          <div>admin@reko-hr.com / admin123</div>
+          <div>employee@reko-hr.com / admin123</div>
         </div>
       </div>
     </div>

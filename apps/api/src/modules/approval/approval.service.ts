@@ -74,6 +74,7 @@ export class ApprovalService {
     return this.prisma.approval_draft.create({
       data: {
         user_id: requesterId,
+        tenant_id: tenantId,
         category_id: createDto.category_id,
         title: createDto.title,
         description: createDto.title,

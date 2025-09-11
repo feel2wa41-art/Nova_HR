@@ -19,16 +19,18 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AttitudeModule } from './modules/attitude/attitude.module';
 import { UserHealthModule } from './modules/user-health/user-health.module';
-// import { LeaveModule } from './modules/leave/leave.module';
+import { LeaveModule } from './modules/leave/leave.module';
 import { LeaveApprovalModule } from './modules/leave/leave-approval.module';
 import awsConfig from './config/aws.config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FeatureConfigModule } from './feature-config/feature-config.module';
-import { UsersModule } from './users/users.module';
+import { UsersModule } from './modules/users/users.module';
 import { CommonCodeModule } from './modules/common-code/common-code.module';
 import { OvertimeModule } from './modules/overtime/overtime.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { UserLeaveBalanceController } from './modules/leave/user-leave-balance.controller';
 
 @Module({
   imports: [
@@ -70,14 +72,15 @@ import { OvertimeModule } from './modules/overtime/overtime.module';
     AdminModule,
     AttitudeModule,
     UserHealthModule,
-    // LeaveModule,
+    LeaveModule,
     LeaveApprovalModule,
     FeatureConfigModule,
     UsersModule,
     CommonCodeModule,
     OvertimeModule,
+    SettingsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, UserLeaveBalanceController],
   providers: [AppService],
 })
 export class AppModule {}

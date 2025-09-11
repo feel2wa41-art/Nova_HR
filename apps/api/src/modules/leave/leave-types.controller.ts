@@ -35,6 +35,10 @@ interface UpdateLeaveTypeDto {
   description?: string;
 }
 
+interface MoveLeaveTypeDto {
+  direction: 'up' | 'down';
+}
+
 @ApiTags('Leave Types Management')
 @Controller('leave-types')
 @UseGuards(EnhancedJwtAuthGuard)
@@ -52,18 +56,16 @@ export class LeaveTypesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get leave types (Admin only)' })
+  @ApiOperation({ summary: 'Get leave types' })
   @ApiResponse({ status: 200, description: 'Leave types retrieved successfully' })
   async getLeaveTypes(@Request() req) {
-    this.checkHRPermissions(req.user);
+    // Allow all authenticated users to view leave types
     const tenantId = req.user.tenantId;
     
     const leaveTypes = await this.prisma.leave_type.findMany({
       where: { 
-        OR: [
-          { company_id: tenantId },  // Company-specific leave types
-          { company_id: null }       // Global/system leave types
-        ]
+        tenant_id: tenantId,
+        is_active: true
       },
       select: {
         id: true,
@@ -76,7 +78,7 @@ export class LeaveTypesController {
         is_active: true,
         created_at: true,
       },
-      orderBy: { name: 'asc' }
+      orderBy: { display_order: 'asc' }
     });
 
     // Transform to match frontend interface expectations
@@ -103,31 +105,32 @@ export class LeaveTypesController {
     this.checkHRPermissions(req.user);
     const tenantId = req.user.tenantId;
 
-    // Check if code already exists for this company
+    // 코드 중복 체크 (테넌트 내에서만)
     const existingType = await this.prisma.leave_type.findFirst({
       where: {
-        code: createDto.code,
-        OR: [
-          { company_id: tenantId },
-          { company_id: null }
-        ]
+        code: createDto.code.toUpperCase(), // 대문자로 통일
+        tenant_id: tenantId
       }
     });
 
     if (existingType) {
-      throw new Error('이미 존재하는 휴가 종류 코드입니다.');
+      throw new ForbiddenException(`코드 '${createDto.code}'는 이미 사용 중입니다. 다른 코드를 사용해주세요.`);
     }
 
+    // 새로운 휴가 종류를 생성 (테넌트별 관리)
     const leaveType = await this.prisma.leave_type.create({
       data: {
-        company_id: tenantId,
+        tenant_id: tenantId, // tenant_id 필드 사용 (company_id 아님)
         name: createDto.name,
-        code: createDto.code,
+        code: createDto.code.toUpperCase(), // 대문자로 저장
         color_hex: createDto.colorHex,
         max_days_year: createDto.maxDaysYear,
         is_paid: createDto.isPaid,
         requires_approval: createDto.requiresApproval,
         is_active: true,
+        display_order: 999, // 기본 정렬 순서
+        allow_half_days: true, // 기본적으로 반일 휴가 허용
+        description: `${createDto.name} 휴가` // 기본 설명
       }
     });
 
@@ -270,5 +273,78 @@ export class LeaveTypesController {
         message: '휴가 종류가 삭제되었습니다.',
       };
     }
+  }
+
+  @Put(':id/move')
+  @ApiOperation({ summary: 'Move leave type order (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Leave type order updated successfully' })
+  async moveLeaveType(
+    @Param('id') id: string,
+    @Body(ValidationPipe) moveDto: MoveLeaveTypeDto,
+    @Request() req
+  ) {
+    this.checkHRPermissions(req.user);
+    const tenantId = req.user.tenantId;
+
+    // Get current leave type
+    const currentType = await this.prisma.leave_type.findFirst({
+      where: {
+        id: id,
+        tenant_id: tenantId,
+        is_active: true
+      }
+    });
+
+    if (!currentType) {
+      throw new ForbiddenException('휴가 종류를 찾을 수 없습니다.');
+    }
+
+    // Get all leave types ordered by display_order
+    const allTypes = await this.prisma.leave_type.findMany({
+      where: {
+        tenant_id: tenantId,
+        is_active: true
+      },
+      orderBy: { display_order: 'asc' }
+    });
+
+    const currentIndex = allTypes.findIndex(type => type.id === id);
+    
+    if (currentIndex === -1) {
+      throw new ForbiddenException('휴가 종류를 찾을 수 없습니다.');
+    }
+
+    let targetIndex: number;
+    
+    if (moveDto.direction === 'up') {
+      if (currentIndex === 0) {
+        return { success: true, message: '이미 첫 번째 순서입니다.' };
+      }
+      targetIndex = currentIndex - 1;
+    } else { // 'down'
+      if (currentIndex === allTypes.length - 1) {
+        return { success: true, message: '이미 마지막 순서입니다.' };
+      }
+      targetIndex = currentIndex + 1;
+    }
+
+    // Swap display orders
+    const targetType = allTypes[targetIndex];
+    
+    await this.prisma.$transaction([
+      this.prisma.leave_type.update({
+        where: { id: currentType.id },
+        data: { display_order: targetType.display_order }
+      }),
+      this.prisma.leave_type.update({
+        where: { id: targetType.id },
+        data: { display_order: currentType.display_order }
+      })
+    ]);
+
+    return {
+      success: true,
+      message: '순서가 변경되었습니다.'
+    };
   }
 }

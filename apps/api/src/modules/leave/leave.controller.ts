@@ -67,7 +67,7 @@ export class LeaveController {
     @Request() req
   ) {
     const userId = req.user.sub;
-    return this.leaveService.createLeaveRequest(userId, createDto);
+    return this.leaveService.createLeaveRequest(userId, createDto, req.user.tenantId);
   }
 
   @Get('requests')
@@ -126,7 +126,7 @@ export class LeaveController {
   ) {
     const userId = req.user.sub;
     const userRole = req.user.roles?.[0];
-    return this.leaveService.getLeaveRequests(queryDto, userId, userRole);
+    return this.leaveService.getLeaveRequests(queryDto, userId, userRole, req.user.tenantId);
   }
 
   @Get('requests/:id')
@@ -167,7 +167,7 @@ export class LeaveController {
   async getLeaveRequest(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
     const userRole = req.user.roles?.[0];
-    return this.leaveService.getLeaveRequest(id, userId, userRole);
+    return this.leaveService.getLeaveRequest(id, userId, userRole, req.user.tenantId);
   }
 
   @Put('requests/:id')
@@ -182,11 +182,11 @@ export class LeaveController {
     @Request() req
   ) {
     const userId = req.user.sub;
-    return this.leaveService.updateLeaveRequest(id, userId, updateDto);
+    return this.leaveService.updateLeaveRequest(id, userId, updateDto, req.user.tenantId);
   }
 
   @Put('requests/:id/approve')
-  @ApiOperation({ summary: 'Approve a leave request (HR Admin only)' })
+  @ApiOperation({ summary: 'Approve a leave request (Organization hierarchy based)' })
   @ApiResponse({ 
     status: 200, 
     description: 'Leave request approved successfully'
@@ -196,18 +196,14 @@ export class LeaveController {
     @Body(ValidationPipe) approveDto: ApproveLeaveRequestDto,
     @Request() req
   ) {
-    const userRole = req.user.roles?.[0];
     const adminId = req.user.sub;
 
-    if (userRole !== 'HR_ADMIN') {
-      throw new ForbiddenException('Only HR admins can approve leave requests');
-    }
-
-    return this.leaveService.approveLeaveRequest(id, adminId, approveDto);
+    // Permission check is now handled in the service layer based on organizational hierarchy
+    return this.leaveService.approveLeaveRequest(id, adminId, approveDto, req.user.tenantId);
   }
 
   @Put('requests/:id/reject')
-  @ApiOperation({ summary: 'Reject a leave request (HR Admin only)' })
+  @ApiOperation({ summary: 'Reject a leave request (Organization hierarchy based)' })
   @ApiResponse({ 
     status: 200, 
     description: 'Leave request rejected successfully'
@@ -217,14 +213,10 @@ export class LeaveController {
     @Body(ValidationPipe) rejectDto: RejectLeaveRequestDto,
     @Request() req
   ) {
-    const userRole = req.user.roles?.[0];
     const adminId = req.user.sub;
 
-    if (userRole !== 'HR_ADMIN') {
-      throw new ForbiddenException('Only HR admins can reject leave requests');
-    }
-
-    return this.leaveService.rejectLeaveRequest(id, adminId, rejectDto);
+    // Permission check is now handled in the service layer based on organizational hierarchy
+    return this.leaveService.rejectLeaveRequest(id, adminId, rejectDto, req.user.tenantId);
   }
 
   @Put('requests/:id/cancel')
@@ -235,7 +227,7 @@ export class LeaveController {
   })
   async cancelLeaveRequest(@Param('id') id: string, @Request() req) {
     const userId = req.user.sub;
-    return this.leaveService.cancelLeaveRequest(id, userId);
+    return this.leaveService.cancelLeaveRequest(id, userId, req.user.tenantId);
   }
 
   @Get('balance')
@@ -278,12 +270,12 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
 
     // Check permission for accessing other user's balance
-    if (queryDto.user_id && queryDto.user_id !== currentUserId && userRole !== 'HR_ADMIN') {
+    if (queryDto.user_id && queryDto.user_id !== currentUserId && !['HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
       throw new ForbiddenException('Cannot access other users leave balance');
     }
 
     const userId = queryDto.user_id || currentUserId;
-    return this.leaveService.getLeaveBalance(userId, queryDto.year);
+    return this.leaveService.getLeaveBalance(userId, req.user.tenantId, queryDto.year);
   }
 
   @Get('statistics')
@@ -323,8 +315,8 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== 'HR_ADMIN') {
-      throw new ForbiddenException('Only HR admins can view leave statistics');
+    if (!['HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      throw new ForbiddenException('Only HR managers and admins can view leave statistics');
     }
 
     return this.leaveService.getLeaveStatistics(companyId, period);
@@ -346,8 +338,8 @@ export class LeaveController {
     const userRole = req.user.roles?.[0];
     const companyId = req.user.companyId;
 
-    if (userRole !== 'HR_ADMIN') {
-      throw new ForbiddenException('Only HR admins can view leave calendar');
+    if (!['HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      throw new ForbiddenException('Only HR managers and admins can view leave calendar');
     }
 
     // Parse month parameter
@@ -370,18 +362,18 @@ export class LeaveController {
       limit: 1000 // Get all approved leave for the month
     };
 
-    const result = await this.leaveService.getLeaveRequests(queryDto, req.user.sub, userRole);
+    const result = await this.leaveService.getLeaveRequests(queryDto, req.user.sub, userRole, req.user.tenantId);
     
-    // Transform data for calendar display
+    // 캘린더 표시용 데이터 변환 (user, leave_type include 필요)
     const calendarData = result.data.map(leave => ({
       id: leave.id,
-      title: `${leave.user.name} - ${leave.leave_type}`,
+      title: `${leave.user?.name || 'Unknown'} - ${leave.leave_type?.name || 'Unknown'}`, // 안전한 접근
       start: leave.start_date,
       end: leave.end_date,
-      type: leave.leave_type,
-      employee: leave.user.name,
-      department: leave.user.employee_profile?.department,
-      days: leave.approved_days
+      type: leave.leave_type?.code || 'UNKNOWN',
+      employee: leave.user?.name || 'Unknown',
+      department: leave.user?.employee_profile?.department || 'Unknown',
+      days: parseFloat(leave.days_count.toString()) // approved_days 대신 days_count 사용
     }));
 
     return {
@@ -399,8 +391,8 @@ export class LeaveController {
   async getPendingApprovals(@Request() req) {
     const userRole = req.user.roles?.[0];
 
-    if (userRole !== 'HR_ADMIN') {
-      throw new ForbiddenException('Only HR admins can view pending approvals');
+    if (!['HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      throw new ForbiddenException('Only HR managers and admins can view pending approvals');
     }
 
     const queryDto: LeaveRequestQueryDto = {
@@ -409,7 +401,7 @@ export class LeaveController {
       limit: 100
     };
 
-    return this.leaveService.getLeaveRequests(queryDto, req.user.sub, userRole);
+    return this.leaveService.getLeaveRequests(queryDto, req.user.sub, userRole, req.user.tenantId);
   }
 
   @Post('bulk-import')
@@ -424,8 +416,8 @@ export class LeaveController {
   ) {
     const userRole = req.user.roles?.[0];
 
-    if (userRole !== 'HR_ADMIN') {
-      throw new ForbiddenException('Only HR admins can import leave records');
+    if (!['HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      throw new ForbiddenException('Only HR managers and admins can import leave records');
     }
 
     // Implementation for bulk import would go here

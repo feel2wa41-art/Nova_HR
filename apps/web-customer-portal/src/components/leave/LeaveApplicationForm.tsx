@@ -1,4 +1,4 @@
-import { Modal, Form, Select, DatePicker, Input, Switch, Button, message, Space, Card, Alert, Tag } from 'antd';
+import { Modal, Form, Select, DatePicker, Input, Switch, Button, Space, Card, Alert, Tag, Radio, App } from 'antd';
 import { CalendarOutlined, ExclamationCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useLeave } from '../../hooks/useLeave';
@@ -11,6 +11,51 @@ import dayjs, { Dayjs } from 'dayjs';
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
+// 반차/종일에 따른 날짜 선택 컴포넌트
+const HalfDayDatePicker = ({ form, value, onChange }: { form: any, value?: any, onChange?: any }) => {
+  const halfDayType = Form.useWatch('halfDayType', form);
+  
+  if (halfDayType === 'FULL_DAY') {
+    return (
+      <RangePicker
+        value={value}
+        onChange={onChange}
+        size="large"
+        style={{ width: '100%' }}
+        format="YYYY-MM-DD"
+        disabledDate={(current) => {
+          return current && current < dayjs().startOf('day');
+        }}
+        placeholder={['시작일', '종료일']}
+      />
+    );
+  } else {
+    // 반차일 때는 단일 날짜를 선택하지만 내부적으로는 같은 날짜로 range 처리
+    const singleDate = value && Array.isArray(value) ? value[0] : value;
+    
+    return (
+      <DatePicker
+        value={singleDate}
+        size="large"
+        style={{ width: '100%' }}
+        format="YYYY-MM-DD"
+        disabledDate={(current) => {
+          return current && current < dayjs().startOf('day');
+        }}
+        placeholder="반차 날짜"
+        onChange={(date) => {
+          // 반차일 때는 같은 날짜로 range 설정
+          if (date) {
+            onChange?.([date, date]);
+          } else {
+            onChange?.(undefined);
+          }
+        }}
+      />
+    );
+  }
+};
+
 interface LeaveApplicationFormProps {
   open: boolean;
   onCancel: () => void;
@@ -20,6 +65,7 @@ interface LeaveApplicationFormProps {
 interface LeaveFormData {
   leaveTypeId: string;
   dateRange: [Dayjs, Dayjs];
+  halfDayType: 'FULL_DAY' | 'MORNING' | 'AFTERNOON';
   reason?: string;
   emergency: boolean;
 }
@@ -31,6 +77,7 @@ export const LeaveApplicationForm = ({
 }: LeaveApplicationFormProps) => {
   const [form] = Form.useForm<LeaveFormData>();
   const { user } = useAuth();
+  const { message } = App.useApp();
   const [approvalSettingsOpen, setApprovalSettingsOpen] = useState(false);
   const [approvalSettings, setApprovalSettings] = useState<any>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
@@ -88,7 +135,7 @@ export const LeaveApplicationForm = ({
 
   const handleSubmit = async (values: LeaveFormData) => {
     try {
-      const { leaveTypeId, dateRange, reason, emergency } = values;
+      const { leaveTypeId, dateRange, halfDayType, reason, emergency } = values;
       
       // Validate based on leave type settings
       const selectedType = leaveTypes.find(type => type.id === leaveTypeId);
@@ -116,6 +163,7 @@ export const LeaveApplicationForm = ({
         leaveTypeId,
         startDate: dateRange[0].format('YYYY-MM-DD'),
         endDate: dateRange[1].format('YYYY-MM-DD'),
+        halfDayType: halfDayType, // 반차 정보 추가
         reason,
         emergency,
         approvalSettings: approvalSettings, // Include approval settings
@@ -152,7 +200,7 @@ export const LeaveApplicationForm = ({
     return leaveBalances.find(balance => balance.leaveType === leaveTypeCode);
   };
 
-  const calculateLeaveDays = (dateRange: [Dayjs, Dayjs] | undefined) => {
+  const calculateLeaveDays = (dateRange: [Dayjs, Dayjs] | undefined, halfDayType: string = 'FULL_DAY') => {
     if (!dateRange || !dateRange[0] || !dateRange[1]) return { totalDays: 0, workingDays: 0 };
     
     const startDate = dateRange[0].toDate();
@@ -160,11 +208,24 @@ export const LeaveApplicationForm = ({
     
     const validation = validateLeaveRequest(startDate, endDate);
     
+    // 반차인 경우 0.5일로 계산
+    if (halfDayType === 'MORNING' || halfDayType === 'AFTERNOON') {
+      return {
+        totalDays: 0.5,
+        workingDays: 0.5,
+        weekendDays: 0,
+        holidayDays: 0,
+        isHalfDay: true,
+        halfDayType: halfDayType,
+      };
+    }
+    
     return {
       totalDays: validation.totalDays,
       workingDays: validation.workingDays,
       weekendDays: validation.weekendDays,
       holidayDays: validation.holidayDays,
+      isHalfDay: false,
     };
   };
 
@@ -177,11 +238,12 @@ export const LeaveApplicationForm = ({
 
   const selectedLeaveType = Form.useWatch('leaveTypeId', form);
   const selectedDateRange = Form.useWatch('dateRange', form);
+  const selectedHalfDayType = Form.useWatch('halfDayType', form);
   const selectedLeaveTypeData = leaveTypes.find(type => type.id === selectedLeaveType);
   const leaveTypeBalance = selectedLeaveTypeData 
     ? getLeaveTypeBalance(selectedLeaveTypeData.code)
     : null;
-  const calculatedDays = calculateLeaveDays(selectedDateRange);
+  const calculatedDays = calculateLeaveDays(selectedDateRange, selectedHalfDayType);
 
   return (
     <Modal
@@ -204,6 +266,7 @@ export const LeaveApplicationForm = ({
         autoComplete="off"
         initialValues={{
           emergency: false,
+          halfDayType: 'FULL_DAY',
         }}
       >
         {/* Company Info and Settings Display */}
@@ -224,13 +287,9 @@ export const LeaveApplicationForm = ({
           </Card>
         )}
 
-        <Alert
-          message="전자결재 시스템 연동 안내"
-          description="휴가 신청은 전자결재 시스템을 통해 승인 처리됩니다. 신청 후 진행 상황은 전자결재 발신함에서 확인하실 수 있습니다."
-          type="info"
-          showIcon
-          style={{ marginBottom: 24 }}
-        />
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-2 mb-4 text-sm">
+          <span className="text-blue-700">💼 휴가 신청은 전자결재 시스템을 통해 승인 처리됩니다</span>
+        </div>
         
         <Form.Item
           label="휴가 종류"
@@ -320,54 +379,77 @@ export const LeaveApplicationForm = ({
         )}
 
         <Form.Item
+          label="휴가 유형"
+          name="halfDayType"
+          rules={[{ required: true, message: '휴가 유형을 선택해주세요' }]}
+        >
+          <Radio.Group size="large">
+            <Radio.Button value="FULL_DAY">종일</Radio.Button>
+            <Radio.Button value="MORNING">오전반차</Radio.Button>
+            <Radio.Button value="AFTERNOON">오후반차</Radio.Button>
+          </Radio.Group>
+        </Form.Item>
+
+        <Form.Item
           label="휴가 기간"
-          name="dateRange"
+          name="dateRange" 
           rules={[
             { required: true, message: '휴가 기간을 선택해주세요' },
           ]}
         >
-          <RangePicker
-            size="large"
-            style={{ width: '100%' }}
-            format="YYYY-MM-DD"
-            disabledDate={(current) => {
-              // Disable past dates
-              return current && current < dayjs().startOf('day');
-            }}
-          />
+          <HalfDayDatePicker form={form} />
         </Form.Item>
 
         {calculatedDays.workingDays > 0 && (
           <Alert
-            message="휴가 일수 계산"
+            message={
+              calculatedDays.isHalfDay 
+                ? `반차 신청 (${calculatedDays.halfDayType === 'MORNING' ? '오전' : '오후'})`
+                : "휴가 일수 계산"
+            }
             description={
               <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="flex justify-between">
-                      <span>전체 기간:</span>
-                      <span className="font-medium">{calculatedDays.totalDays}일</span>
+                {calculatedDays.isHalfDay ? (
+                  <div className="text-sm">
+                    <div className="flex justify-between items-center">
+                      <span>신청 일수:</span>
+                      <span className="font-bold text-green-600">0.5일 (반차)</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-green-600">근무일:</span>
-                      <span className="font-bold text-green-600">{calculatedDays.workingDays}일</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">주말:</span>
-                      <span className="text-gray-500">{calculatedDays.weekendDays || 0}일</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">공휴일:</span>
-                      <span className="text-gray-500">{calculatedDays.holidayDays || 0}일</span>
+                    <div className="flex justify-between items-center mt-1">
+                      <span>신청 날짜:</span>
+                      <span className="font-medium">
+                        {selectedDateRange?.[0]?.format('YYYY년 MM월 DD일')}
+                      </span>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="flex justify-between">
+                        <span>전체 기간:</span>
+                        <span className="font-medium">{calculatedDays.totalDays}일</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-600">근무일:</span>
+                        <span className="font-bold text-green-600">{calculatedDays.workingDays}일</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">주말:</span>
+                        <span className="text-gray-500">{calculatedDays.weekendDays || 0}일</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">공휴일:</span>
+                        <span className="text-gray-500">{calculatedDays.holidayDays || 0}일</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {leaveTypeBalance && calculatedDays.workingDays > leaveTypeBalance.remaining && (
                   <div className="mt-2 text-red-600 text-sm flex items-center">
                     <ExclamationCircleOutlined className="mr-1" />
-                    근무일 기준으로 잔여 휴가일수를 초과합니다
+                    잔여 휴가일수를 초과합니다 (잔여: {leaveTypeBalance.remaining}일)
                   </div>
                 )}
               </div>

@@ -613,16 +613,8 @@ export const CategoryManagement = () => {
             help={
               <div className="text-sm text-gray-600 mt-1">
                 <p>• 시스템 연동용 고유 코드를 입력하세요 (영문 대문자, 숫자, 언더스코어 사용)</p>
-                <p>• 특정 기능과 연동하려면 미리 정의된 코드를 사용해야 합니다</p>
+                <p>• 각 양식마다 고유한 코드를 사용하여 구분합니다</p>
                 <p>• <strong>예시:</strong> LEAVE_REQUEST (휴가신청), OVERTIME_REQUEST (추가근무신청)</p>
-                <Alert
-                  message="중요 안내"
-                  description="휴가 신청 연동을 위해서는 반드시 'LEAVE_REQUEST' 코드를 사용해야 합니다. 다른 코드를 사용하면 휴가 신청 메뉴에서 이 양식을 찾을 수 없습니다."
-                  type="info"
-                  showIcon
-                  size="small"
-                  className="mt-2"
-                />
               </div>
             }
           >

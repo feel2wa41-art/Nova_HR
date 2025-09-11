@@ -378,7 +378,7 @@ export const NetworkSettings = () => {
               { required: true, message: '규칙 유형을 선택해주세요' },
             ]}
           >
-            <Button.Group size="large" style={{ width: '100%' }}>
+            <Space.Compact size="large" style={{ width: '100%' }}>
               <Button 
                 style={{ width: '50%' }}
                 onClick={() => newRuleForm.setFieldValue('type', 'WIFI')}
@@ -391,7 +391,7 @@ export const NetworkSettings = () => {
               >
                 <GlobalOutlined /> IP 주소
               </Button>
-            </Button.Group>
+            </Space.Compact>
           </Form.Item>
 
           <Form.Item

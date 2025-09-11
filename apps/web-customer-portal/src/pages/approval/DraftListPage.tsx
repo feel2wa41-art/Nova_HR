@@ -193,81 +193,76 @@ export const DraftListPage = ({ embedded = false }: DraftListPageProps) => {
     // TODO: 서버 사이드 검색 구현
   };
 
+  const tableContent = (
+    <Card>
+      <div className="flex justify-between items-center mb-4">
+        <Space>
+          <Select
+            placeholder="상태 필터"
+            style={{ width: 120 }}
+            allowClear
+            value={status || undefined}
+            onChange={setStatus}
+          >
+            <Select.Option value="DRAFT">임시저장</Select.Option>
+            <Select.Option value="SUBMITTED">제출됨</Select.Option>
+            <Select.Option value="IN_PROGRESS">진행중</Select.Option>
+            <Select.Option value="APPROVED">승인</Select.Option>
+            <Select.Option value="REJECTED">반려</Select.Option>
+          </Select>
+        </Space>
+        
+        <Search
+          placeholder="제목으로 검색"
+          style={{ width: 250 }}
+          onSearch={handleSearch}
+          allowClear
+        />
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={data?.data || []}
+        rowKey="id"
+        loading={isLoading}
+        pagination={false}
+        locale={{
+          emptyText: <Empty description="작성한 결재 문서가 없습니다" />,
+        }}
+      />
+
+      {data && data.pagination && data.pagination.total > 0 && (
+        <div className="flex justify-center mt-4">
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={data?.pagination?.total || 0}
+            onChange={(newPage, newPageSize) => {
+              setPage(newPage);
+              if (newPageSize) setPageSize(newPageSize);
+            }}
+            showSizeChanger
+            showQuickJumper
+            showTotal={(total, range) => 
+              `${range[0]}-${range[1]} / 총 ${total}건`
+            }
+          />
+        </div>
+      )}
+    </Card>
+  );
+
   if (!embedded) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <Title level={2} className="!mb-0">임시보관함</Title>
-            <div className="text-sm text-gray-500 mt-1">
-              임시저장된 문서와 회수된 문서를 관리할 수 있습니다
-            </div>
+        <div className="mb-6">
+          <Title level={2} className="!mb-2">임시보관함</Title>
+          <div className="text-sm text-gray-500">
+            임시저장된 문서와 회수된 문서를 관리할 수 있습니다
           </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate('/approval/create')}
-          >
-            새 결재 작성
-          </Button>
         </div>
 
-        <Card>
-          <div className="flex justify-between items-center mb-4">
-            <Space>
-              <Select
-                placeholder="상태 필터"
-                style={{ width: 120 }}
-                allowClear
-                value={status || undefined}
-                onChange={setStatus}
-              >
-                <Select.Option value="DRAFT">임시저장</Select.Option>
-                <Select.Option value="SUBMITTED">제출됨</Select.Option>
-                <Select.Option value="IN_PROGRESS">진행중</Select.Option>
-                <Select.Option value="APPROVED">승인</Select.Option>
-                <Select.Option value="REJECTED">반려</Select.Option>
-              </Select>
-            </Space>
-            
-            <Search
-              placeholder="제목으로 검색"
-              style={{ width: 250 }}
-              onSearch={handleSearch}
-              allowClear
-            />
-          </div>
-
-          <Table
-            columns={columns}
-            dataSource={data?.data || []}
-            rowKey="id"
-            loading={isLoading}
-            pagination={false}
-            locale={{
-              emptyText: <Empty description="작성한 결재 문서가 없습니다" />,
-            }}
-          />
-
-          {data && data.pagination && data.pagination.total > 0 && (
-            <div className="flex justify-center mt-4">
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                total={data?.pagination?.total || 0}
-                onChange={(newPage, newPageSize) => {
-                  setPage(newPage);
-                  if (newPageSize) setPageSize(newPageSize);
-                }}
-                showSizeChanger
-                showQuickJumper
-                showTotal={(total, range) => 
-                  `${range[0]}-${range[1]} / 총 ${total}건`
-                }
-              />
-            </div>
-          )}
-        </Card>
+        {tableContent}
       </div>
     );
   }

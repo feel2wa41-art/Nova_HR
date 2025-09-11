@@ -318,7 +318,7 @@ export class UsersService {
       where: { user_id: id }
     });
 
-    await this.prisma.leave_balance.deleteMany({
+    await this.prisma.user_leave_balance.deleteMany({
       where: { user_id: id }
     });
 
@@ -332,6 +332,50 @@ export class UsersService {
     });
 
     return { success: true, message: 'User deleted successfully' };
+  }
+
+  async findByCompany(companyId: string, tenantId?: string) {
+    const where: any = {};
+    
+    // Add tenant filtering if tenantId is provided
+    if (tenantId) {
+      where.tenant_id = tenantId;
+    }
+
+    // Add company filtering through org_unit relation
+    where.org_unit = {
+      company_id: companyId
+    };
+
+    return this.prisma.auth_user.findMany({
+      where,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        title: true,
+        phone: true,
+        avatar_url: true,
+        status: true,
+        role: true,
+        language: true,
+        last_login: true,
+        created_at: true,
+        employee_profile: {
+          select: {
+            emp_no: true,
+            department: true,
+            hire_date: true,
+          }
+        },
+        org_unit: {
+          select: {
+            name: true,
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
   }
 
   async getUserStats(tenantId?: string) {

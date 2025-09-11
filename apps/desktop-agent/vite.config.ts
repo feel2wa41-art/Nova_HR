@@ -16,7 +16,15 @@ export default defineConfig({
           build: {
             rollupOptions: {
               external: [
-                'sharp'
+                'sharp',
+                'systeminformation',
+                'active-win',
+                'auto-launch',
+                'node-cron',
+                'temp',
+                'ws',
+                'bcryptjs',
+                'detect-libc'
               ]
             }
           }
@@ -28,6 +36,11 @@ export default defineConfig({
           // Notify the Renderer-Process to reload the page when the Preload-Scripts build is complete, 
           // instead of restarting the entire Electron App.
           options.reload()
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron/preload'
+          }
         }
       }
     ]),

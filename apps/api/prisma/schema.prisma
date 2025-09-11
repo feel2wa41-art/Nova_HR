@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,588 +7,533 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ================================
-// AUTH & USER MANAGEMENT
-// ================================
-
 model auth_user {
-  id          String  @id @default(uuid())
-  email       String  @unique
-  password    String
-  name        String
-  title       String?
-  phone       String?
-  avatar_url  String?
-  status      String  @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED, PENDING
-  role        String  @default("EMPLOYEE") // SUPER_ADMIN, PROVIDER_ADMIN, CUSTOMER_ADMIN, HR_MANAGER, MANAGER, EMPLOYEE
-  language    String  @default("en") // User's preferred language code
-  tenant_id   String?
-  org_id      String?
-  last_login  DateTime?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  tenant           tenant?            @relation(fields: [tenant_id], references: [id], onDelete: SetNull)
-  org_unit         org_unit?          @relation("org_members", fields: [org_id], references: [id], onDelete: SetNull)
-  employee_profile employee_profile?
-  attendance       attendance[]
-  attendance_requests attendance_request[]
-  leave_requests   leave_request[]
-  approval_drafts  approval_draft[]
-  approval_route_approvers approval_route_approver[]
-  approval_actions approval_action[]
-  audit_logs       audit_log[]
-  attitude_sessions attitude_session[]
-  notifications    notification[] @relation("user_notifications")
-  expense_requests expense_request[] @relation("user_expense_requests")
-  approved_expenses expense_request[] @relation("approved_expense_requests")
-  rejected_expenses expense_request[] @relation("rejected_expense_requests")
-  password_reset_tokens password_reset_token[] @relation("password_reset_tokens")
-  daily_reports daily_report[] @relation("user_daily_reports")
-  reviewed_reports daily_report[] @relation("reviewed_daily_reports")
-  weekly_reports weekly_report[] @relation("user_weekly_reports")
-  reviewed_weekly_reports weekly_report[] @relation("reviewed_weekly_reports")
-  user_status user_status?
-  organized_events event[] @relation("organized_events")
-  event_participations event_participant[]
-  uploaded_attachments event_attachment[] @relation("uploaded_attachments")
-  authored_posts board_post[] @relation("authored_posts")
-  authored_comments board_comment[] @relation("authored_comments")
-  uploaded_board_attachments board_attachment[] @relation("uploaded_board_attachments")
-  board_likes board_like[]
-  reference_documents reference_document[] @relation("reference_documents")
-  reference_document_views reference_document_view[] @relation("reference_document_views")
-  created_calendar_events calendar_event[] @relation("created_events")
-  calendar_event_attendees calendar_event_attendee[] @relation("event_attendees")
-  uploaded_event_attachments calendar_event_attachment[] @relation("uploaded_event_attachments")
-  authored_announcements company_announcement[] @relation("authored_announcements")
-  read_announcements company_announcement_read[] @relation("read_announcements")
-  calendar_settings user_calendar_settings? @relation("calendar_settings")
-  authored_community_posts hr_community_post[] @relation("authored_community_posts")
-  uploaded_community_attachments hr_community_attachment[] @relation("uploaded_community_attachments")
-  authored_community_comments hr_community_comment[] @relation("authored_community_comments")
-  community_likes hr_community_like[] @relation("community_likes")
-  community_views hr_community_view[] @relation("community_views")
-  received_community_notifications hr_community_notification[] @relation("received_community_notifications")
-  notification_preferences user_notification_preference? @relation("notification_preferences")
-  web_push_subscriptions web_push_subscription[] @relation("web_push_subscriptions")
-  
-  // Common Code Relations
-  positions            user_position[] @relation("user_positions")
-  grades               user_grade[] @relation("user_grades")
-  
-  // Overtime Work Relations
-  overtime_requests    overtime_request[] @relation("user_overtime_requests")
-  approved_overtime_requests overtime_request[] @relation("approved_overtime_requests")
-  uploaded_overtime_attachments overtime_attachment[] @relation("uploaded_overtime_attachments")
+  id                               String                        @id @default(uuid())
+  email                            String                        @unique
+  password                         String
+  name                             String
+  title                            String?
+  phone                            String?
+  avatar_url                       String?
+  status                           String                        @default("ACTIVE")
+  role                             String                        @default("EMPLOYEE")
+  tenant_id                        String?
+  org_id                           String?
+  last_login                       DateTime?
+  created_at                       DateTime                      @default(now())
+  updated_at                       DateTime                      @updatedAt
+  language                         String                        @default("en")
+  approval_actions                 approval_action[]
+  approval_drafts                  approval_draft[]
+  approval_route_approvers         approval_route_approver[]
+  attendance                       attendance[]
+  attendance_requests              attendance_request[]
+  attitude_sessions                attitude_session[]
+  audit_logs                       audit_log[]
+  org_unit                         org_unit?                     @relation("org_members", fields: [org_id], references: [id])
+  tenant                           tenant?                       @relation(fields: [tenant_id], references: [id])
+  uploaded_board_attachments       board_attachment[]            @relation("uploaded_board_attachments")
+  authored_comments                board_comment[]               @relation("authored_comments")
+  board_likes                      board_like[]
+  authored_posts                   board_post[]                  @relation("authored_posts")
+  business_trips                   business_trip_request[]       @relation("user_business_trips")
+  uploaded_event_attachments       calendar_event_attachment[]   @relation("uploaded_event_attachments")
+  calendar_event_attendees         calendar_event_attendee[]     @relation("event_attendees")
+  created_calendar_events          calendar_event[]              @relation("created_events")
+  read_announcements               company_announcement_read[]   @relation("read_announcements")
+  authored_announcements           company_announcement[]        @relation("authored_announcements")
+  reviewed_reports                 daily_report[]                @relation("reviewed_daily_reports")
+  daily_reports                    daily_report[]                @relation("user_daily_reports")
+  employee_profile                 employee_profile?
+  uploaded_attachments             event_attachment[]            @relation("uploaded_attachments")
+  event_participations             event_participant[]
+  organized_events                 event[]                       @relation("organized_events")
+  approved_expenses                expense_request[]             @relation("approved_expense_requests")
+  rejected_expenses                expense_request[]             @relation("rejected_expense_requests")
+  expense_requests                 expense_request[]             @relation("user_expense_requests")
+  uploaded_community_attachments   hr_community_attachment[]     @relation("uploaded_community_attachments")
+  authored_community_comments      hr_community_comment[]        @relation("authored_community_comments")
+  community_likes                  hr_community_like[]           @relation("community_likes")
+  received_community_notifications hr_community_notification[]   @relation("received_community_notifications")
+  authored_community_posts         hr_community_post[]           @relation("authored_community_posts")
+  community_views                  hr_community_view[]           @relation("community_views")
+  leave_requests                   leave_request[]
+  notifications                    notification[]                @relation("user_notifications")
+  uploaded_overtime_attachments    overtime_attachment[]         @relation("uploaded_overtime_attachments")
+  approved_overtime_requests       overtime_request[]            @relation("approved_overtime_requests")
+  overtime_requests                overtime_request[]            @relation("user_overtime_requests")
+  password_reset_tokens            password_reset_token[]        @relation("password_reset_tokens")
+  reference_document_views         reference_document_view[]     @relation("reference_document_views")
+  reference_documents              reference_document[]          @relation("reference_documents")
+  calendar_settings                user_calendar_settings?       @relation("calendar_settings")
+  grades                           user_grade[]                  @relation("user_grades")
+  user_leave_balances              user_leave_balance[]
+  notification_preferences         user_notification_preference? @relation("notification_preferences")
+  positions                        user_position[]               @relation("user_positions")
+  user_status                      user_status?
+  web_push_subscriptions           web_push_subscription[]       @relation("web_push_subscriptions")
+  reviewed_weekly_reports          weekly_report[]               @relation("reviewed_weekly_reports")
+  weekly_reports                   weekly_report[]               @relation("user_weekly_reports")
 
   @@map("auth_users")
 }
 
 model password_reset_token {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   user_id    String
-  token      String   @unique
+  token      String    @unique
   expires_at DateTime
-  used       Boolean  @default(false)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  // Relations
-  user auth_user @relation("password_reset_tokens", fields: [user_id], references: [id], onDelete: Cascade)
+  used       Boolean   @default(false)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  user       auth_user @relation("password_reset_tokens", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
 }
 
-// Daily Report System
 model program_category {
-  id          String   @id @default(uuid())
-  company_id  String
-  name        String   // e.g., "Development", "Communication", "Documentation", "Design", "Management"
-  description String?
-  color       String?  // For UI display
-  icon        String?  // Icon identifier
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  company               company                 @relation(fields: [company_id], references: [id])
-  program_mappings      program_category_mapping[]
+  id                    String                     @id @default(uuid())
+  company_id            String
+  name                  String
+  description           String?
+  color                 String?
+  icon                  String?
+  is_active             Boolean                    @default(true)
+  created_at            DateTime                   @default(now())
+  updated_at            DateTime                   @updatedAt
   daily_report_entries  daily_report_entry[]
+  company               company                    @relation(fields: [company_id], references: [id])
+  program_mappings      program_category_mapping[]
   weekly_report_entries weekly_report_entry[]
 
   @@map("program_categories")
 }
 
 model program_category_mapping {
-  id              String   @id @default(uuid())
-  category_id     String
-  program_name    String   // e.g., "Visual Studio Code", "Slack", "Chrome"
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  category program_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  id           String           @id @default(uuid())
+  category_id  String
+  program_name String
+  is_active    Boolean          @default(true)
+  created_at   DateTime         @default(now())
+  updated_at   DateTime         @updatedAt
+  category     program_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
   @@unique([category_id, program_name])
   @@map("program_category_mappings")
 }
 
 model daily_report {
-  id           String   @id @default(uuid())
-  user_id      String
-  report_date  DateTime @db.Date
-  summary      String?  // Overall daily summary
-  achievements String?  // Key achievements
-  challenges   String?  // Challenges faced
-  tomorrow_plan String? // Plan for tomorrow
-  status       String   @default("DRAFT") // DRAFT, SUBMITTED, REVIEWED
-  submitted_at DateTime?
-  reviewed_by  String?
-  reviewed_at  DateTime?
-  review_notes String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  // Relations
-  user      auth_user           @relation("user_daily_reports", fields: [user_id], references: [id])
-  reviewer  auth_user?          @relation("reviewed_daily_reports", fields: [reviewed_by], references: [id])
-  entries   daily_report_entry[]
+  id            String               @id @default(uuid())
+  user_id       String
+  report_date   DateTime             @db.Date
+  summary       String?
+  achievements  String?
+  challenges    String?
+  tomorrow_plan String?
+  status        String               @default("DRAFT")
+  submitted_at  DateTime?
+  reviewed_by   String?
+  reviewed_at   DateTime?
+  review_notes  String?
+  created_at    DateTime             @default(now())
+  updated_at    DateTime             @updatedAt
+  entries       daily_report_entry[]
+  reviewer      auth_user?           @relation("reviewed_daily_reports", fields: [reviewed_by], references: [id])
+  user          auth_user            @relation("user_daily_reports", fields: [user_id], references: [id])
 
   @@unique([user_id, report_date])
   @@map("daily_reports")
 }
 
 model daily_report_entry {
-  id            String   @id @default(uuid())
-  report_id     String
-  category_id   String
+  id               String           @id @default(uuid())
+  report_id        String
+  category_id      String
   task_description String
-  duration_minutes Int    // Time spent in minutes
-  programs_used String[] // List of programs used for this task
-  output        String?  // What was produced/completed
-  notes         String?  // Additional notes
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-
-  // Relations
-  report   daily_report      @relation(fields: [report_id], references: [id], onDelete: Cascade)
-  category program_category  @relation(fields: [category_id], references: [id])
+  duration_minutes Int
+  programs_used    String[]
+  output           String?
+  notes            String?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+  category         program_category @relation(fields: [category_id], references: [id])
+  report           daily_report     @relation(fields: [report_id], references: [id], onDelete: Cascade)
 
   @@map("daily_report_entries")
 }
 
-// Weekly Report System
 model weekly_report {
-  id          String   @id @default(uuid())
-  user_id     String
-  week_start  DateTime @db.Date // Monday of the week
-  week_end    DateTime @db.Date // Sunday of the week
-  summary     String?  @db.Text // Overall weekly summary
-  achievements String? @db.Text // Key achievements this week
-  challenges  String?  @db.Text // Challenges faced
-  next_week_goals String? @db.Text // Goals for next week
-  status      String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED
-  submitted_at DateTime?
-  reviewed_by  String?
-  reviewed_at  DateTime?
-  is_auto_generated Boolean @default(false) // True if generated from daily reports
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  user        auth_user           @relation("user_weekly_reports", fields: [user_id], references: [id])
-  reviewer    auth_user?          @relation("reviewed_weekly_reports", fields: [reviewed_by], references: [id])
-  entries     weekly_report_entry[]
-  daily_reports_included String[] // IDs of daily reports that were used for auto-generation
+  id                     String                @id @default(uuid())
+  user_id                String
+  week_start             DateTime              @db.Date
+  week_end               DateTime              @db.Date
+  summary                String?
+  achievements           String?
+  challenges             String?
+  next_week_goals        String?
+  status                 String                @default("DRAFT")
+  submitted_at           DateTime?
+  reviewed_by            String?
+  reviewed_at            DateTime?
+  is_auto_generated      Boolean               @default(false)
+  created_at             DateTime              @default(now())
+  updated_at             DateTime              @updatedAt
+  daily_reports_included String[]
+  entries                weekly_report_entry[]
+  reviewer               auth_user?            @relation("reviewed_weekly_reports", fields: [reviewed_by], references: [id])
+  user                   auth_user             @relation("user_weekly_reports", fields: [user_id], references: [id])
 
   @@unique([user_id, week_start])
   @@map("weekly_reports")
 }
 
 model weekly_report_entry {
-  id           String   @id @default(uuid())
-  report_id    String
-  category_id  String
-  summary      String   @db.Text // Summary of work done in this category
-  total_hours  Int      // Total hours spent in this category (minutes)
-  key_tasks    String[] // List of key tasks completed
-  deliverables String[] // List of deliverables produced
-  programs_used String[] // Programs used in this category
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  // Relations
-  report   weekly_report     @relation(fields: [report_id], references: [id], onDelete: Cascade)
-  category program_category  @relation(fields: [category_id], references: [id])
+  id            String           @id @default(uuid())
+  report_id     String
+  category_id   String
+  summary       String
+  total_hours   Int
+  key_tasks     String[]
+  deliverables  String[]
+  programs_used String[]
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+  category      program_category @relation(fields: [category_id], references: [id])
+  report        weekly_report    @relation(fields: [report_id], references: [id], onDelete: Cascade)
 
   @@map("weekly_report_entries")
 }
 
-// User Health Check & Organization System
 model user_status {
-  id              String   @id @default(uuid())
-  user_id         String   @unique
-  status          String   @default("ACTIVE") // ACTIVE, INACTIVE, ON_LEAVE, SICK_LEAVE, VACATION
+  id              String    @id @default(uuid())
+  user_id         String    @unique
+  status          String    @default("ACTIVE")
   last_seen       DateTime?
-  location        String?  // Current work location
-  mood            String?  // Happy, Neutral, Busy, etc.
-  status_message  String?  // Custom status message
+  location        String?
+  mood            String?
+  status_message  String?
   birthday        DateTime? @db.Date
-  phone_extension String?  // Office phone extension
-  updated_at      DateTime @updatedAt
-  created_at      DateTime @default(now())
-
-  // Relations
-  user auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  phone_extension String?
+  updated_at      DateTime  @updatedAt
+  created_at      DateTime  @default(now())
+  user            auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("user_statuses")
 }
 
-// Events & Announcements System
 model event {
-  id          String   @id @default(uuid())
-  company_id  String
-  title       String
-  description String?  @db.Text
-  event_type  String   @default("GENERAL") // GENERAL, BIRTHDAY, HOLIDAY, MEETING, TRAINING
-  start_date  DateTime
-  end_date    DateTime?
-  all_day     Boolean  @default(false)
-  location    String?
-  organizer_id String
+  id               String              @id @default(uuid())
+  company_id       String
+  title            String
+  description      String?
+  event_type       String              @default("GENERAL")
+  start_date       DateTime
+  end_date         DateTime?
+  all_day          Boolean             @default(false)
+  location         String?
+  organizer_id     String
   max_participants Int?
-  is_public   Boolean  @default(true)
-  status      String   @default("ACTIVE") // ACTIVE, CANCELLED, COMPLETED
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  company        company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  organizer      auth_user         @relation("organized_events", fields: [organizer_id], references: [id])
-  participants   event_participant[]
-  attachments    event_attachment[]
+  is_public        Boolean             @default(true)
+  status           String              @default("ACTIVE")
+  created_at       DateTime            @default(now())
+  updated_at       DateTime            @updatedAt
+  attachments      event_attachment[]
+  participants     event_participant[]
+  company          company             @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  organizer        auth_user           @relation("organized_events", fields: [organizer_id], references: [id])
 
   @@map("events")
 }
 
 model event_participant {
-  id         String   @id @default(uuid())
-  event_id   String
-  user_id    String
-  status     String   @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  id           String    @id @default(uuid())
+  event_id     String
+  user_id      String
+  status       String    @default("PENDING")
   responded_at DateTime?
-  notes      String?
-  created_at DateTime @default(now())
-
-  // Relations
-  event event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  user  auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  notes        String?
+  created_at   DateTime  @default(now())
+  event        event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user         auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([event_id, user_id])
   @@map("event_participants")
 }
 
 model event_attachment {
-  id         String   @id @default(uuid())
-  event_id   String
-  filename   String
-  file_path  String
-  file_size  Int
-  mime_type  String
+  id          String    @id @default(uuid())
+  event_id    String
+  filename    String
+  file_path   String
+  file_size   Int
+  mime_type   String
   uploaded_by String
-  created_at DateTime @default(now())
-
-  // Relations
-  event event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  user  auth_user @relation("uploaded_attachments", fields: [uploaded_by], references: [id])
+  created_at  DateTime  @default(now())
+  event       event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user        auth_user @relation("uploaded_attachments", fields: [uploaded_by], references: [id])
 
   @@map("event_attachments")
 }
 
-// Bulletin Board System
 model board_category {
-  id         String   @id @default(uuid())
-  company_id String
-  name       String
+  id          String       @id @default(uuid())
+  company_id  String
+  name        String
   description String?
-  color      String?  @default("#1890ff")
-  icon       String?
-  order_index Int     @default(0)
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  // Relations
-  company company      @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  posts   board_post[]
+  color       String?      @default("#1890ff")
+  icon        String?
+  order_index Int          @default(0)
+  is_active   Boolean      @default(true)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  company     company      @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  posts       board_post[]
 
   @@map("board_categories")
 }
 
 model board_post {
-  id          String   @id @default(uuid())
-  category_id String
-  author_id   String
-  title       String
-  content     String   @db.Text
-  is_pinned   Boolean  @default(false)
-  is_important Boolean @default(false)
-  view_count  Int      @default(0)
-  status      String   @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
-  tags        String[] // Array of tags
-  expires_at  DateTime? // Auto-archive date
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  category    board_category     @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  author      auth_user          @relation("authored_posts", fields: [author_id], references: [id])
-  comments    board_comment[]
-  attachments board_attachment[]
-  likes       board_like[]
+  id           String             @id @default(uuid())
+  category_id  String
+  author_id    String
+  title        String
+  content      String
+  is_pinned    Boolean            @default(false)
+  is_important Boolean            @default(false)
+  view_count   Int                @default(0)
+  status       String             @default("PUBLISHED")
+  tags         String[]
+  expires_at   DateTime?
+  created_at   DateTime           @default(now())
+  updated_at   DateTime           @updatedAt
+  attachments  board_attachment[]
+  comments     board_comment[]
+  likes        board_like[]
+  author       auth_user          @relation("authored_posts", fields: [author_id], references: [id])
+  category     board_category     @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
   @@map("board_posts")
 }
 
 model board_comment {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
   post_id    String
   author_id  String
-  content    String   @db.Text
-  parent_id  String?  // For nested comments
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  // Relations
-  post   board_post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  author auth_user      @relation("authored_comments", fields: [author_id], references: [id])
-  parent board_comment? @relation("comment_replies", fields: [parent_id], references: [id])
-  replies board_comment[] @relation("comment_replies")
+  content    String
+  parent_id  String?
+  created_at DateTime        @default(now())
+  updated_at DateTime        @updatedAt
+  author     auth_user       @relation("authored_comments", fields: [author_id], references: [id])
+  parent     board_comment?  @relation("comment_replies", fields: [parent_id], references: [id])
+  replies    board_comment[] @relation("comment_replies")
+  post       board_post      @relation(fields: [post_id], references: [id], onDelete: Cascade)
 
   @@map("board_comments")
 }
 
 model board_attachment {
-  id         String   @id @default(uuid())
-  post_id    String
-  filename   String
-  file_path  String
-  file_size  Int
-  mime_type  String
+  id          String     @id @default(uuid())
+  post_id     String
+  filename    String
+  file_path   String
+  file_size   Int
+  mime_type   String
   uploaded_by String
-  created_at DateTime @default(now())
-
-  // Relations
-  post board_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user auth_user  @relation("uploaded_board_attachments", fields: [uploaded_by], references: [id])
+  created_at  DateTime   @default(now())
+  post        board_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user        auth_user  @relation("uploaded_board_attachments", fields: [uploaded_by], references: [id])
 
   @@map("board_attachments")
 }
 
 model board_like {
-  id         String   @id @default(uuid())
+  id         String     @id @default(uuid())
   post_id    String
   user_id    String
-  created_at DateTime @default(now())
-
-  // Relations
-  post board_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user auth_user  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at DateTime   @default(now())
+  post       board_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       auth_user  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([post_id, user_id])
   @@map("board_likes")
 }
 
 model tenant {
-  id          String   @id @default(uuid())
-  name        String
-  domain      String   @unique
-  status      String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
-  plan        String   @default("BASIC") // BASIC, PREMIUM, ENTERPRISE
-  max_users   Int      @default(100)
-  settings    Json?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  users       auth_user[]
-  companies   company[]
-  auto_approval_settings auto_approval_settings[]
-  approval_route_templates approval_route_template[]
-  company_requests company_request[]
+  id                         String                     @id @default(uuid())
+  name                       String
+  domain                     String                     @unique
+  status                     String                     @default("ACTIVE")
+  plan                       String                     @default("BASIC")
+  max_users                  Int                        @default(100)
+  settings                   Json?
+  created_at                 DateTime                   @default(now())
+  updated_at                 DateTime                   @updatedAt
+  approval_route_templates   approval_route_template[]
+  users                      auth_user[]
+  auto_approval_settings     auto_approval_settings[]
+  companies                  company[]
+  company_requests           company_request[]
+  leave_allocation_histories leave_allocation_history[]
+  leave_types                leave_type[]
+  user_leave_balances        user_leave_balance[]
+  attendance                 attendance[]
+  attendance_requests        attendance_request[]
+  leave_requests             leave_request[]
+  approval_drafts            approval_draft[]
+  attitude_session           attitude_session[]
 
   @@map("tenants")
 }
 
-// ================================
-// COMPANY & ORGANIZATION
-// ================================
-
 model company {
-  id          String   @id @default(uuid())
-  tenant_id   String
-  name        String
-  biz_no      String?
-  ceo_name    String?
-  phone       String?
-  email       String?
-  address     String?
-  timezone    String   @default("Asia/Jakarta")
-  currency    String   @default("IDR")
-  logo_url    String?
-  settings    Json?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  tenant        tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  locations     company_location[]
-  org_units     org_unit[]
-  work_policies work_policy[]
+  id                     String                   @id @default(uuid())
+  tenant_id              String
+  name                   String
+  biz_no                 String?
+  ceo_name               String?
+  phone                  String?
+  email                  String?
+  address                String?
+  timezone               String                   @default("Asia/Jakarta")
+  currency               String                   @default("IDR")
+  logo_url               String?
+  settings               Json?
+  created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @updatedAt
   auto_approval_settings auto_approval_settings[]
-  program_categories program_category[]
-  events event[]
-  board_categories board_category[]
-  reference_documents reference_document[]
-  calendar_events calendar_event[]
-  company_announcements company_announcement[]
-  hr_community_posts hr_community_post[]
+  board_categories       board_category[]
+  business_trip_setting  business_trip_setting?   @relation("company_business_trip_setting")
+  calendar_events        calendar_event[]
+  code_categories        common_code_category[]   @relation("company_code_categories")
+  tenant                 tenant                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  company_announcements  company_announcement[]
+  feature_config         company_feature_config?  @relation("company_features")
+  feature_limits         company_feature_limit[]  @relation("company_limits")
+  locations              company_location[]
+  currency_setting       currency_setting?        @relation("company_currency_setting")
+  events                 event[]
+  expense_limits         expense_limit[]          @relation("company_expense_limits")
+  hr_community_posts     hr_community_post[]
   notification_templates notification_template[]
-  feature_config company_feature_config? @relation("company_features")
-  feature_limits company_feature_limit[] @relation("company_limits")
-  
-  // Common Code Relations
-  code_categories common_code_category[] @relation("company_code_categories")
-  expense_limits expense_limit[] @relation("company_expense_limits")
-  
-  // Overtime Work Relations
-  overtime_requests overtime_request[] @relation("company_overtime_requests")
-  overtime_policies overtime_policy[] @relation("company_overtime_policies")
+  org_units              org_unit[]
+  overtime_policies      overtime_policy[]        @relation("company_overtime_policies")
+  overtime_requests      overtime_request[]       @relation("company_overtime_requests")
+  program_categories     program_category[]
+  reference_documents    reference_document[]
+  work_policies          work_policy[]
 
   @@map("companies")
 }
 
 model company_location {
-  id                    String   @id @default(uuid())
-  company_id            String
-  name                  String
-  code                  String?
-  address               String?
-  lat                   Float
-  lng                   Float
-  radius_m              Int      @default(200)
-  wifi_ssids            String[] @db.Text
-  ip_cidrs              String[] @db.Text
-  web_checkin_allowed   Boolean  @default(true)
-  face_required         Boolean  @default(false)
-  status                String   @default("ACTIVE")
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-
-  // Relations
-  company           company            @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  employee_profiles employee_profile[]
+  id                  String             @id @default(uuid())
+  company_id          String
+  name                String
+  code                String?
+  address             String?
+  lat                 Float
+  lng                 Float
+  radius_m            Int                @default(200)
+  wifi_ssids          String[]
+  ip_cidrs            String[]
+  web_checkin_allowed Boolean            @default(true)
+  face_required       Boolean            @default(false)
+  status              String             @default("ACTIVE")
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+  company             company            @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  employee_profiles   employee_profile[]
 
   @@map("company_locations")
 }
 
 model org_unit {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   company_id  String
   parent_id   String?
   name        String
   code        String?
   description String?
-  order_index Int      @default(0)
-  status      String   @default("ACTIVE")
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  company    company     @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  parent     org_unit?   @relation("org_hierarchy", fields: [parent_id], references: [id])
-  children   org_unit[]  @relation("org_hierarchy")
-  members    auth_user[] @relation("org_members")
+  order_index Int         @default(0)
+  status      String      @default("ACTIVE")
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  members     auth_user[] @relation("org_members")
+  company     company     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  parent      org_unit?   @relation("org_hierarchy", fields: [parent_id], references: [id])
+  children    org_unit[]  @relation("org_hierarchy")
 
   @@map("org_units")
 }
 
 model employee_profile {
-  id                  String    @id @default(uuid())
-  user_id             String    @unique
-  emp_no              String?   @unique
-  department          String?
-  hire_date           DateTime?
-  base_location_id    String?
-  address             String?
-  emergency_contact   String?
-  emergency_phone     String?
-  employment_type     String    @default("FULL_TIME") // FULL_TIME, PART_TIME, CONTRACT, INTERN
-  salary              Decimal?  @db.Decimal(15, 2)
-  bank_account        String?
-  tax_id              String?
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
-
-  // Relations
-  user          auth_user         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  base_location company_location? @relation(fields: [base_location_id], references: [id])
+  id                String            @id @default(uuid())
+  user_id           String            @unique
+  emp_no            String?           @unique
+  department        String?
+  hire_date         DateTime?
+  base_location_id  String?
+  address           String?
+  emergency_contact String?
+  emergency_phone   String?
+  employment_type   String            @default("FULL_TIME")
+  salary            Decimal?          @db.Decimal(15, 2)
+  bank_account      String?
+  tax_id            String?
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  base_location     company_location? @relation(fields: [base_location_id], references: [id])
+  user              auth_user         @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("employee_profiles")
 }
 
-// ================================
-// ATTENDANCE MANAGEMENT
-// ================================
-
 model attendance {
-  id              String    @id @default(uuid())
-  user_id         String
-  date_key        DateTime  // 근무일 기준 (시프트 고려)
-  check_in_at     DateTime?
-  check_in_loc    Json?     // GeoLocation
-  check_out_at    DateTime?
-  check_out_loc   Json?     // GeoLocation
-  status          String    @default("NORMAL") // NORMAL, LATE, EARLY_LEAVE, ABSENT, REMOTE, OFFSITE, HOLIDAY, LEAVE
-  work_minutes    Int       @default(0)
-  break_minutes   Int       @default(0)
-  overtime_minutes Int      @default(0)
-  notes           String?
+  id                String          @id @default(uuid())
+  user_id           String
+  tenant_id         String
+  date_key          DateTime
+  check_in_at       DateTime?
+  check_in_loc      Json?
+  check_out_at      DateTime?
+  check_out_loc     Json?
+  status            String          @default("NORMAL")
+  work_minutes      Int             @default(0)
+  break_minutes     Int             @default(0)
+  overtime_minutes  Int             @default(0)
+  notes             String?
   approval_draft_id String?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-
-  // Relations
-  user auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  approval_draft approval_draft? @relation(fields: [approval_draft_id], references: [id])
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+  approval_draft    approval_draft? @relation(fields: [approval_draft_id], references: [id])
+  user              auth_user       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant            tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, date_key])
+  @@index([tenant_id])
   @@map("attendance")
 }
 
 model attendance_request {
   id           String    @id @default(uuid())
   user_id      String
-  request_type String    // CHECK_IN, CHECK_OUT, ADJUST
-  target_at    DateTime  // 적용할 날짜/시간
+  tenant_id    String
+  request_type String
+  target_at    DateTime
   reason_code  String?
   reason_text  String?
-  attach_urls  String[]  @db.Text
-  geo_snapshot Json?     // GeoSnapshot with device info
-  status       String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  attach_urls  String[]
+  geo_snapshot Json?
+  status       String    @default("PENDING")
   decided_by   String?
   decided_at   DateTime?
   comments     String?
   created_at   DateTime  @default(now())
   updated_at   DateTime  @updatedAt
+  user         auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant       tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
-  // Relations
-  user auth_user @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
+  @@index([tenant_id])
   @@map("attendance_requests")
 }
 
@@ -600,14 +542,14 @@ model work_policy {
   company_id      String
   name            String
   description     String?
-  work_days       Int[]    @db.SmallInt // [1,2,3,4,5] for Mon-Fri
-  start_time      String   // "09:00"
-  end_time        String   // "18:00"
-  lunch_start     String?  // "12:00"
-  lunch_end       String?  // "13:00"
-  late_threshold  Int      @default(15) // minutes
-  early_threshold Int      @default(15) // minutes
-  rounding_mode   String   @default("NONE") // NONE, UP_5, UP_10, UP_15
+  work_days       Int[]    @db.SmallInt
+  start_time      String
+  end_time        String
+  lunch_start     String?
+  lunch_end       String?
+  late_threshold  Int      @default(15)
+  early_threshold Int      @default(15)
+  rounding_mode   String   @default("NONE")
   backdate_days   Int      @default(7)
   geofence_strict Boolean  @default(true)
   face_required   Boolean  @default(false)
@@ -615,281 +557,281 @@ model work_policy {
   is_default      Boolean  @default(false)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
-
-  // Relations
-  company company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  company         company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
 
   @@map("work_policies")
 }
 
-// ================================
-// LEAVE MANAGEMENT
-// ================================
-
 model leave_type {
-  id              String   @id @default(uuid())
-  company_id      String?  // null for system-wide types
-  name            String
-  code            String
-  description     String?
-  max_days_year   Int?     // null for unlimited
-  carry_forward   Boolean  @default(false)
-  requires_approval Boolean @default(true)
-  deduct_weekends Boolean  @default(false)
-  color_hex       String   @default("#3b82f6")
-  is_paid         Boolean  @default(true)
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id                String               @id @default(uuid())
+  company_id        String?
+  name              String
+  code              String
+  description       String?
+  max_days_year     Int?
+  carry_forward     Boolean              @default(false)
+  requires_approval Boolean              @default(true)
+  deduct_weekends   Boolean              @default(false)
+  color_hex         String               @default("#3b82f6")
+  is_paid           Boolean              @default(true)
+  is_active         Boolean              @default(true)
+  created_at        DateTime             @default(now())
+  updated_at        DateTime             @updatedAt
+  allow_half_days   Boolean              @default(true)
+  default_days_year Int?
+  display_order     Int                  @default(0)
+  tenant_id         String
+  leave_requests    leave_request[]
+  tenant            tenant               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user_balances     user_leave_balance[]
 
-  // Relations
-  leave_requests leave_request[]
-
-  @@unique([code, company_id])
+  @@unique([code, tenant_id, company_id])
   @@map("leave_types")
 }
 
-model leave_balance {
-  id          String   @id @default(uuid())
-  user_id     String
-  leave_type  String   // ANNUAL, SICK, etc.
-  year        Int
-  allocated   Decimal  @db.Decimal(5, 2)
-  used        Decimal  @db.Decimal(5, 2) @default(0)
-  pending     Decimal  @db.Decimal(5, 2) @default(0)
-  carried     Decimal  @db.Decimal(5, 2) @default(0)
-  expires_at  DateTime?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+model user_leave_balance {
+  id            String     @id @default(uuid())
+  tenant_id     String
+  user_id       String
+  leave_type_id String
+  company_id    String
+  year          Int
+  allocated     Decimal    @default(0) @db.Decimal(5, 2)
+  used          Decimal    @default(0) @db.Decimal(5, 2)
+  pending       Decimal    @default(0) @db.Decimal(5, 2)
+  available     Decimal    @db.Decimal(5, 2)
+  notes         String?
+  updated_by    String?
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+  leave_type    leave_type @relation(fields: [leave_type_id], references: [id])
+  tenant        tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user          auth_user  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([user_id, leave_type, year])
-  @@map("leave_balances")
+  @@unique([user_id, leave_type_id, year, tenant_id])
+  @@index([tenant_id, company_id])
+  @@map("user_leave_balances")
 }
 
 model leave_request {
-  id             String    @id @default(uuid())
-  user_id        String
-  leave_type_id  String
-  start_date     DateTime
-  end_date       DateTime
-  days_count     Decimal   @db.Decimal(5, 2)
-  reason         String?
-  emergency      Boolean   @default(false)
+  id                String          @id @default(uuid())
+  user_id           String
+  tenant_id         String
+  leave_type_id     String
+  start_date        DateTime
+  end_date          DateTime
+  days_count        Decimal         @db.Decimal(5, 2)
+  reason            String?
+  emergency         Boolean         @default(false)
   emergency_contact String?
-  duration       String?   // "FULL_DAY", "HALF_DAY_MORNING", "HALF_DAY_AFTERNOON", "HOURS"
-  attach_urls    String[]  @db.Text
-  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
-  decided_by     String?
-  decided_at     DateTime?
-  submitted_at   DateTime?
-  comments       String?
+  duration          String?
+  attach_urls       String[]
+  status            String          @default("PENDING")
+  decided_by        String?
+  decided_at        DateTime?
+  submitted_at      DateTime?
+  comments          String?
   approval_draft_id String?
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+  approval_draft    approval_draft? @relation(fields: [approval_draft_id], references: [id])
+  leave_type        leave_type      @relation(fields: [leave_type_id], references: [id])
+  user              auth_user       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant            tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
-  // Relations
-  user       auth_user  @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  leave_type leave_type @relation(fields: [leave_type_id], references: [id])
-  approval_draft approval_draft? @relation(fields: [approval_draft_id], references: [id])
-
+  @@index([tenant_id])
+  @@index([tenant_id, status])
   @@map("leave_requests")
 }
 
-// ================================
-// APPROVAL SYSTEM
-// ================================
+model leave_allocation_history {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  user_id       String
+  leave_type_id String
+  year          Int
+  action_type   String
+  old_allocated Decimal? @db.Decimal(5, 2)
+  new_allocated Decimal  @db.Decimal(5, 2)
+  reason        String?
+  created_by    String
+  created_at    DateTime @default(now())
+  tenant        tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, user_id])
+  @@map("leave_allocation_histories")
+}
 
 model approval_category {
-  id               String   @id @default(uuid())
-  company_id       String?  // null for system-wide categories
-  name             String
-  code             String
-  description      String?
-  icon             String?
-  form_schema      Json?    // JSON Schema for dynamic form (optional now)
-  template_content String?  // Rich text template content
-  is_active        Boolean  @default(true)
-  order_index      Int      @default(0)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  // Relations
-  drafts approval_draft[]
-  auto_approval_settings auto_approval_settings[]
+  id                       String                    @id @default(uuid())
+  company_id               String?
+  name                     String
+  code                     String
+  description              String?
+  icon                     String?
+  form_schema              Json?
+  template_content         String?
+  is_active                Boolean                   @default(true)
+  order_index              Int                       @default(0)
+  created_at               DateTime                  @default(now())
+  updated_at               DateTime                  @updatedAt
+  drafts                   approval_draft[]
   approval_route_templates approval_route_template[]
-  reference_documents reference_document[] @relation("reference_documents")
+  auto_approval_settings   auto_approval_settings[]
+  reference_documents      reference_document[]      @relation("reference_documents")
 
   @@unique([code, company_id])
   @@map("approval_categories")
 }
 
 model approval_route_template {
-  id          String   @id @default(uuid())
+  id          String                          @id @default(uuid())
   tenant_id   String
-  company_id  String?  // null for system-wide templates
+  company_id  String?
   category_id String?
   name        String
   description String?
-  conditions  Json?    // Auto-routing conditions (amount, dept, etc.)
-  is_default  Boolean  @default(false)
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  tenant   tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  category approval_category? @relation(fields: [category_id], references: [id])
-  stages   approval_route_stage_template[]
+  conditions  Json?
+  is_default  Boolean                         @default(false)
+  is_active   Boolean                         @default(true)
+  created_at  DateTime                        @default(now())
+  updated_at  DateTime                        @updatedAt
+  stages      approval_route_stage_template[]
+  category    approval_category?              @relation(fields: [category_id], references: [id])
+  tenant      tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
   @@map("approval_route_templates")
 }
 
 model approval_route_stage_template {
-  id          String  @id @default(uuid())
+  id          String                             @id @default(uuid())
   template_id String
-  type        String  // CONSENT, APPROVAL, CC
-  mode        String? // SEQUENTIAL, PARALLEL (for APPROVAL type)
-  rule        String? // ALL, ANY (for CONSENT type)
+  type        String
+  mode        String?
+  rule        String?
   order_index Int
   name        String?
-
-  // Relations
-  template  approval_route_template           @relation(fields: [template_id], references: [id], onDelete: Cascade)
-  approvers approval_route_approver_template[]
+  approvers   approval_route_approver_template[]
+  template    approval_route_template            @relation(fields: [template_id], references: [id], onDelete: Cascade)
 
   @@map("approval_route_stage_templates")
 }
 
 model approval_route_approver_template {
-  id           String  @id @default(uuid())
-  stage_id     String
-  user_id      String?
-  role         String? // Role-based approver (MANAGER, HR_MANAGER, etc.)
-  order_index  Int
-  is_required  Boolean @default(true)
-
-  // Relations
-  stage approval_route_stage_template @relation(fields: [stage_id], references: [id], onDelete: Cascade)
+  id          String                        @id @default(uuid())
+  stage_id    String
+  user_id     String?
+  role        String?
+  order_index Int
+  is_required Boolean                       @default(true)
+  stage       approval_route_stage_template @relation(fields: [stage_id], references: [id], onDelete: Cascade)
 
   @@map("approval_route_approver_templates")
 }
 
 model approval_draft {
-  id          String    @id @default(uuid())
-  user_id     String
-  category_id String
-  title       String
-  content     Json      // Form data based on category schema
-  description String?   // Main content/body text
-  status      String    @default("DRAFT") // DRAFT, SUBMITTED, IN_PROGRESS, APPROVED, REJECTED, CANCELLED
-  submitted_at DateTime?
-  completed_at DateTime?
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
+  id                     String                  @id @default(uuid())
+  user_id                String
+  tenant_id              String
+  category_id            String
+  title                  String
+  content                Json
+  description            String?
+  status                 String                  @default("DRAFT")
+  submitted_at           DateTime?
+  completed_at           DateTime?
+  created_at             DateTime                @default(now())
+  updated_at             DateTime                @updatedAt
+  actions                approval_action[]
+  category               approval_category       @relation(fields: [category_id], references: [id])
+  user                   auth_user               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant                 tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  route                  approval_route?
+  attendance_records     attendance[]
+  business_trip_expenses business_trip_expense[] @relation("expense_approvals")
+  business_trip_reports  business_trip_report[]  @relation("report_approvals")
+  business_trip_requests business_trip_request[] @relation("business_trip_approvals")
+  attachments            file_attachment[]
+  leave_requests         leave_request[]
+  overtime_requests      overtime_request[]      @relation("overtime_approval_drafts")
 
-  // Relations
-  user     auth_user          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  category approval_category  @relation(fields: [category_id], references: [id])
-  route    approval_route?
-  actions  approval_action[]
-  attachments file_attachment[]
-  attendance_records attendance[]
-  leave_requests leave_request[]
-  overtime_requests overtime_request[] @relation("overtime_approval_drafts")
-
+  @@index([tenant_id])
+  @@index([tenant_id, status])
   @@map("approval_drafts")
 }
 
 model approval_route {
-  id       String @id @default(uuid())
-  draft_id String @unique
-
-  // Relations
-  draft  approval_draft       @relation(fields: [draft_id], references: [id], onDelete: Cascade)
-  stages approval_route_stage[]
+  id       String                 @id @default(uuid())
+  draft_id String                 @unique
+  stages   approval_route_stage[]
+  draft    approval_draft         @relation(fields: [draft_id], references: [id], onDelete: Cascade)
 
   @@map("approval_routes")
 }
 
 model approval_route_stage {
-  id          String  @id @default(uuid())
+  id          String                    @id @default(uuid())
   route_id    String
-  type        String  // CONSENT, APPROVAL, CC
-  mode        String? // SEQUENTIAL, PARALLEL
-  rule        String? // ALL, ANY
+  type        String
+  mode        String?
+  rule        String?
   order_index Int
   name        String?
-  status      String  @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, SKIPPED
-
-  // Relations
-  route     approval_route          @relation(fields: [route_id], references: [id], onDelete: Cascade)
-  approvers approval_route_approver[]
+  status      String                    @default("PENDING")
+  approvers   approval_route_approver[]
+  route       approval_route            @relation(fields: [route_id], references: [id], onDelete: Cascade)
 
   @@map("approval_route_stages")
 }
 
 model approval_route_approver {
-  id          String    @id @default(uuid())
+  id          String               @id @default(uuid())
   stage_id    String
   user_id     String
   order_index Int
-  status      String    @default("PENDING") // PENDING, APPROVED, REJECTED, DELEGATED
+  status      String               @default("PENDING")
   acted_at    DateTime?
   comments    String?
-
-  // Relations
-  stage approval_route_stage @relation(fields: [stage_id], references: [id], onDelete: Cascade)
-  user  auth_user             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  stage       approval_route_stage @relation(fields: [stage_id], references: [id], onDelete: Cascade)
+  user        auth_user            @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("approval_route_approvers")
 }
 
 model approval_action {
-  id        String   @id @default(uuid())
-  draft_id  String
-  user_id   String
-  action    String   // SUBMIT, APPROVE, REJECT, COMMENT, DELEGATE, RECALL
-  comments  String?
-  metadata  Json?
-  created_at DateTime @default(now())
-
-  // Relations
-  draft approval_draft @relation(fields: [draft_id], references: [id], onDelete: Cascade)
-  user  auth_user      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id         String         @id @default(uuid())
+  draft_id   String
+  user_id    String
+  action     String
+  comments   String?
+  metadata   Json?
+  created_at DateTime       @default(now())
+  draft      approval_draft @relation(fields: [draft_id], references: [id], onDelete: Cascade)
+  user       auth_user      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("approval_actions")
 }
 
-// ================================
-// FILE MANAGEMENT
-// ================================
-
 model file_attachment {
-  id           String   @id @default(uuid())
-  draft_id     String?
-  filename     String
+  id            String          @id @default(uuid())
+  draft_id      String?
+  filename      String
   original_name String
-  mime_type    String
-  size_bytes   Int
-  storage_path String
-  public_url   String?
-  uploaded_by  String
-  created_at   DateTime @default(now())
-
-  // Relations
-  draft approval_draft? @relation(fields: [draft_id], references: [id], onDelete: Cascade)
+  mime_type     String
+  size_bytes    Int
+  storage_path  String
+  public_url    String?
+  uploaded_by   String
+  created_at    DateTime        @default(now())
+  draft         approval_draft? @relation(fields: [draft_id], references: [id], onDelete: Cascade)
 
   @@map("file_attachments")
 }
 
-// ================================
-// SYSTEM MANAGEMENT
-// ================================
-
 model codebook {
   id          String   @id @default(uuid())
-  company_id  String?  // null for system-wide codes
-  group_code  String   // ATTEND_REASON, LEAVE_TYPE, etc.
+  company_id  String?
+  group_code  String
   code        String
   name        String
   description String?
@@ -905,8 +847,8 @@ model codebook {
 
 model settings {
   id          String   @id @default(uuid())
-  company_id  String?  // null for system-wide settings
-  category    String   // ATTENDANCE, LEAVE, APPROVAL, NOTIFICATION, etc.
+  company_id  String?
+  category    String
   key         String
   value       Json
   description String?
@@ -918,461 +860,388 @@ model settings {
 }
 
 model audit_log {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   user_id     String?
-  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
-  resource    String   // USER, ATTENDANCE, APPROVAL, etc.
+  action      String
+  resource    String
   resource_id String?
   old_values  Json?
   new_values  Json?
-  metadata    Json?    // IP, user agent, etc.
-  created_at  DateTime @default(now())
-
-  // Relations
-  user auth_user? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  metadata    Json?
+  created_at  DateTime   @default(now())
+  user        auth_user? @relation(fields: [user_id], references: [id])
 
   @@map("audit_logs")
 }
 
-// ================================
-// NOTIFICATION SYSTEM
-// ================================
-
 model notification {
-  id          String   @id @default(uuid())
-  user_id     String   // Recipient
-  title       String
-  message     String
-  type        String   // ATTENDANCE_EXCEPTION, APPROVAL, LEAVE_REQUEST, etc.
-  reference_type String? // ATTENDANCE_REQUEST, APPROVAL_DRAFT, etc.
-  reference_id   String? // Related entity ID
-  status      String   @default("UNREAD") // UNREAD, READ
-  priority    String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
-  metadata    Json?    // Additional data
-  created_at  DateTime @default(now())
-  read_at     DateTime?
-
-  // Relations
-  user auth_user @relation("user_notifications", fields: [user_id], references: [id], onDelete: Cascade)
+  id             String    @id @default(uuid())
+  user_id        String
+  title          String
+  message        String
+  type           String
+  reference_type String?
+  reference_id   String?
+  status         String    @default("UNREAD")
+  priority       String    @default("NORMAL")
+  metadata       Json?
+  created_at     DateTime  @default(now())
+  read_at        DateTime?
+  user           auth_user @relation("user_notifications", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
 
-// ================================
-// EXPENSE MANAGEMENT
-// ================================
-
 model expense_category {
-  id          String   @id @default(uuid())
-  company_id  String?  // null for system-wide categories
+  id          String            @id @default(uuid())
+  company_id  String?
   name        String
   code        String
   description String?
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  expenses expense_request[]
+  is_active   Boolean           @default(true)
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+  expenses    expense_request[]
 
   @@unique([code, company_id])
   @@map("expense_categories")
 }
 
 model expense_request {
-  id             String   @id @default(uuid())
-  user_id        String
-  category_id    String
-  title          String
-  description    String?
-  amount         Decimal  @db.Decimal(10, 2)
-  currency       String   @default("KRW")
-  expense_date   DateTime @db.Date
-  receipt_urls   String[] @db.Text
-  status         String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, PAID
-  submitted_at   DateTime?
-  approved_at    DateTime?
-  approved_by    String?
-  rejected_at    DateTime?
-  rejected_by    String?
+  id               String           @id @default(uuid())
+  user_id          String
+  category_id      String
+  title            String
+  description      String?
+  amount           Decimal          @db.Decimal(10, 2)
+  currency         String           @default("KRW")
+  expense_date     DateTime         @db.Date
+  receipt_urls     String[]
+  status           String           @default("DRAFT")
+  submitted_at     DateTime?
+  approved_at      DateTime?
+  approved_by      String?
+  rejected_at      DateTime?
+  rejected_by      String?
   rejection_reason String?
-  paid_at        DateTime?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-
-  // Relations
-  user     auth_user        @relation("user_expense_requests", fields: [user_id], references: [id], onDelete: Cascade)
-  category expense_category @relation(fields: [category_id], references: [id])
-  approver auth_user?       @relation("approved_expense_requests", fields: [approved_by], references: [id], onDelete: SetNull)
-  rejecter auth_user?       @relation("rejected_expense_requests", fields: [rejected_by], references: [id], onDelete: SetNull)
+  paid_at          DateTime?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+  approver         auth_user?       @relation("approved_expense_requests", fields: [approved_by], references: [id])
+  category         expense_category @relation(fields: [category_id], references: [id])
+  rejecter         auth_user?       @relation("rejected_expense_requests", fields: [rejected_by], references: [id])
+  user             auth_user        @relation("user_expense_requests", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("expense_requests")
 }
 
-// ================================
-// ATTITUDE MONITORING
-// ================================
-
 model attitude_session {
-  id              String   @id @default(uuid())
-  user_id         String
-  date            DateTime @db.Date
-  login_time      DateTime
-  logout_time     DateTime?
-  total_active_time Int?   // in seconds
-  total_idle_time   Int?   // in seconds
-  productivity_score Float? // 0-100
-  status          String   @default("ACTIVE") // ACTIVE, COMPLETED, ABNORMAL
+  id                   String                 @id @default(uuid())
+  user_id              String
+  tenant_id            String
+  date                 DateTime               @db.Date
+  login_time           DateTime
+  logout_time          DateTime?
+  total_active_time    Int?
+  total_idle_time      Int?
+  productivity_score   Float?
+  status               String                 @default("ACTIVE")
   last_agent_heartbeat DateTime?
-  agent_version   String?
-  agent_os        String?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  user         auth_user              @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  screenshots  attitude_screenshot[]
-  idle_periods attitude_idle_period[]
-  app_usage    attitude_app_usage[]
-  web_usage    attitude_web_usage[]
+  agent_version        String?
+  agent_os             String?
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
+  app_usage            attitude_app_usage[]
+  idle_periods         attitude_idle_period[]
+  screenshots          attitude_screenshot[]
+  user                 auth_user              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tenant               tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  web_usage            attitude_web_usage[]
 
   @@unique([user_id, date])
+  @@index([tenant_id])
+  @@index([tenant_id, date])
   @@map("attitude_sessions")
 }
 
 model attitude_screenshot {
-  id           String   @id @default(uuid())
-  session_id   String
-  file_url     String
+  id            String           @id @default(uuid())
+  session_id    String
+  file_url      String
   thumbnail_url String?
-  captured_at  DateTime
-  is_blurred   Boolean  @default(false) // for privacy
-  metadata     Json?    // window titles, active app, etc.
-  created_at   DateTime @default(now())
-
-  // Relations
-  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  captured_at   DateTime
+  is_blurred    Boolean          @default(false)
+  metadata      Json?
+  created_at    DateTime         @default(now())
+  session       attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@map("attitude_screenshots")
 }
 
 model attitude_idle_period {
-  id         String   @id @default(uuid())
+  id         String           @id @default(uuid())
   session_id String
   start_time DateTime
   end_time   DateTime?
-  duration   Int?     // in seconds
-  reason     String?  // INACTIVITY, LOCKED_SCREEN, etc.
-  created_at DateTime @default(now())
-
-  // Relations
-  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  duration   Int?
+  reason     String?
+  created_at DateTime         @default(now())
+  session    attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@map("attitude_idle_periods")
 }
 
 model attitude_app_usage {
-  id           String   @id @default(uuid())
-  session_id   String
-  app_name     String
-  app_category String   // PRODUCTIVITY, COMMUNICATION, ENTERTAINMENT, etc.
-  window_title String?
-  start_time   DateTime
-  end_time     DateTime?
-  duration     Int?     // in seconds
-  is_productive Boolean @default(true)
-  created_at   DateTime @default(now())
-
-  // Relations
-  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  id            String           @id @default(uuid())
+  session_id    String
+  app_name      String
+  app_category  String
+  window_title  String?
+  start_time    DateTime
+  end_time      DateTime?
+  duration      Int?
+  is_productive Boolean          @default(true)
+  created_at    DateTime         @default(now())
+  session       attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@index([session_id, app_category])
   @@map("attitude_app_usage")
 }
 
 model attitude_web_usage {
-  id           String   @id @default(uuid())
-  session_id   String
-  domain       String
-  url          String?
-  page_title   String?
-  category     String   // WORK, SOCIAL_MEDIA, SHOPPING, ENTERTAINMENT, NEWS, etc.
-  visit_count  Int      @default(1)
-  total_time   Int?     // in seconds
-  is_productive Boolean @default(true)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  // Relations
-  session attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  id            String           @id @default(uuid())
+  session_id    String
+  domain        String
+  url           String?
+  page_title    String?
+  category      String
+  visit_count   Int              @default(1)
+  total_time    Int?
+  is_productive Boolean          @default(true)
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+  session       attitude_session @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@index([session_id, category])
   @@map("attitude_web_usage")
 }
 
 model attitude_app_whitelist {
-  id          String   @id @default(uuid())
-  company_id  String?
-  app_name    String
-  category    String
-  is_productive Boolean @default(true)
-  description String?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id            String   @id @default(uuid())
+  company_id    String?
+  app_name      String
+  category      String
+  is_productive Boolean  @default(true)
+  description   String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
   @@unique([app_name, company_id])
   @@map("attitude_app_whitelist")
 }
 
-// ================================
-// SERVICE APPLICATION & PROVIDER
-// ================================
-
-// Service provider (본사) tenant - Special tenant for Nova HR provider
 model provider_tenant {
-  id          String   @id @default(uuid())
-  name        String   @default("Nova HR Inc.")
-  domain      String   @unique @default("provider.nova-hr.com")
-  status      String   @default("ACTIVE")
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
+  id              String           @id @default(uuid())
+  name            String           @default("Nova HR Inc.")
+  domain          String           @unique @default("provider.nova-hr.com")
+  status          String           @default("ACTIVE")
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
   provider_admins provider_admin[]
-  
+
   @@map("provider_tenant")
 }
 
-// Provider admin users (본사 관리자)
 model provider_admin {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  password    String
-  name        String
-  phone       String?
-  role        String   @default("PROVIDER_ADMIN") // PROVIDER_ADMIN, PROVIDER_SUPER_ADMIN
-  status      String   @default("ACTIVE")
-  tenant_id   String
-  last_login  DateTime?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  tenant      provider_tenant @relation(fields: [tenant_id], references: [id])
+  id                String            @id @default(uuid())
+  email             String            @unique
+  password          String
+  name              String
+  phone             String?
+  role              String            @default("PROVIDER_ADMIN")
+  status            String            @default("ACTIVE")
+  tenant_id         String
+  last_login        DateTime?
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
   approved_requests company_request[] @relation("approver")
-  
+  tenant            provider_tenant   @relation(fields: [tenant_id], references: [id])
+
   @@map("provider_admins")
 }
 
-// Company registration requests from public website
 model company_request {
-  id                String   @id @default(uuid())
-  company_name      String
-  business_number   String?
-  ceo_name          String
-  contact_email     String
-  contact_phone     String
-  address           String?
-  employee_count    String?  // 1-10, 11-50, 51-200, 201-500, 500+
-  industry          String?  // IT, Manufacturing, Service, etc.
-  description       String?  @db.Text
-  notes             String?  @db.Text
-  
-  // Request status
-  status            String   @default("PENDING") // PENDING, REVIEWING, APPROVED, REJECTED
-  reviewed_by       String?
-  reviewed_at       DateTime?
-  rejection_reason  String?  @db.Text
-  
-  // Auto-generated on approval
-  tenant_id         String?  // Created tenant ID after approval
-  company_id        String?  // Created company ID after approval
-  admin_user_id     String?  // Created admin user ID after approval
-  
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  id               String          @id @default(uuid())
+  company_name     String
+  business_number  String?
+  ceo_name         String
+  contact_email    String
+  contact_phone    String
+  address          String?
+  employee_count   String?
+  industry         String?
+  description      String?
+  notes            String?
+  status           String          @default("PENDING")
+  reviewed_by      String?
+  reviewed_at      DateTime?
+  rejection_reason String?
+  tenant_id        String?
+  company_id       String?
+  admin_user_id    String?
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+  reviewer         provider_admin? @relation("approver", fields: [reviewed_by], references: [id])
+  tenant           tenant?         @relation(fields: [tenant_id], references: [id])
 
-  // Relations
-  reviewer          provider_admin? @relation("approver", fields: [reviewed_by], references: [id])
-  tenant            tenant? @relation(fields: [tenant_id], references: [id])
-  
   @@index([status, created_at])
   @@index([contact_email])
   @@map("company_requests")
 }
 
-// Add relation to tenant model
-// (This is just a comment - we need to update the existing tenant model)
-
 model attitude_web_whitelist {
-  id          String   @id @default(uuid())
-  company_id  String?
-  domain      String
-  category    String
-  is_productive Boolean @default(true)
-  description String?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id            String   @id @default(uuid())
+  company_id    String?
+  domain        String
+  category      String
+  is_productive Boolean  @default(true)
+  description   String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
   @@unique([domain, company_id])
   @@map("attitude_web_whitelist")
 }
 
-// ================================
-// AUTO APPROVAL SYSTEM
-// ================================
-
 model auto_approval_settings {
-  id             String  @id @default(uuid())
+  id             String             @id @default(uuid())
   tenant_id      String
   company_id     String?
   category_id    String?
-  enabled        Boolean @default(true)
-  conditions     Json    // Complex approval conditions
-  max_amount     Float?  // Maximum amount for auto approval
-  approver_type  String  @default("MANAGER") // MANAGER, HR, DEPARTMENT_HEAD, CUSTOM
-  fallback_users String[] // Fallback approvers if primary not available
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-
-  // Relations
-  tenant   tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  company  company?           @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  category approval_category? @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  enabled        Boolean            @default(true)
+  conditions     Json
+  max_amount     Float?
+  approver_type  String             @default("MANAGER")
+  fallback_users String[]
+  created_at     DateTime           @default(now())
+  updated_at     DateTime           @updatedAt
+  category       approval_category? @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  company        company?           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  tenant         tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
   @@map("auto_approval_settings")
 }
 
-// ================================
-// REFERENCE DOCUMENTS
-// ================================
-
 model reference_document {
-  id          String   @id @default(uuid())
+  id          String                          @id @default(uuid())
   company_id  String
   author_id   String
   category_id String?
   title       String
-  content     Json     // Form data based on category schema
-  description String?  // Main content/body text
-  tags        String[] // Tags for easier searching
-  view_count  Int      @default(0)
-  is_public   Boolean  @default(true)  // Whether other users can view
-  is_template Boolean  @default(false) // Whether this is a template
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  company     company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  author      auth_user         @relation("reference_documents", fields: [author_id], references: [id], onDelete: Cascade)
-  category    approval_category? @relation("reference_documents", fields: [category_id], references: [id], onDelete: SetNull)
+  content     Json
+  description String?
+  tags        String[]
+  view_count  Int                             @default(0)
+  is_public   Boolean                         @default(true)
+  is_template Boolean                         @default(false)
+  created_at  DateTime                        @default(now())
+  updated_at  DateTime                        @updatedAt
   attachments reference_document_attachment[]
   views       reference_document_view[]
+  author      auth_user                       @relation("reference_documents", fields: [author_id], references: [id], onDelete: Cascade)
+  category    approval_category?              @relation("reference_documents", fields: [category_id], references: [id])
+  company     company                         @relation(fields: [company_id], references: [id], onDelete: Cascade)
 
   @@map("reference_documents")
 }
 
 model reference_document_attachment {
-  id          String @id @default(uuid())
+  id          String             @id @default(uuid())
   document_id String
   file_name   String
   file_path   String
   file_size   Int
   mime_type   String
-  created_at  DateTime @default(now())
-
-  // Relations
-  document reference_document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  created_at  DateTime           @default(now())
+  document    reference_document @relation(fields: [document_id], references: [id], onDelete: Cascade)
 
   @@map("reference_document_attachments")
 }
 
 model reference_document_view {
-  id          String   @id @default(uuid())
+  id          String             @id @default(uuid())
   document_id String
   user_id     String
-  viewed_at   DateTime @default(now())
-
-  // Relations
-  document reference_document @relation(fields: [document_id], references: [id], onDelete: Cascade)
-  user     auth_user           @relation("reference_document_views", fields: [user_id], references: [id], onDelete: Cascade)
+  viewed_at   DateTime           @default(now())
+  document    reference_document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  user        auth_user          @relation("reference_document_views", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([document_id, user_id])
   @@map("reference_document_views")
 }
 
-// ================================
-// CALENDAR & SCHEDULE SYSTEM
-// ================================
-
 model calendar_event {
-  id            String   @id @default(uuid())
-  company_id    String
-  creator_id    String
-  title         String
-  description   String?
-  start_date    DateTime
-  end_date      DateTime
-  all_day       Boolean  @default(false)
-  event_type    String   @default("PERSONAL") // PERSONAL, MEETING, COMPANY_ANNOUNCEMENT, HOLIDAY, BIRTHDAY, LEAVE
-  location      String?
-  color         String?  @default("#1890ff")
-  is_public     Boolean  @default(false) // Whether others can see this event
-  is_recurring  Boolean  @default(false)
-  recurrence_rule String? // RRULE for recurring events
-  reminder_minutes Int[]  @default([15]) // Reminder times in minutes before event
-  status        String   @default("CONFIRMED") // CONFIRMED, TENTATIVE, CANCELLED
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-
-  // Relations
-  company       company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  creator       auth_user @relation("created_events", fields: [creator_id], references: [id], onDelete: Cascade)
-  attendees     calendar_event_attendee[]
-  attachments   calendar_event_attachment[]
+  id               String                      @id @default(uuid())
+  company_id       String
+  creator_id       String
+  title            String
+  description      String?
+  start_date       DateTime
+  end_date         DateTime
+  all_day          Boolean                     @default(false)
+  event_type       String                      @default("PERSONAL")
+  location         String?
+  color            String?                     @default("#1890ff")
+  is_public        Boolean                     @default(false)
+  is_recurring     Boolean                     @default(false)
+  recurrence_rule  String?
+  reminder_minutes Int[]                       @default([15])
+  status           String                      @default("CONFIRMED")
+  created_at       DateTime                    @default(now())
+  updated_at       DateTime                    @updatedAt
+  attachments      calendar_event_attachment[]
+  attendees        calendar_event_attendee[]
+  company          company                     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  creator          auth_user                   @relation("created_events", fields: [creator_id], references: [id], onDelete: Cascade)
 
   @@map("calendar_events")
 }
 
 model calendar_event_attendee {
-  id        String   @id @default(uuid())
-  event_id  String
-  user_id   String
-  status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, TENTATIVE
+  id               String         @id @default(uuid())
+  event_id         String
+  user_id          String
+  status           String         @default("PENDING")
   response_message String?
-  is_organizer Boolean @default(false)
-  can_edit  Boolean  @default(false)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  // Relations
-  event     calendar_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  user      auth_user @relation("event_attendees", fields: [user_id], references: [id], onDelete: Cascade)
+  is_organizer     Boolean        @default(false)
+  can_edit         Boolean        @default(false)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+  event            calendar_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user             auth_user      @relation("event_attendees", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([event_id, user_id])
   @@map("calendar_event_attendees")
 }
 
 model calendar_event_attachment {
-  id          String @id @default(uuid())
+  id          String         @id @default(uuid())
   event_id    String
   file_name   String
   file_path   String
   file_size   Int
   mime_type   String
   uploaded_by String
-  created_at  DateTime @default(now())
-
-  // Relations
+  created_at  DateTime       @default(now())
   event       calendar_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  uploader    auth_user @relation("uploaded_event_attachments", fields: [uploaded_by], references: [id], onDelete: Cascade)
+  uploader    auth_user      @relation("uploaded_event_attachments", fields: [uploaded_by], references: [id], onDelete: Cascade)
 
   @@map("calendar_event_attachments")
 }
 
 model public_holiday {
   id          String   @id @default(uuid())
-  country     String   @default("KR") // ISO country code
+  country     String   @default("KR")
   name        String
   date        DateTime @db.Date
   is_national Boolean  @default(true)
@@ -1385,613 +1254,581 @@ model public_holiday {
 }
 
 model company_announcement {
-  id              String   @id @default(uuid())
-  company_id      String
-  author_id       String
-  title           String
-  content         String   @db.Text
-  announcement_type String @default("GENERAL") // GENERAL, URGENT, POLICY, EVENT, MAINTENANCE
-  priority        String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
-  is_published    Boolean  @default(false)
-  publish_date    DateTime?
-  expire_date     DateTime?
-  target_audience String   @default("ALL") // ALL, DEPARTMENT, SPECIFIC_USERS
-  department_ids  String[] // Target departments
-  user_ids        String[] // Target specific users
-  read_count      Int      @default(0)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  company         company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  author          auth_user @relation("authored_announcements", fields: [author_id], references: [id], onDelete: Cascade)
-  attachments     company_announcement_attachment[]
-  read_receipts   company_announcement_read[]
+  id                String                            @id @default(uuid())
+  company_id        String
+  author_id         String
+  title             String
+  content           String
+  announcement_type String                            @default("GENERAL")
+  priority          String                            @default("NORMAL")
+  is_published      Boolean                           @default(false)
+  publish_date      DateTime?
+  expire_date       DateTime?
+  target_audience   String                            @default("ALL")
+  department_ids    String[]
+  user_ids          String[]
+  read_count        Int                               @default(0)
+  created_at        DateTime                          @default(now())
+  updated_at        DateTime                          @updatedAt
+  attachments       company_announcement_attachment[]
+  read_receipts     company_announcement_read[]
+  author            auth_user                         @relation("authored_announcements", fields: [author_id], references: [id], onDelete: Cascade)
+  company           company                           @relation(fields: [company_id], references: [id], onDelete: Cascade)
 
   @@map("company_announcements")
 }
 
 model company_announcement_attachment {
-  id              String @id @default(uuid())
+  id              String               @id @default(uuid())
   announcement_id String
   file_name       String
   file_path       String
   file_size       Int
   mime_type       String
-  created_at      DateTime @default(now())
-
-  // Relations
+  created_at      DateTime             @default(now())
   announcement    company_announcement @relation(fields: [announcement_id], references: [id], onDelete: Cascade)
 
   @@map("company_announcement_attachments")
 }
 
 model company_announcement_read {
-  id              String   @id @default(uuid())
+  id              String               @id @default(uuid())
   announcement_id String
   user_id         String
-  read_at         DateTime @default(now())
-
-  // Relations
+  read_at         DateTime             @default(now())
   announcement    company_announcement @relation(fields: [announcement_id], references: [id], onDelete: Cascade)
-  user            auth_user @relation("read_announcements", fields: [user_id], references: [id], onDelete: Cascade)
+  user            auth_user            @relation("read_announcements", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([announcement_id, user_id])
   @@map("company_announcement_reads")
 }
 
 model user_calendar_settings {
-  id                    String   @id @default(uuid())
-  user_id               String   @unique
-  default_view          String   @default("MONTH") // MONTH, WEEK, DAY, AGENDA
-  week_start            Int      @default(0) // 0 = Sunday, 1 = Monday
-  work_hours_start      String   @default("09:00")
-  work_hours_end        String   @default("18:00")
-  show_weekends         Boolean  @default(true)
-  default_reminder      Int      @default(15) // Minutes before event
-  time_zone             String   @default("Asia/Seoul")
-  show_declined_events  Boolean  @default(false)
-  calendar_color_scheme Json?    // Custom color scheme for different event types
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-
-  // Relations
+  id                    String    @id @default(uuid())
+  user_id               String    @unique
+  default_view          String    @default("MONTH")
+  week_start            Int       @default(0)
+  work_hours_start      String    @default("09:00")
+  work_hours_end        String    @default("18:00")
+  show_weekends         Boolean   @default(true)
+  default_reminder      Int       @default(15)
+  time_zone             String    @default("Asia/Seoul")
+  show_declined_events  Boolean   @default(false)
+  calendar_color_scheme Json?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
   user                  auth_user @relation("calendar_settings", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("user_calendar_settings")
 }
 
-// ================================
-// HR COMMUNITY & NOTIFICATION SYSTEM
-// ================================
-
 model hr_community_post {
-  id              String   @id @default(uuid())
-  company_id      String
-  author_id       String
-  title           String
-  content         String   @db.Text
-  post_type       String   @default("GENERAL") // GENERAL, ANNOUNCEMENT, POLICY, URGENT, CELEBRATION, QUESTION
-  priority        String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
-  is_pinned       Boolean  @default(false)
-  is_published    Boolean  @default(true)
-  allow_comments  Boolean  @default(true)
-  view_count      Int      @default(0)
-  like_count      Int      @default(0)
-  comment_count   Int      @default(0)
-  notification_settings Json? // Web push, email, app push preferences
-  target_audience String   @default("ALL") // ALL, DEPARTMENT, ROLE, SPECIFIC_USERS
-  department_ids  String[] // Target departments
-  role_ids        String[] // Target roles
-  user_ids        String[] // Target specific users
-  tags            String[] // Post tags for categorization
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  company         company @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  author          auth_user @relation("authored_community_posts", fields: [author_id], references: [id], onDelete: Cascade)
-  attachments     hr_community_attachment[]
-  comments        hr_community_comment[]
-  likes           hr_community_like[]
-  views           hr_community_view[]
-  notifications   hr_community_notification[]
+  id                    String                      @id @default(uuid())
+  company_id            String
+  author_id             String
+  title                 String
+  content               String
+  post_type             String                      @default("GENERAL")
+  priority              String                      @default("NORMAL")
+  is_pinned             Boolean                     @default(false)
+  is_published          Boolean                     @default(true)
+  allow_comments        Boolean                     @default(true)
+  view_count            Int                         @default(0)
+  like_count            Int                         @default(0)
+  comment_count         Int                         @default(0)
+  notification_settings Json?
+  target_audience       String                      @default("ALL")
+  department_ids        String[]
+  role_ids              String[]
+  user_ids              String[]
+  tags                  String[]
+  created_at            DateTime                    @default(now())
+  updated_at            DateTime                    @updatedAt
+  attachments           hr_community_attachment[]
+  comments              hr_community_comment[]
+  likes                 hr_community_like[]
+  notifications         hr_community_notification[]
+  author                auth_user                   @relation("authored_community_posts", fields: [author_id], references: [id], onDelete: Cascade)
+  company               company                     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  views                 hr_community_view[]
 
   @@map("hr_community_posts")
 }
 
 model hr_community_attachment {
-  id          String @id @default(uuid())
+  id          String            @id @default(uuid())
   post_id     String
   file_name   String
   file_path   String
   file_size   Int
   mime_type   String
   uploaded_by String
-  created_at  DateTime @default(now())
-
-  // Relations
+  created_at  DateTime          @default(now())
   post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  uploader    auth_user @relation("uploaded_community_attachments", fields: [uploaded_by], references: [id], onDelete: Cascade)
+  uploader    auth_user         @relation("uploaded_community_attachments", fields: [uploaded_by], references: [id], onDelete: Cascade)
 
   @@map("hr_community_attachments")
 }
 
 model hr_community_comment {
-  id          String   @id @default(uuid())
-  post_id     String
-  author_id   String
-  parent_id   String?  // For nested comments (replies)
-  content     String   @db.Text
-  is_edited   Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  author      auth_user @relation("authored_community_comments", fields: [author_id], references: [id], onDelete: Cascade)
-  parent      hr_community_comment? @relation("comment_replies", fields: [parent_id], references: [id])
-  replies     hr_community_comment[] @relation("comment_replies")
+  id         String                 @id @default(uuid())
+  post_id    String
+  author_id  String
+  parent_id  String?
+  content    String
+  is_edited  Boolean                @default(false)
+  created_at DateTime               @default(now())
+  updated_at DateTime               @updatedAt
+  author     auth_user              @relation("authored_community_comments", fields: [author_id], references: [id], onDelete: Cascade)
+  parent     hr_community_comment?  @relation("comment_replies", fields: [parent_id], references: [id])
+  replies    hr_community_comment[] @relation("comment_replies")
+  post       hr_community_post      @relation(fields: [post_id], references: [id], onDelete: Cascade)
 
   @@map("hr_community_comments")
 }
 
 model hr_community_like {
-  id          String   @id @default(uuid())
-  post_id     String
-  user_id     String
-  created_at  DateTime @default(now())
-
-  // Relations
-  post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user        auth_user @relation("community_likes", fields: [user_id], references: [id], onDelete: Cascade)
+  id         String            @id @default(uuid())
+  post_id    String
+  user_id    String
+  created_at DateTime          @default(now())
+  post       hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       auth_user         @relation("community_likes", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([post_id, user_id])
   @@map("hr_community_likes")
 }
 
 model hr_community_view {
-  id          String   @id @default(uuid())
-  post_id     String
-  user_id     String
-  viewed_at   DateTime @default(now())
-
-  // Relations
-  post        hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user        auth_user @relation("community_views", fields: [user_id], references: [id], onDelete: Cascade)
+  id        String            @id @default(uuid())
+  post_id   String
+  user_id   String
+  viewed_at DateTime          @default(now())
+  post      hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user      auth_user         @relation("community_views", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([post_id, user_id])
   @@map("hr_community_views")
 }
 
 model hr_community_notification {
-  id                String   @id @default(uuid())
+  id                String            @id @default(uuid())
   post_id           String
   recipient_id      String
-  notification_type String   // POST_CREATED, COMMENT_ADDED, POST_LIKED, MENTION
+  notification_type String
   title             String
   message           String
-  is_read           Boolean  @default(false)
-  web_push_sent     Boolean  @default(false)
-  email_sent        Boolean  @default(false)
-  app_push_sent     Boolean  @default(false)
+  is_read           Boolean           @default(false)
+  web_push_sent     Boolean           @default(false)
+  email_sent        Boolean           @default(false)
+  app_push_sent     Boolean           @default(false)
   web_push_sent_at  DateTime?
   email_sent_at     DateTime?
   app_push_sent_at  DateTime?
-  created_at        DateTime @default(now())
+  created_at        DateTime          @default(now())
   read_at           DateTime?
-
-  // Relations
   post              hr_community_post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  recipient         auth_user @relation("received_community_notifications", fields: [recipient_id], references: [id], onDelete: Cascade)
+  recipient         auth_user         @relation("received_community_notifications", fields: [recipient_id], references: [id], onDelete: Cascade)
 
   @@map("hr_community_notifications")
 }
 
 model user_notification_preference {
-  id                    String   @id @default(uuid())
-  user_id               String   @unique
-  web_push_enabled      Boolean  @default(true)
-  email_enabled         Boolean  @default(true)
-  app_push_enabled      Boolean  @default(true)
-  community_posts       Boolean  @default(true) // New community posts
-  announcements         Boolean  @default(true) // Important announcements
-  comments              Boolean  @default(true) // Comments on my posts
-  likes                 Boolean  @default(false) // Likes on my posts
-  mentions              Boolean  @default(true) // When mentioned in posts/comments
-  urgent_only           Boolean  @default(false) // Only urgent notifications
-  quiet_hours_enabled   Boolean  @default(false)
-  quiet_hours_start     String?  @default("22:00") // 10 PM
-  quiet_hours_end       String?  @default("08:00") // 8 AM
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-
-  // Relations
-  user                  auth_user @relation("notification_preferences", fields: [user_id], references: [id], onDelete: Cascade)
+  id                  String    @id @default(uuid())
+  user_id             String    @unique
+  web_push_enabled    Boolean   @default(true)
+  email_enabled       Boolean   @default(true)
+  app_push_enabled    Boolean   @default(true)
+  community_posts     Boolean   @default(true)
+  announcements       Boolean   @default(true)
+  comments            Boolean   @default(true)
+  likes               Boolean   @default(false)
+  mentions            Boolean   @default(true)
+  urgent_only         Boolean   @default(false)
+  quiet_hours_enabled Boolean   @default(false)
+  quiet_hours_start   String?   @default("22:00")
+  quiet_hours_end     String?   @default("08:00")
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  user                auth_user @relation("notification_preferences", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("user_notification_preferences")
 }
 
 model web_push_subscription {
-  id          String   @id @default(uuid())
-  user_id     String
-  endpoint    String   @unique
-  p256dh_key  String   // Public key for encryption
-  auth_key    String   // Authentication secret
-  user_agent  String?  // Browser/device info
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  // Relations
-  user        auth_user @relation("web_push_subscriptions", fields: [user_id], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid())
+  user_id    String
+  endpoint   String    @unique
+  p256dh_key String
+  auth_key   String
+  user_agent String?
+  is_active  Boolean   @default(true)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  user       auth_user @relation("web_push_subscriptions", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("web_push_subscriptions")
 }
 
 model notification_template {
-  id              String   @id @default(uuid())
-  company_id      String?  // null for system-wide templates
-  name            String   // Template identifier
-  notification_type String // POST_CREATED, COMMENT_ADDED, etc.
-  channel         String   // WEB_PUSH, EMAIL, APP_PUSH
-  subject         String?  // For email notifications
-  title           String   // Notification title
-  body            String   // Notification body (supports placeholders)
-  html_body       String?  // HTML version for emails
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  company         company? @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  id                String   @id @default(uuid())
+  company_id        String?
+  name              String
+  notification_type String
+  channel           String
+  subject           String?
+  title             String
+  body              String
+  html_body         String?
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  company           company? @relation(fields: [company_id], references: [id], onDelete: Cascade)
 
   @@unique([company_id, name, channel])
   @@map("notification_templates")
 }
 
-// Company Feature Configuration
 model company_feature_config {
-  id              String   @id @default(uuid())
-  company_id      String   @unique
-  
-  // Main Modules
-  attendance_enabled      Boolean  @default(true)
-  leave_enabled          Boolean  @default(true)
-  approval_enabled       Boolean  @default(true)
-  hr_community_enabled   Boolean  @default(true)
-  calendar_enabled       Boolean  @default(true)
-  
-  // Attendance Features
-  geofence_enabled       Boolean  @default(true)
-  face_recognition_enabled Boolean @default(false)
-  qr_checkin_enabled     Boolean  @default(false)
-  overtime_enabled       Boolean  @default(true)
-  remote_work_enabled    Boolean  @default(true)
-  
-  // Leave Features
-  annual_leave_enabled   Boolean  @default(true)
-  sick_leave_enabled     Boolean  @default(true)
-  special_leave_enabled  Boolean  @default(true)
-  leave_calendar_enabled Boolean  @default(true)
-  auto_approval_enabled  Boolean  @default(false)
-  
-  // Approval Features
-  dynamic_forms_enabled  Boolean  @default(true)
-  parallel_approval_enabled Boolean @default(false)
-  deputy_approval_enabled Boolean @default(true)
-  bulk_approval_enabled  Boolean  @default(true)
-  
-  // Communication Features
-  company_notice_enabled Boolean  @default(true)
-  team_board_enabled     Boolean  @default(true)
-  survey_enabled         Boolean  @default(true)
-  anonymous_post_enabled Boolean  @default(false)
-  
-  // Advanced Features
-  ai_assistant_enabled   Boolean  @default(false)
-  analytics_enabled      Boolean  @default(true)
-  custom_reports_enabled Boolean  @default(false)
-  api_access_enabled     Boolean  @default(false)
-  
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  
-  // Relations
-  company         company  @relation("company_features", fields: [company_id], references: [id], onDelete: Cascade)
-  menu_permissions company_menu_permission[]
-  
+  id                        String                    @id @default(uuid())
+  company_id                String                    @unique
+  attendance_enabled        Boolean                   @default(true)
+  leave_enabled             Boolean                   @default(true)
+  approval_enabled          Boolean                   @default(true)
+  hr_community_enabled      Boolean                   @default(true)
+  calendar_enabled          Boolean                   @default(true)
+  geofence_enabled          Boolean                   @default(true)
+  face_recognition_enabled  Boolean                   @default(false)
+  qr_checkin_enabled        Boolean                   @default(false)
+  overtime_enabled          Boolean                   @default(true)
+  remote_work_enabled       Boolean                   @default(true)
+  annual_leave_enabled      Boolean                   @default(true)
+  sick_leave_enabled        Boolean                   @default(true)
+  special_leave_enabled     Boolean                   @default(true)
+  leave_calendar_enabled    Boolean                   @default(true)
+  auto_approval_enabled     Boolean                   @default(false)
+  dynamic_forms_enabled     Boolean                   @default(true)
+  parallel_approval_enabled Boolean                   @default(false)
+  deputy_approval_enabled   Boolean                   @default(true)
+  bulk_approval_enabled     Boolean                   @default(true)
+  company_notice_enabled    Boolean                   @default(true)
+  team_board_enabled        Boolean                   @default(true)
+  survey_enabled            Boolean                   @default(true)
+  anonymous_post_enabled    Boolean                   @default(false)
+  ai_assistant_enabled      Boolean                   @default(false)
+  analytics_enabled         Boolean                   @default(true)
+  custom_reports_enabled    Boolean                   @default(false)
+  api_access_enabled        Boolean                   @default(false)
+  created_at                DateTime                  @default(now())
+  updated_at                DateTime                  @updatedAt
+  company                   company                   @relation("company_features", fields: [company_id], references: [id], onDelete: Cascade)
+  menu_permissions          company_menu_permission[]
+
   @@map("company_feature_configs")
 }
 
-// Menu Permission by Role
 model company_menu_permission {
-  id              String   @id @default(uuid())
-  config_id       String
-  role            String   // ADMIN, HR_MANAGER, TEAM_LEADER, EMPLOYEE
-  menu_key        String   // attendance, leave, approval, hr_community, etc.
-  
-  // Permissions
-  can_view        Boolean  @default(false)
-  can_create      Boolean  @default(false)
-  can_edit        Boolean  @default(false)
-  can_delete      Boolean  @default(false)
-  can_approve     Boolean  @default(false)
-  can_export      Boolean  @default(false)
-  
-  // Additional restrictions
-  scope           String   @default("SELF") // SELF, TEAM, DEPARTMENT, COMPANY
-  custom_rules    Json?    // Additional custom rules
-  
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  
-  // Relations
-  config          company_feature_config @relation(fields: [config_id], references: [id], onDelete: Cascade)
-  
+  id           String                 @id @default(uuid())
+  config_id    String
+  role         String
+  menu_key     String
+  can_view     Boolean                @default(false)
+  can_create   Boolean                @default(false)
+  can_edit     Boolean                @default(false)
+  can_delete   Boolean                @default(false)
+  can_approve  Boolean                @default(false)
+  can_export   Boolean                @default(false)
+  scope        String                 @default("SELF")
+  custom_rules Json?
+  created_at   DateTime               @default(now())
+  updated_at   DateTime               @updatedAt
+  config       company_feature_config @relation(fields: [config_id], references: [id], onDelete: Cascade)
+
   @@unique([config_id, role, menu_key])
   @@map("company_menu_permissions")
 }
 
-// Feature Usage Limit
 model company_feature_limit {
-  id              String   @id @default(uuid())
-  company_id      String
-  feature_key     String   // storage, users, api_calls, etc.
-  
-  // Limits
-  limit_value     Int      // Maximum allowed value
-  current_usage   Int      @default(0)
-  reset_period    String?  // DAILY, WEEKLY, MONTHLY, YEARLY, null for no reset
-  last_reset_at   DateTime?
-  
-  // Notifications
-  warning_threshold Int?   // Send warning at this percentage
-  notification_sent Boolean @default(false)
-  
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  
-  // Relations
-  company         company  @relation("company_limits", fields: [company_id], references: [id], onDelete: Cascade)
-  
+  id                String    @id @default(uuid())
+  company_id        String
+  feature_key       String
+  limit_value       Int
+  current_usage     Int       @default(0)
+  reset_period      String?
+  last_reset_at     DateTime?
+  warning_threshold Int?
+  notification_sent Boolean   @default(false)
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+  company           company   @relation("company_limits", fields: [company_id], references: [id], onDelete: Cascade)
+
   @@unique([company_id, feature_key])
   @@map("company_feature_limits")
 }
 
-// ================================
-// COMMON CODE MANAGEMENT
-// ================================
-
-// Common Code Categories (직급, 등급, 부서, 휴가타입 등)
 model common_code_category {
-  id              String   @id @default(uuid())
-  company_id      String?  // null for system-wide categories
-  category_code   String   // POSITION, GRADE, DEPARTMENT, LEAVE_TYPE, EXPENSE_CATEGORY
-  category_name   String   // 직급, 등급, 부서, 휴가타입, 비용항목
-  description     String?
-  is_system       Boolean  @default(false)  // 시스템 기본 카테고리 여부
-  is_active       Boolean  @default(true)
-  sort_order      Int      @default(0)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  company         company?      @relation("company_code_categories", fields: [company_id], references: [id], onDelete: Cascade)
-  codes           common_code[]
+  id            String        @id @default(uuid())
+  company_id    String?
+  category_code String
+  category_name String
+  description   String?
+  is_system     Boolean       @default(false)
+  is_active     Boolean       @default(true)
+  sort_order    Int           @default(0)
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  company       company?      @relation("company_code_categories", fields: [company_id], references: [id], onDelete: Cascade)
+  codes         common_code[]
 
   @@unique([company_id, category_code])
   @@map("common_code_categories")
 }
 
-// Common Codes (각 카테고리의 실제 코드값들)
 model common_code {
-  id              String   @id @default(uuid())
-  category_id     String
-  code            String   // MANAGER, CEO, GRADE_A, IT_DEPT, ANNUAL_LEAVE
-  name            String   // 부장, 대표이사, A등급, IT부서, 연차
-  description     String?
-  parent_code_id  String?  // 상위 코드 (계층구조 지원)
-  extra_data      Json?    // 추가 데이터 (색상, 아이콘, 설정값 등)
-  is_active       Boolean  @default(true)
-  sort_order      Int      @default(0)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  category        common_code_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  parent_code     common_code?         @relation("code_hierarchy", fields: [parent_code_id], references: [id])
-  child_codes     common_code[]        @relation("code_hierarchy")
-  
-  // 사용자 직급/등급 연결
-  user_positions  user_position[]
-  user_grades     user_grade[]
-  
-  // 등급별 비용 설정
-  expense_limits  expense_limit[]
+  id             String               @id @default(uuid())
+  category_id    String
+  code           String
+  name           String
+  description    String?
+  parent_code_id String?
+  extra_data     Json?
+  is_active      Boolean              @default(true)
+  sort_order     Int                  @default(0)
+  created_at     DateTime             @default(now())
+  updated_at     DateTime             @updatedAt
+  category       common_code_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  parent_code    common_code?         @relation("code_hierarchy", fields: [parent_code_id], references: [id])
+  child_codes    common_code[]        @relation("code_hierarchy")
+  expense_limits expense_limit[]
+  user_grades    user_grade[]
+  user_positions user_position[]
 
   @@unique([category_id, code])
   @@map("common_codes")
 }
 
-// 사용자 직급 정보
 model user_position {
-  id              String   @id @default(uuid())
-  user_id         String
+  id               String      @id @default(uuid())
+  user_id          String
   position_code_id String
-  effective_date  DateTime @default(now())
-  end_date        DateTime?
-  is_primary      Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  user            auth_user   @relation("user_positions", fields: [user_id], references: [id], onDelete: Cascade)
-  position_code   common_code @relation(fields: [position_code_id], references: [id])
+  effective_date   DateTime    @default(now())
+  end_date         DateTime?
+  is_primary       Boolean     @default(true)
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
+  position_code    common_code @relation(fields: [position_code_id], references: [id])
+  user             auth_user   @relation("user_positions", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("user_positions")
 }
 
-// 사용자 등급 정보
 model user_grade {
-  id              String   @id @default(uuid())
-  user_id         String
-  grade_code_id   String
-  effective_date  DateTime @default(now())
-  end_date        DateTime?
-  is_primary      Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  user            auth_user   @relation("user_grades", fields: [user_id], references: [id], onDelete: Cascade)
-  grade_code      common_code @relation(fields: [grade_code_id], references: [id])
+  id             String      @id @default(uuid())
+  user_id        String
+  grade_code_id  String
+  effective_date DateTime    @default(now())
+  end_date       DateTime?
+  is_primary     Boolean     @default(true)
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  grade_code     common_code @relation(fields: [grade_code_id], references: [id])
+  user           auth_user   @relation("user_grades", fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("user_grades")
 }
 
-// 등급별/직급별 비용 한도 설정
 model expense_limit {
-  id              String   @id @default(uuid())
-  company_id      String
-  grade_code_id   String?  // 등급별 설정
-  position_code_id String? // 직급별 설정 (등급과 직급 중 하나만 설정)
-  expense_category String  // HOTEL, TRANSPORTATION, MEAL, etc.
-  
-  // 비용 한도 설정
-  daily_limit     Decimal? @db.Decimal(12, 2)
-  monthly_limit   Decimal? @db.Decimal(12, 2)
-  yearly_limit    Decimal? @db.Decimal(12, 2)
-  
-  // 추가 규칙
-  currency        String   @default("IDR")
-  approval_required Boolean @default(true)
-  auto_approval_limit Decimal? @db.Decimal(12, 2)
-  
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  // Relations
-  company         company     @relation("company_expense_limits", fields: [company_id], references: [id], onDelete: Cascade)
-  grade_code      common_code? @relation(fields: [grade_code_id], references: [id])
+  id                  String       @id @default(uuid())
+  company_id          String
+  grade_code_id       String?
+  position_code_id    String?
+  expense_category    String
+  daily_limit         Decimal?     @db.Decimal(12, 2)
+  monthly_limit       Decimal?     @db.Decimal(12, 2)
+  yearly_limit        Decimal?     @db.Decimal(12, 2)
+  currency            String       @default("IDR")
+  approval_required   Boolean      @default(true)
+  auto_approval_limit Decimal?     @db.Decimal(12, 2)
+  is_active           Boolean      @default(true)
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+  company             company      @relation("company_expense_limits", fields: [company_id], references: [id], onDelete: Cascade)
+  grade_code          common_code? @relation(fields: [grade_code_id], references: [id])
 
   @@unique([company_id, grade_code_id, position_code_id, expense_category])
   @@map("expense_limits")
 }
 
-// ================================
-// OVERTIME WORK MANAGEMENT
-// ================================
-
-// Overtime Work Requests (추가근무 신청)
 model overtime_request {
-  id                  String   @id @default(uuid())
-  user_id             String
-  company_id          String
-  
-  // 추가근무 기본 정보
-  overtime_type       String   // EVENING (야근), WEEKEND (주말근무), HOLIDAY (특근), EARLY (조기출근)
-  work_date           DateTime // 추가근무 날짜
-  start_time          DateTime // 시작 시간
-  end_time            DateTime // 종료 시간
-  total_hours         Decimal  @db.Decimal(4, 2) // 총 추가근무 시간
-  
-  // 신청 내용
-  title               String   // 신청 제목
-  work_description    String   // 추가근무 내용
-  reason              String   // 추가근무 사유
-  
-  // 결재 정보
-  approval_draft_id   String?  // 연결된 전자결재 문서 ID
-  status              String   @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
-  
-  // 승인 정보
-  approved_by         String?
-  approved_at         DateTime?
-  approved_hours      Decimal? @db.Decimal(4, 2) // 승인된 시간 (신청시간과 다를 수 있음)
-  rejection_reason    String?
-  
-  // 급여 정산 정보
-  hourly_rate         Decimal? @db.Decimal(10, 2) // 시간당 수당
-  total_payment       Decimal? @db.Decimal(12, 2) // 총 지급액
-  is_paid             Boolean  @default(false)
-  paid_at             DateTime?
-  
-  // 메타데이터
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
-  
-  // Relations
-  user                auth_user      @relation("user_overtime_requests", fields: [user_id], references: [id], onDelete: Cascade)
-  company             company        @relation("company_overtime_requests", fields: [company_id], references: [id], onDelete: Cascade)
-  approved_by_user    auth_user?     @relation("approved_overtime_requests", fields: [approved_by], references: [id])
-  approval_draft      approval_draft? @relation("overtime_approval_drafts", fields: [approval_draft_id], references: [id])
-  attachments         overtime_attachment[]
-  
+  id                String                @id @default(uuid())
+  user_id           String
+  company_id        String
+  overtime_type     String
+  work_date         DateTime
+  start_time        DateTime
+  end_time          DateTime
+  total_hours       Decimal               @db.Decimal(4, 2)
+  title             String
+  work_description  String
+  reason            String
+  approval_draft_id String?
+  status            String                @default("PENDING")
+  approved_by       String?
+  approved_at       DateTime?
+  approved_hours    Decimal?              @db.Decimal(4, 2)
+  rejection_reason  String?
+  hourly_rate       Decimal?              @db.Decimal(10, 2)
+  total_payment     Decimal?              @db.Decimal(12, 2)
+  is_paid           Boolean               @default(false)
+  paid_at           DateTime?
+  created_at        DateTime              @default(now())
+  updated_at        DateTime              @updatedAt
+  attachments       overtime_attachment[]
+  approval_draft    approval_draft?       @relation("overtime_approval_drafts", fields: [approval_draft_id], references: [id])
+  approved_by_user  auth_user?            @relation("approved_overtime_requests", fields: [approved_by], references: [id])
+  company           company               @relation("company_overtime_requests", fields: [company_id], references: [id], onDelete: Cascade)
+  user              auth_user             @relation("user_overtime_requests", fields: [user_id], references: [id], onDelete: Cascade)
+
   @@map("overtime_requests")
 }
 
-// Overtime Attachments (추가근무 첨부파일)
 model overtime_attachment {
-  id                  String   @id @default(uuid())
+  id                  String           @id @default(uuid())
   overtime_request_id String
-  
-  // 파일 정보
   file_name           String
   file_path           String
   file_size           Int
-  file_type           String   // application/pdf, image/png, application/vnd.ms-excel, etc.
-  
-  // 업로드 정보
+  file_type           String
   uploaded_by         String
-  uploaded_at         DateTime @default(now())
-  
-  // Relations
+  uploaded_at         DateTime         @default(now())
   overtime_request    overtime_request @relation(fields: [overtime_request_id], references: [id], onDelete: Cascade)
   uploaded_by_user    auth_user        @relation("uploaded_overtime_attachments", fields: [uploaded_by], references: [id])
-  
+
   @@map("overtime_attachments")
 }
 
-// Overtime Policies (추가근무 정책)
 model overtime_policy {
-  id                    String   @id @default(uuid())
-  company_id            String
-  
-  // 정책 기본 정보
-  policy_name           String
-  overtime_type         String   // EVENING, WEEKEND, HOLIDAY, EARLY
-  
-  // 시간 제한
-  max_daily_hours       Decimal? @db.Decimal(4, 2) // 일일 최대 추가근무 시간
-  max_weekly_hours      Decimal? @db.Decimal(4, 2) // 주간 최대 추가근무 시간
-  max_monthly_hours     Decimal? @db.Decimal(5, 2) // 월간 최대 추가근무 시간
-  
-  // 수당 정보
-  base_hourly_rate      Decimal? @db.Decimal(10, 2) // 기본 시간당 수당
-  rate_multiplier       Decimal  @db.Decimal(3, 2) @default(1.5) // 수당 배율 (1.5배, 2배 등)
-  
-  // 승인 설정
-  requires_approval     Boolean  @default(true)
-  auto_approval_hours   Decimal? @db.Decimal(4, 2) // 자동 승인 가능한 시간
-  advance_notice_hours  Int?     // 사전 신청 필수 시간
-  
-  // 적용 조건
-  applicable_roles      Json?    // 적용 가능한 역할/직급
-  applicable_departments Json?   // 적용 가능한 부서
-  
-  // 상태
-  is_active             Boolean  @default(true)
-  effective_from        DateTime @default(now())
-  effective_until       DateTime?
-  
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-  
-  // Relations
-  company               company  @relation("company_overtime_policies", fields: [company_id], references: [id], onDelete: Cascade)
-  
+  id                     String    @id @default(uuid())
+  company_id             String
+  policy_name            String
+  overtime_type          String
+  max_daily_hours        Decimal?  @db.Decimal(4, 2)
+  max_weekly_hours       Decimal?  @db.Decimal(4, 2)
+  max_monthly_hours      Decimal?  @db.Decimal(5, 2)
+  base_hourly_rate       Decimal?  @db.Decimal(10, 2)
+  rate_multiplier        Decimal   @default(1.5) @db.Decimal(3, 2)
+  requires_approval      Boolean   @default(true)
+  auto_approval_hours    Decimal?  @db.Decimal(4, 2)
+  advance_notice_hours   Int?
+  applicable_roles       Json?
+  applicable_departments Json?
+  is_active              Boolean   @default(true)
+  effective_from         DateTime  @default(now())
+  effective_until        DateTime?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  company                company   @relation("company_overtime_policies", fields: [company_id], references: [id], onDelete: Cascade)
+
   @@map("overtime_policies")
 }
 
+model currency_setting {
+  id                 String   @id @default(uuid())
+  company_id         String   @unique
+  default_currency   String   @default("IDR")
+  currency_symbol    String   @default("Rp")
+  show_local_format  Boolean  @default(true)
+  decimal_places     Int      @default(0)
+  thousand_separator String   @default(",")
+  decimal_separator  String   @default(".")
+  exchange_rates     Json?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  company            company  @relation("company_currency_setting", fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("currency_settings")
+}
+
+model business_trip_setting {
+  id                      String   @id @default(uuid())
+  company_id              String   @unique
+  auto_approval_limit     Decimal? @db.Decimal(12, 2)
+  advance_payment_enabled Boolean  @default(true)
+  grade_limits            Json
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+  company                 company  @relation("company_business_trip_setting", fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("business_trip_settings")
+}
+
+model business_trip_request {
+  id                String                  @id @default(uuid())
+  user_id           String
+  approval_draft_id String?
+  trip_type         String
+  destination       String
+  purpose           String
+  start_date        DateTime
+  end_date          DateTime
+  duration_days     Int
+  travelers         Json
+  estimated_costs   Json
+  advance_payment   Decimal?                @db.Decimal(12, 2)
+  actual_costs      Json?
+  status            String                  @default("DRAFT")
+  submitted_at      DateTime?
+  approved_at       DateTime?
+  completed_at      DateTime?
+  itinerary         String?
+  notes             String?
+  attachments       String[]
+  created_at        DateTime                @default(now())
+  updated_at        DateTime                @updatedAt
+  expenses          business_trip_expense[] @relation("trip_expenses")
+  reports           business_trip_report?   @relation("trip_report")
+  approval_draft    approval_draft?         @relation("business_trip_approvals", fields: [approval_draft_id], references: [id])
+  user              auth_user               @relation("user_business_trips", fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("business_trip_requests")
+}
+
+model business_trip_expense {
+  id                String                @id @default(uuid())
+  business_trip_id  String
+  approval_draft_id String?
+  expense_items     Json
+  total_amount      Decimal               @db.Decimal(12, 2)
+  currency          String                @default("IDR")
+  receipt_urls      String[]
+  status            String                @default("DRAFT")
+  submitted_at      DateTime?
+  approved_at       DateTime?
+  paid_at           DateTime?
+  created_at        DateTime              @default(now())
+  updated_at        DateTime              @updatedAt
+  approval_draft    approval_draft?       @relation("expense_approvals", fields: [approval_draft_id], references: [id])
+  business_trip     business_trip_request @relation("trip_expenses", fields: [business_trip_id], references: [id], onDelete: Cascade)
+
+  @@map("business_trip_expenses")
+}
+
+model business_trip_report {
+  id                String                @id @default(uuid())
+  business_trip_id  String                @unique
+  approval_draft_id String?
+  achievements      String
+  challenges        String?
+  recommendations   String?
+  follow_up_actions String?
+  attachments       String[]
+  status            String                @default("DRAFT")
+  submitted_at      DateTime?
+  approved_at       DateTime?
+  created_at        DateTime              @default(now())
+  updated_at        DateTime              @updatedAt
+  approval_draft    approval_draft?       @relation("report_approvals", fields: [approval_draft_id], references: [id])
+  business_trip     business_trip_request @relation("trip_report", fields: [business_trip_id], references: [id], onDelete: Cascade)
+
+  @@map("business_trip_reports")
+}

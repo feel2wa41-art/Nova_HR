@@ -1,5 +1,5 @@
-import { powerMonitor, ipcMain } from 'electron'
-import { ApiService, ApiResponse } from './ApiService'
+import { powerMonitor } from 'electron'
+import { ApiService } from './ApiService'
 import { SystemInfoService } from './SystemInfoService'
 
 export interface IdleEvent {
@@ -319,7 +319,7 @@ export class IdleDetectionService {
   }
 
   // Get idle statistics
-  async getIdleStats(days: number = 7): Promise<ApiResponse> {
+  async getIdleStats(days: number = 7): Promise<any> {
     try {
       return await this.apiService.get('/attitude/idle-stats', { days })
     } catch (error: any) {

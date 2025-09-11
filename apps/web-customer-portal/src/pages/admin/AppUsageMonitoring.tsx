@@ -373,7 +373,7 @@ const AppUsageMonitoring: React.FC = () => {
             {appUsage.length === 0 ? (
               <Empty description="앱 사용 기록이 없습니다" />
             ) : (
-              <Table
+              <Table<AppUsageRecord>
                 dataSource={appUsage}
                 columns={appUsageColumns}
                 rowKey="id"
@@ -392,7 +392,7 @@ const AppUsageMonitoring: React.FC = () => {
             {webUsage.length === 0 ? (
               <Empty description="웹사이트 사용 기록이 없습니다" />
             ) : (
-              <Table
+              <Table<WebUsageRecord>
                 dataSource={webUsage}
                 columns={webUsageColumns}
                 rowKey="id"

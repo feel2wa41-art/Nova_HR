@@ -6,7 +6,6 @@ import ScreenshotGallery from './ScreenshotGallery';
 import RealScreenshotGallery from './RealScreenshotGallery';
 
 const { Title } = Typography;
-const { TabPane } = Tabs;
 
 const ScreenshotManagement: React.FC = () => {
   const location = useLocation();

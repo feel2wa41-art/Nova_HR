@@ -31,9 +31,12 @@ import { CalendarPage } from './pages/calendar/CalendarPage';
 import { CommunityPage } from './pages/community/CommunityPage';
 import { CommunityPostDetail } from './pages/community/CommunityPostDetail';
 import { NotificationsPage } from './pages/community/NotificationsPage';
-import { CommonCodeManagement } from './pages/admin/CommonCodeManagement';
+import CommonCodeManagement from './pages/admin/CommonCodeManagement';
 import { OvertimeRequestPage } from './pages/approval/OvertimeRequestPage';
 import { LeaveTypeManagement } from './pages/admin/LeaveTypeManagement';
+import { UserLeaveBalanceManagement } from './pages/admin/UserLeaveBalanceManagement';
+import { AttitudeSettings } from './pages/admin/AttitudeSettings';
+import { LeaveApproval } from './pages/LeaveApproval';
 import { useAuth } from './hooks/useAuth';
 
 const { Content } = Layout;
@@ -80,6 +83,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path='attendance' element={<AttendancePage />} />
           <Route path='leave' element={<Leave />} />
+          <Route path='leave-approval' element={<LeaveApproval />} />
           <Route path='approval/*' element={<ApprovalPage />} />
           <Route path='daily-report' element={<DailyReportPage />} />
           <Route path='daily-report/create' element={<CreateDailyReportPage />} />
@@ -99,17 +103,19 @@ function App() {
           <Route path='settings/change-password' element={<ChangePasswordPage />} />
           <Route path='hr-management' element={<HRManagement />} />
           <Route path='admin/approval-management' element={<ApprovalManagement />} />
-          <Route path='admin/users' element={<UserManagement />} />
           <Route path='admin/company' element={<CompanySettings />} />
           <Route path='admin/screenshot-gallery' element={<ScreenshotGallery />} />
           <Route path='admin/desktop-agent' element={<DesktopAgentDownload />} />
           {/* HR Management Routes */}
           <Route path='admin/attendance-management' element={<AttendanceManagement />} />
           <Route path='admin/leave-management' element={<LeaveManagement />} />
-          <Route path='admin/organization' element={<CompanySettings />} />
+          <Route path='admin/organization' element={<HRManagement />} />
+          <Route path='admin/user-management' element={<UserManagement />} />
           <Route path='admin/common-code' element={<CommonCodeManagement />} />
           <Route path='admin/overtime-management' element={<OvertimeRequestPage />} />
           <Route path='admin/leave-types' element={<LeaveTypeManagement />} />
+          <Route path='admin/user-leave-balance' element={<UserLeaveBalanceManagement />} />
+          <Route path='admin/attitude-settings' element={<AttitudeSettings />} />
         </Route>
       </Routes>
     </AntdApp>

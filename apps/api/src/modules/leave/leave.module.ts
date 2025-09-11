@@ -5,6 +5,7 @@ import { LeaveController } from './leave.controller';
 import { LeaveService } from './leave.service';
 import { LeaveApprovalController } from './leave-approval.controller';
 import { LeaveTypesController } from './leave-types.controller';
+import { UserLeaveBalanceController } from './user-leave-balance.controller';
 import { SharedModule } from '../../shared/shared.module';
 import { ApprovalModule } from '../approval/approval.module';
 
@@ -21,7 +22,7 @@ import { ApprovalModule } from '../approval/approval.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [LeaveController, LeaveApprovalController, LeaveTypesController],
+  controllers: [LeaveController, LeaveApprovalController, LeaveTypesController, UserLeaveBalanceController],
   providers: [LeaveService],
   exports: [LeaveService],
 })

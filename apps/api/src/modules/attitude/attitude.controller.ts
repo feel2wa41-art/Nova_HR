@@ -3,6 +3,7 @@ import {
   Post, 
   Get, 
   Put,
+  Delete,
   Param,
   Query,
   Body, 
@@ -116,7 +117,7 @@ export class AttitudeController {
 
   // Admin-only endpoints
   @Get('analytics/productivity')
-  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get productivity analytics (Admin only)' })
   @ApiResponse({ status: 200, description: 'Productivity analytics retrieved successfully' })
@@ -133,7 +134,7 @@ export class AttitudeController {
   }
 
   @Get('screenshots/gallery')
-  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get screenshot gallery (Admin only)' })
   @ApiResponse({ status: 200, description: 'Screenshot gallery retrieved successfully' })
@@ -150,7 +151,7 @@ export class AttitudeController {
   }
 
   @Put('screenshots/:id/blur')
-  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Update screenshot blur status (Admin only)' })
   @ApiResponse({ status: 200, description: 'Screenshot blur status updated successfully' })
@@ -369,6 +370,137 @@ export class AttitudeController {
       req.user.companyId,
       dateFilter || 'today',
       limit || 100,
+    );
+  }
+
+  // App Whitelist Management
+  @Get('app-whitelist')
+  @ApiOperation({ summary: 'Get app whitelist' })
+  @ApiResponse({ status: 200, description: 'App whitelist retrieved successfully' })
+  async getAppWhitelist(@Request() req: any) {
+    return this.attitudeService.getAppWhitelist(req.user.companyId);
+  }
+
+  @Post('app-whitelist')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Add app to whitelist (Admin only)' })
+  @ApiResponse({ status: 201, description: 'App added to whitelist successfully' })
+  async addAppToWhitelist(
+    @Request() req: any,
+    @Body() data: {
+      app_name: string;
+      category: string;
+      is_productive: boolean;
+      description?: string;
+    },
+  ) {
+    return this.attitudeService.addAppToWhitelist(req.user.companyId, data);
+  }
+
+  @Put('app-whitelist/:id')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Update app in whitelist (Admin only)' })
+  @ApiResponse({ status: 200, description: 'App updated successfully' })
+  async updateAppInWhitelist(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() data: {
+      app_name?: string;
+      category?: string;
+      is_productive?: boolean;
+      description?: string;
+    },
+  ) {
+    return this.attitudeService.updateAppInWhitelist(req.user.companyId, id, data);
+  }
+
+  @Delete('app-whitelist/:id')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Delete app from whitelist (Admin only)' })
+  @ApiResponse({ status: 200, description: 'App deleted successfully' })
+  async deleteAppFromWhitelist(
+    @Request() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.attitudeService.deleteAppFromWhitelist(req.user.companyId, id);
+  }
+
+  // Attitude Settings Management
+  @Get('settings')
+  @ApiOperation({ summary: 'Get attitude monitoring settings' })
+  @ApiResponse({ status: 200, description: 'Settings retrieved successfully' })
+  async getAttitudeSettings(@Request() req: any) {
+    return this.attitudeService.getAttitudeSettings(req.user.companyId);
+  }
+
+  @Put('settings')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Update attitude monitoring settings (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Settings updated successfully' })
+  async updateAttitudeSettings(
+    @Request() req: any,
+    @Body() settings: {
+      screenshotInterval?: number;
+      activityInterval?: number;
+      idleTimeout?: number;
+      workingHours?: { start: string; end: string };
+      captureSettings?: {
+        quality: number;
+        format: 'png' | 'jpeg';
+        blurSensitive: boolean;
+        multiMonitor: boolean;
+      };
+      features?: {
+        screenshot: boolean;
+        activity: boolean;
+        appUsage: boolean;
+        webUsage: boolean;
+        idleDetection: boolean;
+      };
+    },
+  ) {
+    return this.attitudeService.updateAttitudeSettings(req.user.companyId, settings);
+  }
+
+  // Admin Screenshot Management Endpoints
+  @Delete('admin/screenshots/batch')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Delete multiple screenshots (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Screenshots deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  async deleteScreenshotsBatch(
+    @Request() req: any,
+    @Body() body: { screenshotIds: string[] },
+  ) {
+    return this.attitudeService.deleteScreenshotsBatch(
+      req.user.companyId,
+      body.screenshotIds,
+      true,
+    );
+  }
+
+  @Delete('admin/screenshots/user/:userId')
+  @Roles('CUSTOMER_ADMIN', 'HR_MANAGER', 'SUPER_ADMIN')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Delete all screenshots for user in time period (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User screenshots deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  async deleteUserScreenshots(
+    @Request() req: any,
+    @Param('userId') userId: string,
+    @Query('timeSlot') timeSlot?: string,
+    @Query('dateFilter') dateFilter?: 'today' | 'week' | 'month',
+  ) {
+    return this.attitudeService.deleteUserScreenshots(
+      req.user.companyId,
+      userId,
+      { timeSlot, dateFilter },
+      true,
     );
   }
 }

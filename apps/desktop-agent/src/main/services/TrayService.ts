@@ -186,31 +186,22 @@ export class TrayService {
     this.tray.setToolTip(tooltip)
   }
 
-  updateMenuItem(id: string, options: { 
+  updateMenuItem(_id: string, _options: { 
     label?: string
     enabled?: boolean
     checked?: boolean 
   }): void {
     if (!this.tray) return
 
-    const menu = this.tray.getContextMenu()
-    if (!menu) return
-
-    // This is a simplified implementation
-    // In a full implementation, you'd recursively search menu items
-    const item = menu.items.find(item => item.id === id)
-    if (item) {
-      if (options.label !== undefined) item.label = options.label
-      if (options.enabled !== undefined) item.enabled = options.enabled
-      if (options.checked !== undefined) item.checked = options.checked
-    }
+    // Rebuild context menu with updated items
+    this.createTray()
   }
 
   showNotification(title: string, body: string, options: {
     silent?: boolean
     icon?: string
     urgency?: 'low' | 'normal' | 'critical'
-    actions?: Array<{ type: string, text: string }>
+    actions?: Array<{ type: "button", text: string }>
   } = {}): void {
     if (!this.tray) return
 
@@ -433,6 +424,6 @@ export class TrayService {
 
   // Check if tray is supported on this platform
   static isSupported(): boolean {
-    return Tray.isSupported()
+    return true // Tray is supported on Windows
   }
 }

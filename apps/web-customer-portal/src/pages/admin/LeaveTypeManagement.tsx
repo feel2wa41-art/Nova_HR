@@ -10,18 +10,23 @@ import {
   InputNumber, 
   Typography, 
   Space, 
-  message,
+  App,
   Popconfirm,
   ColorPicker,
   Tag,
   Select,
-  Alert
+  Alert,
+  Tooltip
 } from 'antd';
 import { 
   PlusOutlined, 
   EditOutlined, 
   DeleteOutlined, 
-  CalendarOutlined 
+  CalendarOutlined,
+  InfoCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  MenuOutlined
 } from '@ant-design/icons';
 import { useLeave } from '../../hooks/useLeave';
 import { apiClient } from '../../lib/api';
@@ -145,12 +150,13 @@ interface LeaveTypeFormData {
 }
 
 export const LeaveTypeManagement = () => {
+  const { message } = App.useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<LeaveType | null>(null);
   const [form] = Form.useForm<LeaveTypeFormData>();
   const [loading, setLoading] = useState(false);
   const [useTemplate, setUseTemplate] = useState(true);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
   const { leaveTypes, fetchLeaveTypes } = useLeave();
 
   useEffect(() => {
@@ -159,47 +165,46 @@ export const LeaveTypeManagement = () => {
 
   const handleCreate = () => {
     setEditingItem(null);
-    setUseTemplate(true);
-    setSelectedTemplate('');
     form.resetFields();
     form.setFieldsValue({
       isPaid: true,
       requiresApproval: true,
-      colorHex: '#3b82f6'
+      colorHex: '#3b82f6',
+      maxDaysYear: 15 // 기본값 설정
     });
     setIsModalOpen(true);
   };
 
-  // 템플릿 선택 핸들러
-  const handleTemplateSelect = (templateName: string) => {
-    const template = LEAVE_TEMPLATES.find(t => t.name === templateName);
-    if (template) {
-      form.setFieldsValue({
-        name: template.name,
-        code: template.code,
-        colorHex: template.colorHex,
-        maxDaysYear: template.maxDaysYear,
-        isPaid: template.isPaid,
-        requiresApproval: template.requiresApproval,
-        description: template.description
-      });
-      setSelectedTemplate(templateName);
-    }
+  // 예시 휴가 종류 선택 핸들러
+  const handleExampleSelect = (example: typeof LEAVE_TEMPLATES[0]) => {
+    form.setFieldsValue({
+      name: example.name,
+      code: example.code,
+      colorHex: example.colorHex,
+      maxDaysYear: example.maxDaysYear,
+      isPaid: example.isPaid,
+      requiresApproval: example.requiresApproval,
+      description: example.description
+    });
   };
 
   // 휴가 종류명 변경 시 자동으로 코드 생성
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
-    if (name && !useTemplate) {
-      const generatedCode = generateCodeFromName(name);
-      form.setFieldValue('code', generatedCode);
+    // 신규 생성 시에만 자동 생성
+    if (name && !editingItem) {
+      const currentCode = form.getFieldValue('code');
+      
+      // 코드가 비어있거나 사용자가 수정하지 않은 경우에만 자동 생성
+      if (!currentCode || currentCode.length === 0) {
+        const generatedCode = generateCodeFromName(name);
+        form.setFieldValue('code', generatedCode);
+      }
     }
   };
 
   const handleEdit = (item: LeaveType) => {
     setEditingItem(item);
-    setUseTemplate(false); // 편집 시에는 템플릿 모드 비활성화
-    setSelectedTemplate('');
     form.setFieldsValue(item);
     setIsModalOpen(true);
   };
@@ -238,7 +243,49 @@ export const LeaveTypeManagement = () => {
     }
   };
 
+  // 순서 변경 함수
+  const moveLeaveType = async (id: string, direction: 'up' | 'down') => {
+    try {
+      const response = await apiClient.put(`/leave-types/${id}/move`, { direction });
+      if (response.data?.success) {
+        // message.success(response.data.message);
+        fetchLeaveTypes(); // 데이터 새로고침
+      }
+    } catch (error: any) {
+      console.error('Failed to move leave type:', error);
+      // message.error(error.response?.data?.message || '순서 변경에 실패했습니다.');
+    }
+  };
+
   const columns = [
+    {
+      title: '순번',
+      key: 'order',
+      width: 80,
+      render: (text: string, record: LeaveType, index: number) => (
+        <div className="flex items-center space-x-1">
+          <span className="font-medium">{index + 1}</span>
+          <div className="flex flex-col">
+            <Button 
+              type="text" 
+              size="small" 
+              icon={<ArrowUpOutlined />}
+              disabled={index === 0}
+              onClick={() => moveLeaveType(record.id, 'up')}
+              style={{ padding: '0 4px', height: '16px', fontSize: '10px' }}
+            />
+            <Button 
+              type="text" 
+              size="small" 
+              icon={<ArrowDownOutlined />}
+              disabled={index === leaveTypes.length - 1}
+              onClick={() => moveLeaveType(record.id, 'down')}
+              style={{ padding: '0 4px', height: '16px', fontSize: '10px' }}
+            />
+          </div>
+        </div>
+      ),
+    },
     {
       title: '휴가 종류',
       dataIndex: 'name',
@@ -375,63 +422,33 @@ export const LeaveTypeManagement = () => {
           className="mt-4"
         >
           {!editingItem && (
-            <>
-              {/* 생성 방식 선택 */}
-              <Alert
-                message="휴가 종류 생성 방식"
-                description="템플릿을 사용하면 일반적인 휴가 종류를 빠르게 생성할 수 있습니다."
-                type="info"
-                className="mb-4"
-              />
-              
-              <Form.Item label="생성 방식">
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Button.Group>
-                    <Button 
-                      type={useTemplate ? 'primary' : 'default'}
-                      onClick={() => setUseTemplate(true)}
-                    >
-                      템플릿 사용
-                    </Button>
-                    <Button 
-                      type={!useTemplate ? 'primary' : 'default'}
-                      onClick={() => setUseTemplate(false)}
-                    >
-                      직접 생성
-                    </Button>
-                  </Button.Group>
-                </Space>
-              </Form.Item>
-
-              {useTemplate && (
-                <Form.Item label="휴가 종류 템플릿">
-                  <Select
-                    placeholder="템플릿을 선택하세요"
-                    value={selectedTemplate || undefined}
-                    onChange={handleTemplateSelect}
-                    style={{ width: '100%' }}
-                  >
-                    {LEAVE_TEMPLATES.map(template => (
-                      <Option key={template.name} value={template.name}>
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-2">
-                            <span 
-                              className="inline-block w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: template.colorHex }}
-                            />
-                            {template.name}
-                          </span>
-                          <span className="text-gray-500 text-sm">
-                            {template.maxDaysYear ? `${template.maxDaysYear}일` : '제한없음'} • 
-                            {template.isPaid ? '유급' : '무급'}
-                          </span>
-                        </div>
-                      </Option>
+            <Alert
+              message="빠른 설정"
+              description={
+                <div>
+                  <p className="mb-2">일반적인 휴가 종류 예시를 참고하여 빠르게 생성할 수 있습니다.</p>
+                  <Space wrap>
+                    {LEAVE_TEMPLATES.slice(0, 4).map(example => (
+                      <Button 
+                        key={example.name}
+                        size="small"
+                        type="dashed"
+                        onClick={() => handleExampleSelect(example)}
+                        style={{ 
+                          borderColor: example.colorHex,
+                          color: example.colorHex
+                        }}
+                      >
+                        {example.name} ({example.code})
+                      </Button>
                     ))}
-                  </Select>
-                </Form.Item>
-              )}
-            </>
+                  </Space>
+                </div>
+              }
+              type="info"
+              showIcon
+              className="mb-4"
+            />
           )}
           <Form.Item
             label="휴가 종류명"
@@ -443,37 +460,50 @@ export const LeaveTypeManagement = () => {
             <Input 
               placeholder="예: 연차, 병가, 출산휴가" 
               onChange={handleNameChange}
-              disabled={useTemplate && !editingItem}
             />
           </Form.Item>
 
           <Form.Item
             label={
-              <span>
-                코드 
-                {!useTemplate && !editingItem && (
-                  <span className="text-gray-500 text-sm ml-1">(자동생성됨)</span>
-                )}
-              </span>
+              <Space>
+                <span>코드</span>
+                <Tooltip title="시스템에서 사용되는 고유 식별자입니다. 대문자와 언더스코어만 사용 가능합니다.">
+                  <InfoCircleOutlined className="text-gray-400" />
+                </Tooltip>
+              </Space>
             }
             name="code"
             rules={[
               { required: true, message: '코드를 입력해주세요' },
-              { pattern: /^[A-Z_]+$/, message: '대문자와 언더스코어만 사용해주세요' },
+              { pattern: /^[A-Z][A-Z0-9_]*$/, message: '대문자로 시작하고, 대문자/숫자/언더스코어만 사용해주세요' },
+              { min: 2, message: '최소 2자 이상 입력해주세요' },
+              { max: 20, message: '최대 20자까지 입력 가능합니다' },
             ]}
+            extra={!editingItem ? "휴가 종류명 입력 시 자동 생성됩니다. 필요시 수정 가능합니다." : null}
           >
             <Input 
               placeholder="예: ANNUAL, SICK, MATERNITY" 
               style={{ textTransform: 'uppercase' }}
-              disabled={useTemplate && !editingItem}
+              disabled={!!editingItem}
+              onChange={(e) => {
+                // 입력값을 대문자로 변환
+                const value = e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+                form.setFieldValue('code', value);
+              }}
             />
           </Form.Item>
 
-          {!useTemplate && !editingItem && (
+          {!editingItem && (
             <Alert
-              message="자동 코드 생성"
-              description="휴가 종류명을 입력하면 코드가 자동으로 생성됩니다. 필요시 수정하실 수 있습니다."
-              type="success"
+              message="코드 사용 안내"
+              description={
+                <ul className="list-disc list-inside text-sm">
+                  <li>코드는 시스템 내부에서 휴가 종류를 구분하는 고유값입니다</li>
+                  <li>한번 생성된 코드는 변경하지 않는 것을 권장합니다</li>
+                  <li>자동 생성된 코드를 수정할 수 있지만, 중복되지 않도록 주의하세요</li>
+                </ul>
+              }
+              type="info"
               showIcon
               className="mb-4"
             />

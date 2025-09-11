@@ -11,6 +11,7 @@ interface LeaveType {
   deductWeekends: boolean;
   colorHex: string;
   isPaid: boolean;
+  allowHalfDays?: boolean;
 }
 
 interface LeaveBalance {
@@ -50,9 +51,11 @@ interface LeaveState {
   fetchLeaveBalances: () => Promise<void>;
   fetchLeaveRequests: () => Promise<void>;
   submitLeaveRequest: (request: {
+    categoryId?: string;
     leaveTypeId: string;
     startDate: string;
     endDate: string;
+    halfDayType?: string;
     reason?: string;
     emergency?: boolean;
     approvalSettings?: any;
@@ -72,6 +75,7 @@ const mockLeaveTypes: LeaveType[] = [
     deductWeekends: false,
     colorHex: '#3b82f6',
     isPaid: true,
+    allowHalfDays: true,
   },
   {
     id: 'sick',
@@ -82,6 +86,7 @@ const mockLeaveTypes: LeaveType[] = [
     deductWeekends: false,
     colorHex: '#ef4444',
     isPaid: true,
+    allowHalfDays: true,
   },
   {
     id: 'personal',
@@ -92,6 +97,7 @@ const mockLeaveTypes: LeaveType[] = [
     deductWeekends: false,
     colorHex: '#8b5cf6',
     isPaid: false,
+    allowHalfDays: true,
   },
   {
     id: 'maternity',
@@ -102,6 +108,29 @@ const mockLeaveTypes: LeaveType[] = [
     deductWeekends: true,
     colorHex: '#f59e0b',
     isPaid: true,
+    allowHalfDays: true,
+  },
+  {
+    id: 'special',
+    name: '특별휴가',
+    code: 'SPECIAL',
+    maxDaysYear: 10,
+    requiresApproval: true,
+    deductWeekends: false,
+    colorHex: '#06b6d4',
+    isPaid: true,
+    allowHalfDays: true,
+  },
+  {
+    id: 'special_2',
+    name: '특별휴가2',
+    code: 'SPECIAL_2',
+    maxDaysYear: 5,
+    requiresApproval: true,
+    deductWeekends: false,
+    colorHex: '#22c55e',
+    isPaid: true,
+    allowHalfDays: true,
   },
 ];
 
@@ -129,6 +158,22 @@ const mockLeaveBalances: LeaveBalance[] = [
     used: 1,
     pending: 0,
     remaining: 4,
+  },
+  {
+    leaveType: 'SPECIAL',
+    leaveTypeName: '특별휴가',
+    allocated: 10,
+    used: 0,
+    pending: 0,
+    remaining: 10,
+  },
+  {
+    leaveType: 'SPECIAL_2',
+    leaveTypeName: '특별휴가2',
+    allocated: 5,
+    used: 0,
+    pending: 0,
+    remaining: 5,
   },
 ];
 
@@ -165,13 +210,14 @@ const mockLeaveRequests: LeaveRequest[] = [
 // API functions
 const fetchLeaveTypesApi = async (): Promise<LeaveType[]> => {
   try {
-    const response = await apiClient.get('/leave-approval/types');
+    const response = await apiClient.get('/leave-types');
     const data = response.data;
     
     // API now returns data in the correct format
     return data.map((type: any) => ({
       ...type,
-      deductWeekends: true, // Assume default for now
+      deductWeekends: type.deductWeekends ?? true, // Use value from API or default to true
+      allowHalfDays: true, // 모든 휴가 타입에서 반차 허용
     }));
   } catch (error) {
     console.error('Failed to fetch leave types:', error);
@@ -186,12 +232,12 @@ const fetchLeaveBalancesApi = async (): Promise<LeaveBalance[]> => {
     
     // API now returns data in the correct array format
     return data.map((balance: any) => ({
-      leaveType: balance.leaveType,
-      leaveTypeName: balance.leaveTypeName,
-      allocated: balance.allocated,
-      used: balance.used,
-      pending: balance.pending,
-      remaining: balance.remaining,
+      leaveType: balance.leaveType || balance.leave_type_id || balance.code,
+      leaveTypeName: balance.leaveTypeName || balance.leave_type_name || balance.name,
+      allocated: balance.allocated || 0,
+      used: balance.used || 0,
+      pending: balance.pending || 0,
+      remaining: balance.remaining || balance.available || 0,
     }));
   } catch (error) {
     console.error('Failed to fetch leave balances:', error);
@@ -201,8 +247,23 @@ const fetchLeaveBalancesApi = async (): Promise<LeaveBalance[]> => {
 
 const fetchLeaveRequestsApi = async (): Promise<LeaveRequest[]> => {
   try {
-    const response = await apiClient.get('/leave-approval/requests');
-    return response.data;
+    const response = await apiClient.get('/leave/requests');
+    const data = response.data.data || response.data; // Handle both paginated and non-paginated responses
+    return data.map((req: any) => ({
+      id: req.id,
+      leaveTypeId: req.leave_type_id || req.leaveTypeId,
+      leaveTypeName: req.leave_type?.name || req.leave_type_name || req.leaveTypeName,
+      startDate: req.start_date || req.startDate,
+      endDate: req.end_date || req.endDate,
+      daysCount: req.days_count || req.daysCount,
+      reason: req.reason,
+      emergency: req.emergency || false,
+      status: req.status,
+      decidedBy: req.decided_by || req.decidedBy,
+      decidedAt: req.decided_at || req.decidedAt,
+      comments: req.comments,
+      createdAt: req.created_at || req.createdAt,
+    }));
   } catch (error) {
     console.error('Failed to fetch leave requests:', error);
     throw new Error('Failed to fetch leave requests');
@@ -210,19 +271,27 @@ const fetchLeaveRequestsApi = async (): Promise<LeaveRequest[]> => {
 };
 
 const submitLeaveRequestApi = async (request: {
+  categoryId?: string;
   leaveTypeId: string;
   startDate: string;
   endDate: string;
+  halfDayType?: string;
   reason?: string;
   emergency?: boolean;
   approvalSettings?: any;
 }): Promise<any> => {
   try {
-    const response = await apiClient.post('/leave-approval/submit', {
-      ...request,
-      approvalSettings: request.approvalSettings
+    const response = await apiClient.post('/leave/requests', {
+      leave_type: request.leaveTypeId,
+      start_date: request.startDate,
+      end_date: request.endDate,
+      half_day_period: request.halfDayType === 'MORNING' ? 'morning' : 
+                       request.halfDayType === 'AFTERNOON' ? 'afternoon' : undefined,
+      reason: request.reason || '휴가 신청',
     });
     const result = response.data;
+    
+    console.log('API response received:', result);
     
     // Return a LeaveRequest-like object (the actual leave request will be fetched later)
     const startDate = new Date(request.startDate);
@@ -231,27 +300,36 @@ const submitLeaveRequestApi = async (request: {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     
     return {
-      id: result.approvalId,
+      id: result.approvalId || result.id,
       leaveTypeId: request.leaveTypeId,
-      leaveTypeName: result.data.leaveType,
+      leaveTypeName: result.data?.leaveType || result.leave_type || 'Unknown',
       startDate: request.startDate,
       endDate: request.endDate,
-      daysCount: result.data.workingDays || diffDays,
+      daysCount: result.data?.workingDays || result.days_count || diffDays,
       reason: request.reason,
-      emergency: result.data.emergency || false,
+      emergency: result.data?.emergency || result.emergency || false,
       status: 'PENDING',
       createdAt: new Date().toISOString(),
     };
   } catch (error: any) {
     console.error('Failed to submit leave request:', error);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    console.error('Request data sent:', {
+      leave_type: request.leaveTypeId,
+      start_date: request.startDate,
+      end_date: request.endDate,
+      half_day_period: request.halfDayType === 'MORNING' ? 'morning' : 
+                       request.halfDayType === 'AFTERNOON' ? 'afternoon' : undefined,
+      reason: request.reason,
+    });
     throw new Error(error.response?.data?.message || 'Failed to submit leave request');
   }
 };
 
 const cancelLeaveRequestApi = async (requestId: string): Promise<void> => {
   try {
-    // Note: This endpoint would need to be implemented in the backend
-    await apiClient.post(`/leave-approval/cancel/${requestId}`);
+    await apiClient.put(`/leave/requests/${requestId}/cancel`);
   } catch (error) {
     console.error('Failed to cancel leave request:', error);
     throw new Error('Failed to cancel leave request');
@@ -274,9 +352,7 @@ export const useLeave = create<LeaveState>()(
           set({ leaveTypes, isLoading: false });
         } catch (error) {
           console.error('Failed to fetch leave types:', error);
-          // Fall back to mock data on error
-          const leaveTypes = mockLeaveTypes;
-          set({ leaveTypes, isLoading: false });
+          set({ leaveTypes: [], isLoading: false });
         }
       },
 
@@ -287,9 +363,8 @@ export const useLeave = create<LeaveState>()(
           set({ leaveBalances, isLoading: false });
         } catch (error) {
           console.error('Failed to fetch leave balances:', error);
-          // Fall back to mock data on error
-          const leaveBalances = mockLeaveBalances;
-          set({ leaveBalances, isLoading: false });
+          // DB 연결 실패시 빈 배열로 설정
+          set({ leaveBalances: [], isLoading: false });
         }
       },
 
@@ -310,7 +385,21 @@ export const useLeave = create<LeaveState>()(
       submitLeaveRequest: async (request) => {
         set({ isSubmitting: true });
         try {
-          const result = await submitLeaveRequestApi(request);
+          // Find the leave type to get its code
+          const { leaveTypes } = get();
+          console.log('Available leave types:', leaveTypes);
+          console.log('Requested leave type ID:', request.leaveTypeId);
+          const selectedLeaveType = leaveTypes.find(type => type.id === request.leaveTypeId);
+          console.log('Selected leave type:', selectedLeaveType);
+          if (!selectedLeaveType) {
+            throw new Error('Selected leave type not found');
+          }
+          
+          // Pass the leave type code instead of ID
+          const result = await submitLeaveRequestApi({
+            ...request,
+            leaveTypeId: selectedLeaveType.code // Send code instead of ID
+          });
           const { leaveRequests } = get();
           
           // Add to local state if we have request data
@@ -323,11 +412,11 @@ export const useLeave = create<LeaveState>()(
             set({ isSubmitting: false });
           }
           
-          // Refresh the data from server after submission
-          setTimeout(() => {
-            get().fetchLeaveRequests();
-            get().fetchLeaveBalances();
-          }, 1000);
+          // Immediately refresh the data from server after submission
+          await Promise.all([
+            get().fetchLeaveRequests(),
+            get().fetchLeaveBalances()
+          ]);
           
           // Return the full result for the component to handle
           return result;

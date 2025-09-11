@@ -44,16 +44,16 @@ const DesktopAgentDownload: React.FC = () => {
 
       switch (platform) {
         case 'windows':
-          downloadUrl = '/downloads/nova-hr-agent-setup.exe';
-          fileName = 'nova-hr-agent-setup.exe';
+          downloadUrl = '/downloads/Reko HR Desktop Agent-1.0.0-win-x64.exe';
+          fileName = 'Reko HR Desktop Agent-1.0.0-win-x64.exe';
           break;
         case 'macos':
-          downloadUrl = '/downloads/nova-hr-agent.dmg';
-          fileName = 'nova-hr-agent.dmg';
+          downloadUrl = '/downloads/reko-hr-agent.dmg';
+          fileName = 'reko-hr-agent.dmg';
           break;
         case 'linux':
-          downloadUrl = '/downloads/nova-hr-agent.AppImage';
-          fileName = 'nova-hr-agent.AppImage';
+          downloadUrl = '/downloads/reko-hr-agent.AppImage';
+          fileName = 'reko-hr-agent.AppImage';
           break;
       }
 
@@ -135,11 +135,11 @@ const DesktopAgentDownload: React.FC = () => {
     },
     {
       question: 'I want to remove the agent.',
-      answer: 'You can remove it from Control Panel > Add or Remove Programs by finding "Nova HR Agent".',
+      answer: 'You can remove it from Control Panel > Add or Remove Programs by finding "Reko HR Agent".',
     },
     {
       question: 'My antivirus is blocking it.',
-      answer: 'Please add Nova HR Agent to your antivirus program\'s exception list.',
+      answer: 'Please add Reko HR Agent to your antivirus program\'s exception list.',
     },
   ];
 
@@ -147,7 +147,7 @@ const DesktopAgentDownload: React.FC = () => {
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '32px', textAlign: 'center' }}>
         <Title level={1} style={{ marginBottom: '8px' }}>
-          🖥️ Nova HR Desktop Agent
+          🖥️ Reko HR Desktop Agent
         </Title>
         <Text type="secondary" style={{ fontSize: '16px' }}>
           Desktop monitoring software for work attitude management
@@ -192,7 +192,7 @@ const DesktopAgentDownload: React.FC = () => {
                       onClick={() => handleDownload(req.os.toLowerCase() as any)}
                       style={{ width: '200px' }}
                     >
-                      Download ({req.os === 'Windows' ? '15.2MB' : '15.5MB'})
+                      Download ({req.os === 'Windows' ? '75MB' : '15.5MB'})
                     </Button>
                   </Space>
                 </Card>
@@ -314,7 +314,7 @@ const DesktopAgentDownload: React.FC = () => {
           <div>
             <Title level={4}>IT Support Team</Title>
             <Space direction="vertical">
-              <Text>📧 Email: it-support@nova-hr.com</Text>
+              <Text>📧 Email: it-support@reko-hr.com</Text>
               <Text>📞 Extension: 1234</Text>
               <Text>🕒 Support hours: Weekdays 09:00-18:00</Text>
             </Space>
@@ -345,7 +345,7 @@ const DesktopAgentDownload: React.FC = () => {
                     title: 'Windows Installation',
                     description: (
                       <div>
-                        <p>1. Right-click the nova-hr-agent-setup.exe file</p>
+                        <p>1. Right-click the Reko HR Desktop Agent installer file</p>
                         <p>2. Select "Run as administrator"</p>
                         <p>3. Follow the installation wizard instructions</p>
                         <p>4. Background service starts automatically after installation</p>

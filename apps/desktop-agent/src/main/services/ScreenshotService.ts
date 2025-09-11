@@ -1,10 +1,9 @@
-import { screen, desktopCapturer, BrowserWindow } from 'electron'
+import { screen, desktopCapturer } from 'electron'
 import { writeFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import Store from 'electron-store'
-import sharp from 'sharp'
-import { ApiService, ApiResponse } from './ApiService'
+import { ApiService } from './ApiService'
 
 export interface ScreenshotOptions {
   quality?: number
@@ -66,7 +65,7 @@ export class ScreenshotService {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
-        thumbnailSize: { width: 1920, height: 1080 },
+        thumbnailSize: { width: 1920, height: 1080 }, // Better resolution for clarity
         fetchWindowIcons: false
       })
 
@@ -81,23 +80,22 @@ export class ScreenshotService {
       // Get screenshot metadata
       const metadata = await this.generateMetadata()
 
-      // Convert to buffer with quality settings
+      // Convert to buffer using Electron's nativeImage
       let buffer: Buffer
-      const quality = options.quality || this.store.get('settings.uploadQuality', 80)
+      const quality = options.quality || (this.store.get('settings.uploadQuality', 85) as number) // Increased default quality
       
       if (options.format === 'jpeg') {
-        buffer = await sharp(image.toPNG())
-          .jpeg({ quality })
-          .toBuffer()
+        buffer = image.toJPEG(Math.round(quality as number))
       } else {
-        buffer = await sharp(image.toPNG())
-          .png({ quality })
-          .toBuffer()
+        buffer = image.toPNG()
       }
 
       // Save temporary file
       const tempPath = join(tmpdir(), `screenshot-${Date.now()}.${options.format || 'png'}`)
       await writeFile(tempPath, buffer)
+
+      // Clear buffer from memory immediately
+      buffer = null as any
 
       return {
         success: true,
@@ -215,7 +213,7 @@ export class ScreenshotService {
     endDate?: string
     page?: number
     limit?: number
-  } = {}): Promise<ApiResponse> {
+  } = {}): Promise<any> {
     return await this.apiService.getScreenshotHistory(params)
   }
 
@@ -230,9 +228,9 @@ export class ScreenshotService {
       const win = null
       if (win) {
         activeWindow = {
-          title: win.title,
-          owner: win.owner.name,
-          url: win.url
+          title: (win as any).title,
+          owner: (win as any).owner.name,
+          url: (win as any).url
         }
       }
     } catch (error) {
@@ -273,7 +271,7 @@ export class ScreenshotService {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['window'],
-        thumbnailSize: { width: 1920, height: 1080 },
+        thumbnailSize: { width: 1280, height: 720 }, // Reduced resolution
         fetchWindowIcons: false
       })
 
@@ -314,7 +312,7 @@ export class ScreenshotService {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
-        thumbnailSize: { width: 1920, height: 1080 },
+        thumbnailSize: { width: 1280, height: 720 }, // Reduced resolution for memory optimization
         fetchWindowIcons: false
       })
 

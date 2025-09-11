@@ -1,5 +1,3 @@
-import * as keytar from 'keytar'
-import * as bcrypt from 'bcryptjs'
 import * as crypto from 'crypto'
 import { app } from 'electron'
 import Store from 'electron-store'
@@ -38,8 +36,8 @@ export class SecureCredentialService {
   // Generate or retrieve encryption key
   private getOrCreateEncryptionKey(): string {
     try {
-      // Try to get existing key from keytar
-      const existingKey = keytar.getPasswordSync(this.SERVICE_NAME, this.ENCRYPTION_KEY_NAME)
+      // Try to get existing key from store
+      const existingKey = this.store.get(this.ENCRYPTION_KEY_NAME) as string
       
       if (existingKey) {
         return existingKey
@@ -47,7 +45,7 @@ export class SecureCredentialService {
 
       // Generate new key
       const newKey = crypto.randomBytes(32).toString('hex')
-      keytar.setPasswordSync(this.SERVICE_NAME, this.ENCRYPTION_KEY_NAME, newKey)
+      this.store.set(this.ENCRYPTION_KEY_NAME, newKey)
       
       console.log('New encryption key generated and stored')
       return newKey
@@ -109,8 +107,8 @@ export class SecureCredentialService {
         return true
       }
 
-      // Hash password for storage
-      const hashedPassword = await bcrypt.hash(credentials.password, 12)
+      // Hash password for storage (using crypto instead of bcrypt)
+      const hashedPassword = crypto.createHash('sha256').update(credentials.password + this.encryptionKey).digest('hex')
       
       // Create credentials object
       const credentialsToStore: StoredCredentials = {
@@ -124,25 +122,13 @@ export class SecureCredentialService {
           undefined
       }
 
-      // Store in OS keychain (primary method)
-      try {
-        await keytar.setPassword(
-          this.SERVICE_NAME,
-          this.ACCOUNT_NAME,
-          JSON.stringify(credentialsToStore)
-        )
-        console.log('Credentials saved to OS keychain')
-      } catch (keytarError) {
-        console.warn('Failed to save to keychain:', keytarError)
-      }
-
-      // Store encrypted backup in app storage
+      // Store encrypted credentials in app storage
       try {
         const encryptedCredentials = this.encrypt(JSON.stringify(credentialsToStore))
-        this.store.set('auth_backup', encryptedCredentials)
-        console.log('Encrypted credentials backup saved')
+        this.store.set('auth_credentials', encryptedCredentials)
+        console.log('Encrypted credentials saved')
       } catch (encryptError) {
-        console.warn('Failed to save encrypted backup:', encryptError)
+        console.warn('Failed to save encrypted credentials:', encryptError)
       }
 
       // Store basic info (non-sensitive) for quick access
@@ -162,29 +148,17 @@ export class SecureCredentialService {
   // Retrieve stored credentials
   async getStoredCredentials(): Promise<StoredCredentials | null> {
     try {
-      // First try OS keychain
+      // Get encrypted credentials from store
       let credentialsJson: string | null = null
       
       try {
-        credentialsJson = await keytar.getPassword(this.SERVICE_NAME, this.ACCOUNT_NAME)
-        if (credentialsJson) {
-          console.log('Credentials retrieved from OS keychain')
+        const encryptedCredentials = this.store.get('auth_credentials') as string
+        if (encryptedCredentials) {
+          credentialsJson = this.decrypt(encryptedCredentials)
+          console.log('Credentials retrieved from encrypted storage')
         }
-      } catch (keytarError) {
-        console.warn('Failed to retrieve from keychain:', keytarError)
-      }
-
-      // Fallback to encrypted backup
-      if (!credentialsJson) {
-        try {
-          const encryptedBackup = this.store.get('auth_backup') as string
-          if (encryptedBackup) {
-            credentialsJson = this.decrypt(encryptedBackup)
-            console.log('Credentials retrieved from encrypted backup')
-          }
-        } catch (decryptError) {
-          console.warn('Failed to decrypt backup credentials:', decryptError)
-        }
+      } catch (decryptError) {
+        console.warn('Failed to decrypt credentials:', decryptError)
       }
 
       if (!credentialsJson) {
@@ -295,7 +269,9 @@ export class SecureCredentialService {
         return false
       }
 
-      return await bcrypt.compare(providedPassword, storedCredentials.hashedPassword)
+      // Compare password using crypto hash
+      const providedHash = crypto.createHash('sha256').update(providedPassword + this.encryptionKey).digest('hex')
+      return providedHash === storedCredentials.hashedPassword
     } catch (error) {
       console.error('Password validation failed:', error)
       return false
@@ -319,23 +295,12 @@ export class SecureCredentialService {
         savedAt: new Date().toISOString()
       }
 
-      // Update in keychain
-      try {
-        await keytar.setPassword(
-          this.SERVICE_NAME,
-          this.ACCOUNT_NAME,
-          JSON.stringify(updatedCredentials)
-        )
-      } catch (keytarError) {
-        console.warn('Failed to update keychain:', keytarError)
-      }
-
-      // Update encrypted backup
+      // Update encrypted credentials
       try {
         const encryptedCredentials = this.encrypt(JSON.stringify(updatedCredentials))
-        this.store.set('auth_backup', encryptedCredentials)
+        this.store.set('auth_credentials', encryptedCredentials)
       } catch (encryptError) {
-        console.warn('Failed to update encrypted backup:', encryptError)
+        console.warn('Failed to update encrypted credentials:', encryptError)
       }
 
       console.log('Stored tokens updated successfully')
@@ -349,16 +314,8 @@ export class SecureCredentialService {
   // Clear stored credentials
   async clearStoredCredentials(): Promise<boolean> {
     try {
-      // Remove from keychain
-      try {
-        await keytar.deletePassword(this.SERVICE_NAME, this.ACCOUNT_NAME)
-        console.log('Credentials removed from OS keychain')
-      } catch (keytarError) {
-        console.warn('Failed to remove from keychain:', keytarError)
-      }
-
-      // Remove encrypted backup
-      this.store.delete('auth_backup')
+      // Remove encrypted credentials
+      this.store.delete('auth_credentials')
 
       // Clear last login info
       this.store.delete('last_login')
@@ -379,7 +336,11 @@ export class SecureCredentialService {
   } {
     return this.store.get('last_login', {
       hasRememberedCredentials: false
-    })
+    }) as {
+      email?: string
+      hasRememberedCredentials: boolean
+      lastLoginAt?: string
+    }
   }
 
   // Check if credentials are stored
@@ -392,25 +353,48 @@ export class SecureCredentialService {
     }
   }
 
+  // Store credentials (simple method for login)
+  async storeCredentials(email: string, _password: string): Promise<boolean> {
+    try {
+      // For simplicity, just store email in last_login
+      this.store.set('last_login', {
+        email: email,
+        hasRememberedCredentials: true,
+        lastLoginAt: new Date().toISOString()
+      })
+      
+      console.log('Credentials stored for:', email)
+      return true
+    } catch (error) {
+      console.error('Failed to store credentials:', error)
+      return false
+    }
+  }
+
+  // Get saved credentials for auto-fill
+  async getSavedCredentials(): Promise<{ email?: string; password?: string } | null> {
+    try {
+      const lastLogin = this.store.get('last_login') as any
+      if (lastLogin && lastLogin.email) {
+        return {
+          email: lastLogin.email,
+          password: '' // Don't pre-fill password for security
+        }
+      }
+      return null
+    } catch (error) {
+      console.error('Failed to get saved credentials:', error)
+      return null
+    }
+  }
+
   // Test credential storage system
   async testCredentialSystem(): Promise<{
-    keytarAvailable: boolean
     encryptionWorking: boolean
     canSaveRetrieve: boolean
     error?: string
   }> {
     try {
-      // Test keytar availability
-      let keytarAvailable = false
-      try {
-        await keytar.setPassword('test-service', 'test-account', 'test-password')
-        const retrieved = await keytar.getPassword('test-service', 'test-account')
-        keytarAvailable = retrieved === 'test-password'
-        await keytar.deletePassword('test-service', 'test-account')
-      } catch (error) {
-        console.warn('Keytar test failed:', error)
-      }
-
       // Test encryption
       let encryptionWorking = false
       try {
@@ -427,35 +411,29 @@ export class SecureCredentialService {
       try {
         const testCredentials: StoredCredentials = {
           email: 'test@example.com',
-          hashedPassword: await bcrypt.hash('testpassword', 12),
+          hashedPassword: crypto.createHash('sha256').update('testpassword' + this.encryptionKey).digest('hex'),
           apiToken: 'test-token',
           savedAt: new Date().toISOString()
         }
 
-        if (keytarAvailable) {
-          await keytar.setPassword('test-nova-hr', 'test-creds', JSON.stringify(testCredentials))
-          const retrieved = await keytar.getPassword('test-nova-hr', 'test-creds')
-          canSaveRetrieve = retrieved !== null
-          await keytar.deletePassword('test-nova-hr', 'test-creds')
-        } else {
-          // Test with encrypted storage
-          const encrypted = this.encrypt(JSON.stringify(testCredentials))
-          const decrypted = this.decrypt(encrypted)
-          const parsed = JSON.parse(decrypted)
-          canSaveRetrieve = parsed.email === testCredentials.email
-        }
+        // Test with encrypted storage
+        const encrypted = this.encrypt(JSON.stringify(testCredentials))
+        this.store.set('test_credentials', encrypted)
+        const retrieved = this.store.get('test_credentials') as string
+        const decrypted = this.decrypt(retrieved)
+        const parsed = JSON.parse(decrypted)
+        canSaveRetrieve = parsed.email === testCredentials.email
+        this.store.delete('test_credentials')
       } catch (error) {
         console.warn('Save/retrieve test failed:', error)
       }
 
       return {
-        keytarAvailable,
         encryptionWorking,
         canSaveRetrieve
       }
     } catch (error: any) {
       return {
-        keytarAvailable: false,
         encryptionWorking: false,
         canSaveRetrieve: false,
         error: error.message

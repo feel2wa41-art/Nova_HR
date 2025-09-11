@@ -95,6 +95,7 @@ export const MainLayout = () => {
   const { user, logout, isHRManager, hasPermission, isAuthenticated } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [logoLoadError, setLogoLoadError] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
 
   // Get inbox count
   const { data: inboxCount } = useQuery({
@@ -163,200 +164,218 @@ export const MainLayout = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Generate dynamic menu items based on user permissions
-  const getMenuItems = (): MenuProps['items'] => {
-    const baseItems = [
-      {
-        key: '/',
-        icon: <HomeOutlined />,
-        label: '대시보드',
-      },
-      {
-        key: '/attendance-management',
-        icon: <ClockCircleOutlined />,
-        label: '근태관리',
-        children: [
-          {
-            key: '/attendance',
-            icon: <ClockCircleOutlined />,
-            label: '출퇴근',
-          },
-        ],
-      },
-      {
-        key: '/leave',
-        icon: <CalendarOutlined />,
-        label: '휴가',
-      },
-      {
-        key: '/daily-report',
-        icon: <FileSearchOutlined />,
-        label: '일일보고서',
-      },
-      {
-        key: '/weekly-report',
-        icon: <CalendarTwoTone />,
-        label: '주간보고서',
-      },
-      {
-        key: '/user-health',
-        icon: <HeartOutlined />,
-        label: '사용자 헬스 체크',
-      },
-      {
-        key: '/approval',
-        icon: <FileTextOutlined />,
-        label: '전자결재',
-        children: [
-          {
-            key: '/approval/drafts',
-            icon: <FileTextOutlined />,
-            label: (
-              <div className="flex items-center justify-between w-full">
-                <span>임시보관함</span>
-                <Badge count={draftsCount?.count || 0} size="small" />
-              </div>
-            ),
-          },
-          {
-            key: '/approval/pending',
-            icon: <ClockCircleOutlined />,
-            label: (
-              <div className="flex items-center justify-between w-full">
-                <span>결재 대기</span>
-                <Badge count={pendingCount?.count || 0} size="small" />
-              </div>
-            ),
-          },
-          {
-            key: '/approval/inbox',
-            icon: <InboxOutlined />,
-            label: (
-              <div className="flex items-center justify-between w-full">
-                <span>수신함</span>
-                <Badge count={inboxCount?.count || 0} size="small" />
-              </div>
-            ),
-          },
-          {
-            key: '/approval/outbox',
-            icon: <SendOutlined />,
-            label: (
-              <div className="flex items-center justify-between w-full">
-                <span>상신함</span>
-                <Badge count={outboxCount?.count || 0} size="small" />
-              </div>
-            ),
-          },
-          {
-            key: '/approval/reference',
-            icon: <FileTextOutlined />,
-            label: (
-              <div className="flex items-center justify-between w-full">
-                <span>참조문서</span>
-                <Badge count={referenceCount?.count || 0} size="small" />
-              </div>
-            ),
-          },
-          {
-            key: '/reference-documents',
-            icon: <BookOutlined />,
-            label: '참고결재문서',
-          },
-        ],
-      },
-      {
-        key: '/calendar',
-        icon: <CalendarFilled />,
-        label: '캘린더',
-      },
-      {
-        key: '/community',
-        icon: <MessageOutlined />,
-        label: 'HR 커뮤니티',
-      },
-      {
-        key: '/settings',
-        icon: <SettingOutlined />,
-        label: '설정',
-      },
-    ];
+  // Check if current path is admin route to toggle admin mode
+  useEffect(() => {
+    const isAdminPath = location.pathname.startsWith('/admin');
+    setAdminMode(isAdminPath);
+  }, [location.pathname]);
 
-    // Add HR Manager menu items
-    if (isHRManager()) {
-      baseItems.push(
+  // Get user menu items (일반 사용자 메뉴)
+  const getUserMenuItems = (): MenuProps['items'] => [
+    {
+      key: '/',
+      icon: <HomeOutlined />,
+      label: '대시보드',
+    },
+    {
+      key: '/attendance-management',
+      icon: <ClockCircleOutlined />,
+      label: '근태관리',
+      children: [
         {
-          type: 'divider',
-        } as any,
+          key: '/attendance',
+          icon: <ClockCircleOutlined />,
+          label: '출퇴근',
+        },
+      ],
+    },
+    {
+      key: '/leave',
+      icon: <CalendarOutlined />,
+      label: '휴가',
+    },
+    {
+      key: '/leave-approval',
+      icon: <CheckCircleOutlined />,
+      label: '휴가 승인',
+    },
+    {
+      key: '/daily-report',
+      icon: <FileSearchOutlined />,
+      label: '일일보고서',
+    },
+    {
+      key: '/weekly-report',
+      icon: <CalendarTwoTone />,
+      label: '주간보고서',
+    },
+    {
+      key: '/user-health',
+      icon: <HeartOutlined />,
+      label: '사용자 헬스 체크',
+    },
+    {
+      key: '/approval',
+      icon: <FileTextOutlined />,
+      label: '전자결재',
+      children: [
         {
-          key: 'admin',
-          icon: <CrownOutlined />,
-          label: '관리자',
-          children: [
-            {
-              key: '/admin/users',
-              icon: <UserOutlined />,
-              label: '직원 관리',
-            },
-            {
-              key: '/admin/attendance-management',
-              icon: <ClockCircleOutlined />,
-              label: '근태 관리',
-            },
-            {
-              key: '/admin/leave-management',
-              icon: <CalendarOutlined />,
-              label: '휴가 관리',
-            },
-            {
-              key: '/admin/leave-types',
-              icon: <CalendarOutlined />,
-              label: '휴가 종류 관리',
-            },
-            {
-              key: '/admin/organization',
-              icon: <TeamOutlined />,
-              label: '조직도 관리',
-            },
-            {
-              key: '/admin/approval-management',
-              icon: <FileTextOutlined />,
-              label: '전자결재 관리',
-            },
-            {
-              key: '/admin/company',
-              icon: <EnvironmentOutlined />,
-              label: '회사 설정',
-            },
-            {
-              key: '/admin/common-code',
-              icon: <SettingOutlined />,
-              label: '공통코드 관리',
-            },
-            {
-              key: '/admin/overtime-management',
-              icon: <ClockCircleOutlined />,
-              label: '추가근무 관리',
-            },
-            {
-              key: '/admin/screenshot-gallery',
-              icon: <EyeOutlined />,
-              label: '스크린캡처 관리',
-            },
-            {
-              key: '/admin/desktop-agent',
-              icon: <FundProjectionScreenOutlined />,
-              label: '데스크톱 에이전트',
-            },
-          ],
-        }
-      );
+          key: '/approval/drafts',
+          icon: <FileTextOutlined />,
+          label: (
+            <div className="flex items-center justify-between w-full">
+              <span>임시보관함</span>
+              <Badge count={draftsCount?.count || 0} size="small" />
+            </div>
+          ),
+        },
+        {
+          key: '/approval/pending',
+          icon: <ClockCircleOutlined />,
+          label: (
+            <div className="flex items-center justify-between w-full">
+              <span>결재 대기</span>
+              <Badge count={pendingCount?.count || 0} size="small" />
+            </div>
+          ),
+        },
+        {
+          key: '/approval/inbox',
+          icon: <InboxOutlined />,
+          label: (
+            <div className="flex items-center justify-between w-full">
+              <span>수신함</span>
+              <Badge count={inboxCount?.count || 0} size="small" />
+            </div>
+          ),
+        },
+        {
+          key: '/approval/outbox',
+          icon: <SendOutlined />,
+          label: (
+            <div className="flex items-center justify-between w-full">
+              <span>상신함</span>
+              <Badge count={outboxCount?.count || 0} size="small" />
+            </div>
+          ),
+        },
+        {
+          key: '/approval/reference',
+          icon: <FileTextOutlined />,
+          label: (
+            <div className="flex items-center justify-between w-full">
+              <span>참조문서</span>
+              <Badge count={referenceCount?.count || 0} size="small" />
+            </div>
+          ),
+        },
+        {
+          key: '/reference-documents',
+          icon: <BookOutlined />,
+          label: '참고결재문서',
+        },
+      ],
+    },
+    {
+      key: '/calendar',
+      icon: <CalendarFilled />,
+      label: '캘린더',
+    },
+    {
+      key: '/community',
+      icon: <MessageOutlined />,
+      label: 'HR 커뮤니티',
+    },
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: '설정',
+    },
+  ];
+
+  // Get admin menu items (관리자 메뉴)
+  const getAdminMenuItems = (): MenuProps['items'] => [
+    {
+      key: '/admin/user-management',
+      icon: <UserOutlined />,
+      label: '사용자 관리',
+    },
+    {
+      key: '/admin/attendance-management',
+      icon: <ClockCircleOutlined />,
+      label: '근태 관리',
+    },
+    {
+      key: '/admin/leave-management',
+      icon: <CalendarOutlined />,
+      label: '휴가 관리',
+    },
+    {
+      key: '/admin/leave-types',
+      icon: <CalendarOutlined />,
+      label: '휴가 종류 관리',
+    },
+    {
+      key: '/admin/user-leave-balance',
+      icon: <CalendarOutlined />,
+      label: '사용자 휴가 잔여 관리',
+    },
+    {
+      key: '/admin/organization',
+      icon: <TeamOutlined />,
+      label: 'HR 관리',
+    },
+    {
+      key: '/admin/approval-management',
+      icon: <FileTextOutlined />,
+      label: '전자결재 관리',
+    },
+    {
+      key: '/admin/company',
+      icon: <EnvironmentOutlined />,
+      label: '회사 설정',
+    },
+    {
+      key: '/admin/common-code',
+      icon: <SettingOutlined />,
+      label: '공통코드 관리',
+    },
+    {
+      key: '/admin/overtime-management',
+      icon: <ClockCircleOutlined />,
+      label: '추가근무 관리',
+    },
+    {
+      key: '/admin/screenshot-gallery',
+      icon: <EyeOutlined />,
+      label: '스크린캡처 관리',
+    },
+    {
+      key: '/admin/attitude-settings',
+      icon: <SettingOutlined />,
+      label: '태도 모니터링 설정',
+    },
+    {
+      key: '/admin/desktop-agent',
+      icon: <FundProjectionScreenOutlined />,
+      label: '데스크톱 에이전트',
+    },
+  ];
+
+  // Generate dynamic menu items based on admin mode
+  const getMenuItems = (): MenuProps['items'] => {
+    if (!isHRManager()) {
+      return getUserMenuItems();
     }
 
-    return baseItems;
+    if (adminMode) {
+      return getAdminMenuItems();
+    }
+
+    return getUserMenuItems();
   };
 
-  const getUserMenuItems = (): MenuProps['items'] => [
+  const getUserDropdownMenuItems = (): MenuProps['items'] => [
     {
       key: 'profile',
       icon: <UserOutlined />,
@@ -431,6 +450,18 @@ export const MainLayout = () => {
             </div>
           )}
         </div>
+        {isHRManager() && !collapsed && (
+          <div className="px-6 pb-4">
+            <div className={`px-3 py-2 rounded-lg text-sm text-center ${
+              adminMode 
+                ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                : 'bg-gray-50 text-gray-700 border border-gray-200'
+            }`}>
+              <CrownOutlined className="mr-2" />
+              {adminMode ? '관리자 모드' : '사용자 모드'}
+            </div>
+          </div>
+        )}
         <Menu
           mode='inline'
           selectedKeys={[location.pathname]}
@@ -449,10 +480,28 @@ export const MainLayout = () => {
             className='text-lg'
           />
           <div className='flex items-center gap-3'>
+            {isHRManager() && (
+              <Button
+                type={adminMode ? 'primary' : 'default'}
+                icon={<CrownOutlined />}
+                onClick={() => {
+                  const newMode = !adminMode;
+                  setAdminMode(newMode);
+                  if (newMode && !location.pathname.startsWith('/admin')) {
+                    navigate('/admin/organization');
+                  } else if (!newMode && location.pathname.startsWith('/admin')) {
+                    navigate('/');
+                  }
+                }}
+                className='transition-colors'
+              >
+                {adminMode ? '관리자 모드' : '사용자 모드'}
+              </Button>
+            )}
             <NotificationCenter />
             <Dropdown
               menu={{
-                items: getUserMenuItems(),
+                items: getUserDropdownMenuItems(),
                 onClick: handleUserMenuClick,
               }}
               placement='bottomRight'

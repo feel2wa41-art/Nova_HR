@@ -16,7 +16,8 @@ import {
 
 export class SubmitScreenshotDto {
   @ApiProperty({ description: 'Screenshot file' })
-  screenshot: any;
+  @IsOptional()
+  screenshot?: any;
 
   @ApiProperty({ description: 'Screenshot metadata' })
   @IsOptional()

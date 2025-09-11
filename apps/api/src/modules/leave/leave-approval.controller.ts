@@ -16,6 +16,7 @@ import { ApprovalService } from '../approval/approval.service';
 import { PrismaService } from '../../shared/services/prisma.service';
 
 interface CreateLeaveApprovalDto {
+  categoryId?: string;
   leaveTypeId: string;
   startDate: string;
   endDate: string;
@@ -46,19 +47,39 @@ export class LeaveApprovalController {
     const userId = req.user.sub;
     const tenantId = req.user.tenantId;
 
-    // Get the leave approval category with company filtering
-    const leaveCategory = await this.prisma.approval_category.findFirst({
-      where: { 
-        code: 'LEAVE_REQUEST',
-        OR: [
-          { company_id: tenantId },  // Company-specific category
-          { company_id: null }       // Global/system category
+    // Get the approval category - either specified or default leave category
+    let leaveCategory;
+    
+    if (createDto.categoryId) {
+      // Use specified category
+      leaveCategory = await this.prisma.approval_category.findFirst({
+        where: { 
+          id: createDto.categoryId,
+          OR: [
+            { company_id: tenantId },  // Company-specific category
+            { company_id: null }       // Global/system category
+          ]
+        }
+      });
+    } else {
+      // Find default leave category (LEAVE_REQUEST or similar)
+      leaveCategory = await this.prisma.approval_category.findFirst({
+        where: { 
+          code: { in: ['LEAVE_REQUEST', 'LEAVE_APPLICATION', 'LEAVE_FORM'] },
+          OR: [
+            { company_id: tenantId },  // Company-specific category
+            { company_id: null }       // Global/system category
+          ]
+        },
+        orderBy: [
+          { company_id: 'desc' }, // Prefer company-specific over global
+          { created_at: 'desc' }
         ]
-      }
-    });
+      });
+    }
 
     if (!leaveCategory) {
-      throw new Error('Leave request category not found. Please contact administrator.');
+      throw new Error('Leave approval form not found. Please contact administrator to set up leave approval categories.');
     }
 
     // Get leave type with company filtering
@@ -118,6 +139,7 @@ export class LeaveApprovalController {
     await this.prisma.leave_request.create({
       data: {
         user_id: userId,
+        tenant_id: tenantId,
         leave_type_id: leaveType.id,
         start_date: startDate,
         end_date: endDate,
@@ -189,10 +211,20 @@ export class LeaveApprovalController {
     const userId = req.user.sub;
     const currentYear = new Date().getFullYear();
 
-    const balances = await this.prisma.leave_balance.findMany({
+    // 사용자의 휴가 잔여 현황을 조회 (휴가 타입 정보 포함)
+    const balances = await this.prisma.user_leave_balance.findMany({
       where: {
         user_id: userId,
+        tenant_id: req.user.tenantId,
         year: currentYear
+      },
+      include: {
+        leave_type: {
+          select: {
+            code: true,
+            name: true
+          }
+        }
       }
     });
 
@@ -211,10 +243,10 @@ export class LeaveApprovalController {
       return acc;
     }, {} as any);
 
-    // Transform to expected format - return array instead of object
+    // 응답 형식으로 변환 - 배열 형태로 반환
     const result = balances.map(balance => ({
-      leaveType: balance.leave_type.toUpperCase(),
-      leaveTypeName: leaveTypeMap[balance.leave_type.toUpperCase()] || balance.leave_type,
+      leaveType: balance.leave_type.code.toUpperCase(),
+      leaveTypeName: balance.leave_type.name,
       allocated: Number(balance.allocated),
       used: Number(balance.used),
       pending: Number(balance.pending),

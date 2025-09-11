@@ -42,6 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       return {
         id: payload.sub,
+        userId: payload.sub,  // Add userId for controllers that expect it
         sub: payload.sub,  // For backward compatibility
         email: payload.email,
         role: payload.role,

@@ -68,6 +68,7 @@ export class AttendanceService {
 
     const attendanceData = {
       user_id: userId,
+      tenant_id: tenantId,
       date_key: today,
       check_in_at: new Date(),
       check_in_loc: {
@@ -289,6 +290,7 @@ export class AttendanceService {
     return this.prisma.attendance_request.create({
       data: {
         user_id: userId,
+        tenant_id: tenantId,
         target_at: new Date(adjustmentDto.date),
         request_type: adjustmentDto.adjustmentType,
         reason_text: adjustmentDto.reason,

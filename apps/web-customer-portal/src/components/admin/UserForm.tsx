@@ -158,7 +158,6 @@ export const UserForm = ({ open, user, onOk, onCancel, loading }: UserFormProps)
         <Form.Item
           label="표시 순서"
           name="order"
-          initialValue={0}
         >
           <Input 
             type="number" 

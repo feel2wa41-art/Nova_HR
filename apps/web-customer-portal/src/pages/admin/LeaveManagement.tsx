@@ -7,7 +7,6 @@ import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 export const LeaveManagement: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('PENDING');
@@ -16,48 +15,24 @@ export const LeaveManagement: React.FC = () => {
   const [selectedLeaveType, setSelectedLeaveType] = useState<string | undefined>();
   const queryClient = useQueryClient();
 
-  // Fetch leave requests from approval system
+  // Fetch leave requests from leave API
   const { data: leaveRequests, isLoading } = useQuery({
     queryKey: ['leave-requests', selectedStatus, selectedEmployee, dateRange, selectedLeaveType],
     queryFn: async () => {
-      // Get leave approval category first
-      const categoryResponse = await apiClient.get('/approval/categories');
-      const leaveCategory = categoryResponse.data.find((cat: any) => cat.code === 'LEAVE_REQUEST');
-      
-      if (!leaveCategory) {
-        return [];
-      }
-
-      // Fetch approval drafts for leave requests
+      // Build query parameters
       const params = new URLSearchParams();
-      if (selectedStatus) params.append('status', selectedStatus);
+      if (selectedStatus && selectedStatus !== '') params.append('status', selectedStatus);
+      if (selectedEmployee) params.append('userId', selectedEmployee);
+      if (selectedLeaveType) params.append('leaveType', selectedLeaveType);
+      if (dateRange) {
+        params.append('startDate', dateRange[0].format('YYYY-MM-DD'));
+        params.append('endDate', dateRange[1].format('YYYY-MM-DD'));
+      }
       
-      const response = await apiClient.get(`/approval/drafts?${params.toString()}`);
+      const response = await apiClient.get(`/leave/requests?${params.toString()}`);
       
-      // Filter for leave requests and transform data
-      const leaveApprovals = response.data.filter((draft: any) => 
-        draft.category_id === leaveCategory.id
-      );
-
-      // Map to expected format
-      return leaveApprovals.map((draft: any) => {
-        const formData = draft.form_data || {};
-        return {
-          id: draft.id,
-          user: draft.user,
-          leaveType: {
-            name: formData.leave_type_name || 'Unknown',
-            colorHex: '#1890ff',
-          },
-          startDate: formData.start_date,
-          endDate: formData.end_date,
-          daysCount: formData.working_days || formData.total_days || 0,
-          reason: formData.reason || '',
-          emergency: formData.emergency || false,
-          status: draft.status,
-          submittedAt: draft.submitted_at || draft.created_at,
-        };
-      });
+      // Data is already in the correct format from the API
+      return response.data.data || response.data;
     },
   });
 
@@ -65,7 +40,7 @@ export const LeaveManagement: React.FC = () => {
   const { data: statistics } = useQuery({
     queryKey: ['leave-statistics'],
     queryFn: async () => {
-      const response = await apiClient.get('/admin/leave-statistics');
+      const response = await apiClient.get('/leave/statistics');
       return response.data;
     },
   });
@@ -91,11 +66,11 @@ export const LeaveManagement: React.FC = () => {
   // Approve/Reject leave mutation through approval system
   const processLeaveMutation = useMutation({
     mutationFn: async ({ id, action, comments }: { id: string; action: 'approve' | 'reject'; comments?: string }) => {
-      // Process through approval system
+      // Process through leave API
       if (action === 'approve') {
-        return apiClient.post(`/approval/drafts/${id}/approve`, { comments });
+        return apiClient.put(`/leave/requests/${id}/approve`, { comments });
       } else {
-        return apiClient.post(`/approval/drafts/${id}/reject`, { comments });
+        return apiClient.put(`/leave/requests/${id}/reject`, { reason: comments });
       }
     },
     onSuccess: (_, variables) => {
@@ -141,6 +116,12 @@ export const LeaveManagement: React.FC = () => {
 
   const columns = [
     {
+      title: '순번',
+      key: 'index',
+      width: 60,
+      render: (_: any, __: any, index: number) => index + 1,
+    },
+    {
       title: '신청자',
       dataIndex: 'user',
       key: 'user',
@@ -152,37 +133,37 @@ export const LeaveManagement: React.FC = () => {
       dataIndex: 'user',
       key: 'department',
       width: 120,
-      render: (user: any) => user?.department?.name || '-',
+      render: (user: any) => user?.employee_profile?.department || '-',
     },
     {
       title: '휴가 유형',
-      dataIndex: 'leaveType',
-      key: 'leaveType',
+      dataIndex: 'leave_type',
+      key: 'leave_type',
       width: 120,
       render: (type: any) => (
-        <Tag color={type?.colorHex || 'blue'}>{type?.name || '-'}</Tag>
+        <Tag color={type?.colorHex || 'blue'}>{type?.name || type || '-'}</Tag>
       ),
     },
     {
       title: '시작일',
-      dataIndex: 'startDate',
-      key: 'startDate',
+      dataIndex: 'start_date',
+      key: 'start_date',
       width: 120,
       render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
     },
     {
       title: '종료일',
-      dataIndex: 'endDate',
-      key: 'endDate',
+      dataIndex: 'end_date',
+      key: 'end_date',
       width: 120,
       render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
     },
     {
       title: '일수',
-      dataIndex: 'daysCount',
-      key: 'daysCount',
+      dataIndex: 'requested_days',
+      key: 'requested_days',
       width: 80,
-      render: (days: number) => `${days}일`,
+      render: (days: number) => `${days || 0}일`,
     },
     {
       title: '사유',
@@ -219,9 +200,11 @@ export const LeaveManagement: React.FC = () => {
     },
     {
       title: '신청일',
-      dataIndex: 'submittedAt',
-      key: 'submittedAt',
-      width: 120,
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 140,
+      sorter: (a: any, b: any) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix(),
+      defaultSortOrder: 'descend' as const,
       render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
     },
     {
@@ -311,12 +294,28 @@ export const LeaveManagement: React.FC = () => {
           </div>
         }
       >
-        <Tabs activeKey={selectedStatus} onChange={setSelectedStatus}>
-          <TabPane tab="대기중" key="PENDING" />
-          <TabPane tab="승인됨" key="APPROVED" />
-          <TabPane tab="반려됨" key="REJECTED" />
-          <TabPane tab="전체" key="" />
-        </Tabs>
+        <Tabs 
+          activeKey={selectedStatus} 
+          onChange={setSelectedStatus}
+          items={[
+            {
+              key: 'PENDING',
+              label: '대기중'
+            },
+            {
+              key: 'APPROVED',
+              label: '승인됨'
+            },
+            {
+              key: 'REJECTED',
+              label: '반려됨'
+            },
+            {
+              key: '',
+              label: '전체'
+            }
+          ]}
+        />
 
         <div className="mb-4">
           <Space size="middle" wrap>

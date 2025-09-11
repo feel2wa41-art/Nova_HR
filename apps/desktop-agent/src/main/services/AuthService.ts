@@ -1,5 +1,6 @@
 import Store from 'electron-store'
-import { ApiService, ApiResponse } from './ApiService'
+import { ApiService } from './ApiService'
+import { Logger } from '../utils/logger'
 
 export interface User {
   id: string
@@ -7,13 +8,29 @@ export interface User {
   name: string
   role: string
   title?: string
+  phone?: string
+  tenant_id: string
+  tenant?: {
+    name: string
+    domain?: string
+  }
   company?: {
     id: string
     name: string
   }
   employee_profile?: {
-    department?: string
     emp_no?: string
+    department?: string
+    hire_date?: string
+    employment_type?: string
+    salary?: number
+    base_location?: {
+      name?: string
+      address?: string
+    }
+  }
+  org_unit?: {
+    name?: string
   }
 }
 
@@ -37,9 +54,12 @@ export class AuthService {
     this.store = store
   }
 
-  async login(credentials: LoginCredentials): Promise<ApiResponse<{ user: User; tokens: any }>> {
+  async login(credentials: LoginCredentials): Promise<any> {
     try {
+      Logger.log('AuthService: Starting login process for:', credentials.email)
       const response = await this.apiService.login(credentials)
+      
+      Logger.log('AuthService: ApiService response:', response)
       
       if (response.success && response.data) {
         // Store authentication data
@@ -51,7 +71,7 @@ export class AuthService {
         
         this.store.set('auth', authData)
         
-        console.log('User logged in:', response.data.user.email)
+        Logger.log('AuthService: User logged in successfully:', response.data.user.email)
         
         return {
           success: true,
@@ -66,9 +86,10 @@ export class AuthService {
         }
       }
       
+      Logger.log('AuthService: Login failed with response:', response)
       return response
     } catch (error: any) {
-      console.error('Login error:', error)
+      Logger.error('AuthService: Login error:', error)
       return {
         success: false,
         error: error.message || 'Login failed'
@@ -76,19 +97,19 @@ export class AuthService {
     }
   }
 
-  async logout(): Promise<ApiResponse> {
+  async logout(): Promise<any> {
     try {
       // Call logout API
-      const response = await this.apiService.logout()
+      // const response = await this.apiService.logout()
       
       // Clear local auth data regardless of API response
       this.clearAuthData()
       
-      console.log('User logged out')
+      Logger.log('User logged out')
       
       return { success: true }
     } catch (error: any) {
-      console.error('Logout error:', error)
+      Logger.error('Logout error:', error)
       // Still clear local data even if API call fails
       this.clearAuthData()
       return {
@@ -120,7 +141,7 @@ export class AuthService {
 
       return false
     } catch (error) {
-      console.error('Token refresh error:', error)
+      Logger.error('Token refresh error:', error)
       return false
     }
   }
@@ -155,7 +176,7 @@ export class AuthService {
     return user ? roles.includes(user.role) : false
   }
 
-  async updateUserProfile(): Promise<ApiResponse<User>> {
+  async updateUserProfile(): Promise<any> {
     try {
       const response = await this.apiService.getCurrentUser()
       
@@ -175,7 +196,7 @@ export class AuthService {
       
       return response
     } catch (error: any) {
-      console.error('Update user profile error:', error)
+      Logger.error('Update user profile error:', error)
       return {
         success: false,
         error: error.message || 'Failed to update user profile'
@@ -197,7 +218,7 @@ export class AuthService {
   }
 
   // Event handlers for auth state changes
-  onAuthStateChange(callback: (authenticated: boolean, user: User | null) => void): void {
+  onAuthStateChange(_callback: (authenticated: boolean, user: User | null) => void): void {
     // This would be implemented with an event emitter in a full implementation
     // For now, this is a placeholder
   }
@@ -225,7 +246,7 @@ export class AuthService {
         return false
       }
     } catch (error) {
-      console.error('Token validation error:', error)
+      Logger.error('Token validation error:', error)
       this.clearAuthData()
       return false
     }
@@ -235,7 +256,7 @@ export class AuthService {
   getUserPermissions(): string[] {
     const user = this.getCurrentUser()
     // This would typically come from the user object or be fetched separately
-    return user?.permissions || []
+    return (user as any)?.permissions || []
   }
 
   // Check if user has specific permission
@@ -267,14 +288,14 @@ export class AuthService {
       const isValid = await this.validateStoredToken()
       
       if (isValid) {
-        console.log('Auto-login successful for:', this.getCurrentUser()?.email)
+        Logger.log('Auto-login successful for:', this.getCurrentUser()?.email)
         return true
       } else {
-        console.log('Auto-login failed: invalid token')
+        Logger.log('Auto-login failed: invalid token')
         return false
       }
     } catch (error) {
-      console.error('Auto-login error:', error)
+      Logger.error('Auto-login error:', error)
       return false
     }
   }

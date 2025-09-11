@@ -12,14 +12,14 @@ async function main() {
     where: { domain: 'demo.reko-hr.com' },
     update: {},
     create: {
-      name: 'Demo Company',
+      name: 'Reko HR',
       domain: 'demo.reko-hr.com',
       status: 'ACTIVE',
       plan: 'PREMIUM',
       max_users: 500,
       settings: {
-        timezone: 'Asia/Jakarta',
-        currency: 'IDR',
+        timezone: 'Asia/Seoul',
+        currency: 'KRW',
         language: 'ko',
       },
     },
@@ -34,7 +34,7 @@ async function main() {
     create: {
       id: 'company-demo',
       tenant_id: tenant.id,
-      name: '(주)노바HR',
+      name: '(주)레코HR',
       biz_no: '123-45-67890',
       ceo_name: '김대표',
       phone: '+82-2-1234-5678',
@@ -65,7 +65,7 @@ async function main() {
       lat: 37.5665,
       lng: 126.978,
       radius_m: 200,
-      wifi_ssids: ['NovaHR-WiFi', 'NovaHR-Guest'],
+      wifi_ssids: ['RekoHR-WiFi', 'RekoHR-Guest'],
       ip_cidrs: ['192.168.1.0/24'],
       web_checkin_allowed: true,
       face_required: false,
@@ -78,7 +78,7 @@ async function main() {
   const rootOrg = await prisma.org_unit.create({
     data: {
       company_id: company.id,
-      name: '(주)노바HR',
+      name: '(주)레코HR',
       code: 'ROOT',
       description: '최상위 조직',
       order_index: 0,
@@ -257,12 +257,23 @@ async function main() {
     { name: '출산휴가', code: 'MATERNITY', max_days_year: 90, carry_forward: false, color_hex: '#ec4899' },
     { name: '육아휴직', code: 'PATERNITY', max_days_year: 5, carry_forward: false, color_hex: '#8b5cf6' },
     { name: '개인사유', code: 'PERSONAL', max_days_year: 3, carry_forward: false, color_hex: '#f59e0b' },
+    { name: '특별휴가', code: 'SPECIAL', max_days_year: 10, carry_forward: false, color_hex: '#06b6d4' },
+    { name: '특별휴가2', code: 'SPECIAL_2', max_days_year: 5, carry_forward: false, color_hex: '#22c55e' },
   ];
 
   for (const leaveType of leaveTypes) {
-    await prisma.leave_type.create({
-      data: {
+    await prisma.leave_type.upsert({
+      where: {
+        code_tenant_id_company_id: {
+          code: leaveType.code,
+          tenant_id: tenant.id,
+          company_id: company.id
+        }
+      },
+      update: {},
+      create: {
         ...leaveType,
+        tenant_id: tenant.id, // Add tenant_id
         company_id: company.id, // Assign to the company
         description: `${leaveType.name} 휴가`,
         requires_approval: true,
@@ -275,35 +286,46 @@ async function main() {
 
   console.log('✅ Created leave types');
 
-  // Create leave balances for users
+  // Create user leave balances for users
   const currentYear = new Date().getFullYear();
   const users = [adminUser, hrManager, employee];
+  const createdLeaveTypes = await prisma.leave_type.findMany({
+    where: { tenant_id: tenant.id }
+  });
   
   for (const user of users) {
-    for (const leaveType of leaveTypes) {
-      await prisma.leave_balance.upsert({
+    for (const leaveType of createdLeaveTypes) {
+      const allocated = leaveType.max_days_year || 15; // Default 15 days if not specified
+      await prisma.user_leave_balance.upsert({
         where: {
-          user_id_leave_type_year: {
+          user_id_leave_type_id_year_tenant_id: {
             user_id: user.id,
-            leave_type: leaveType.code,
+            leave_type_id: leaveType.id,
             year: currentYear,
-          },
+            tenant_id: tenant.id
+          }
         },
-        update: {},
+        update: {
+          allocated: allocated,
+          available: allocated // Just update the allocated amount, keep current used/pending values
+        },
         create: {
+          tenant_id: tenant.id,
           user_id: user.id,
-          leave_type: leaveType.code,
+          leave_type_id: leaveType.id,
+          company_id: company.id,
           year: currentYear,
-          allocated: leaveType.max_days_year || 0,
+          allocated: allocated,
           used: 0,
           pending: 0,
-          carried: 0,
+          available: allocated, // available = allocated - used - pending
+          updated_by: adminUser.id,
         },
       });
     }
   }
 
-  console.log('✅ Created leave balances');
+  console.log('✅ Created user leave balances');
 
   // Create approval categories
   const categories = [
@@ -570,7 +592,10 @@ async function main() {
   const createdCategories = [];
   for (const category of categories) {
     const created = await prisma.approval_category.create({
-      data: category,
+      data: {
+        ...category,
+        company_id: company.id,
+      },
     });
     createdCategories.push(created);
   }
@@ -628,7 +653,10 @@ async function main() {
   const createdDrafts = [];
   for (const draft of sampleDrafts) {
     const createdDraft = await prisma.approval_draft.create({
-      data: draft,
+      data: {
+        ...draft,
+        tenant_id: tenant.id,
+      },
     });
     createdDrafts.push(createdDraft);
   }
@@ -765,6 +793,7 @@ async function main() {
       await prisma.attendance.create({
         data: {
           user_id: user.id,
+          tenant_id: tenant.id,
           date_key: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
           check_in_at: checkInTime,
           check_in_loc: {

@@ -351,7 +351,7 @@ export const CalendarPage: React.FC = () => {
               headerRender={({ value, type, onChange, onTypeChange }) => (
                 <div className="flex justify-between items-center p-4 border-b">
                   <div className="flex items-center gap-4">
-                    <Button.Group>
+                    <Space.Compact>
                       <Button 
                         type={type === 'month' ? 'primary' : 'default'}
                         onClick={() => onTypeChange('month')}
@@ -364,7 +364,7 @@ export const CalendarPage: React.FC = () => {
                       >
                         년
                       </Button>
-                    </Button.Group>
+                    </Space.Compact>
                     <Title level={4} className="!mb-0">
                       {value.format('YYYY년 MM월')}
                     </Title>

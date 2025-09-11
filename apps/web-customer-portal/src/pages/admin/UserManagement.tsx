@@ -11,13 +11,13 @@ import {
   Form, 
   Input,
   Select,
-  message,
   Badge,
   Descriptions,
   Row,
   Col,
   Avatar,
-  Tooltip
+  Tooltip,
+  App
 } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -74,6 +74,7 @@ interface PendingUser {
 }
 
 export const UserManagement = () => {
+  const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('users');
   const [viewModalVisible, setViewModalVisible] = useState(false);
@@ -97,17 +98,32 @@ export const UserManagement = () => {
     queryFn: () => apiClient.get('/users/profile').then(res => res.data),
   });
 
-  const companyId = profile?.org_unit?.company?.id;
+  const companyId = profile?.company?.id || profile?.org_unit?.company?.id;
 
-  // Get all users (company users for customer portal)
+  // Get all users (try both endpoints)
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['company-users', companyId],
     queryFn: async () => {
-      if (!companyId) return [];
-      const response = await apiClient.get(`/users/company/${companyId}`);
-      return response.data;
+      // Try company-specific endpoint first
+      if (companyId) {
+        try {
+          const response = await apiClient.get(`/users/company/${companyId}`);
+          return response.data;
+        } catch (error) {
+          console.warn('Company users endpoint failed, trying general users:', error);
+        }
+      }
+      
+      // Fallback to general users endpoint
+      try {
+        const response = await apiClient.get('/users');
+        return response.data?.data || response.data || [];
+      } catch (error) {
+        console.error('Users endpoint failed:', error);
+        return [];
+      }
     },
-    enabled: activeTab === 'users' && !!companyId,
+    enabled: activeTab === 'users',
   });
 
   // Get pending users
@@ -194,20 +210,26 @@ export const UserManagement = () => {
     },
   });
 
-  // Invite user mutation
-  const inviteUserMutation = useMutation({
+  // Create user mutation (replaces invite)
+  const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      if (!companyId) throw new Error('Company ID not found');
-      return await apiClient.post(`/users/company/${companyId}/invite`, userData);
+      const createData = {
+        ...userData,
+        password: 'admin123', // Default password
+        org_id: userData.organizationId !== 'org_4' ? userData.organizationId : null, // Set to null if default
+      };
+      delete createData.organizationId; // Remove the original field
+      delete createData.order; // Remove order field as it's not in API
+      return await apiClient.post(`/users`, createData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-users', companyId] });
-      message.success('사용자 초대가 완료되었습니다. 이메일을 확인해주세요.');
+      message.success('사용자가 생성되었습니다. 기본 비밀번호는 admin123입니다.');
       setUserFormVisible(false);
       setSelectedUserForForm(null);
     },
     onError: (error: any) => {
-      message.error(error.response?.data?.message || '사용자 초대에 실패했습니다');
+      message.error(error.response?.data?.message || '사용자 생성에 실패했습니다');
     },
   });
 
@@ -215,12 +237,24 @@ export const UserManagement = () => {
   const saveUserMutation = useMutation({
     mutationFn: async ({ userId, userData }: { userId?: string; userData: any }) => {
       if (userId) {
-        // Update existing user
-        return await apiClient.put(`/users/${userId}`, userData);
+        // Update existing user - map organizationId to org_id
+        const updateData = {
+          ...userData,
+          org_id: userData.organizationId !== 'org_4' ? userData.organizationId : null,
+        };
+        delete updateData.organizationId;
+        delete updateData.order;
+        return await apiClient.patch(`/users/${userId}`, updateData);
       } else {
-        // Invite new user
-        if (!companyId) throw new Error('Company ID not found');
-        return await apiClient.post(`/users/company/${companyId}/invite`, userData);
+        // Create new user (use the standard createUser endpoint)
+        const createData = {
+          ...userData,
+          password: 'admin123', // Default password
+          org_id: userData.organizationId !== 'org_4' ? userData.organizationId : null, // Set to null if default
+        };
+        delete createData.organizationId; // Remove the original field
+        delete createData.order; // Remove order field as it's not in API
+        return await apiClient.post(`/users`, createData);
       }
     },
     onSuccess: () => {

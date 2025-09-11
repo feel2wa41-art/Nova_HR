@@ -27,7 +27,7 @@ export class UsersController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN')
-  @ApiOperation({ summary: 'Get all users' })
+  @ApiOperation({ summary: 'Get all users for current tenant' })
   async getAllUsers(@Request() req: any) {
     // Use tenantId from JWT token for security
     const tenantId = req.user.tenantId;
@@ -38,6 +38,21 @@ export class UsersController {
   @ApiOperation({ summary: 'Get current user profile' })
   async getCurrentUser(@Request() req: any) {
     return this.usersService.findById(req.user.userId);
+  }
+
+  @Get('profile')
+  @ApiOperation({ summary: 'Get current user profile (alias for /me)' })
+  async getUserProfile(@Request() req: any) {
+    return this.usersService.findById(req.user.userId);
+  }
+
+  @Get('company/:companyId')
+  @UseGuards(RolesGuard)
+  @Roles('HR_MANAGER', 'CUSTOMER_ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Get users by company ID' })
+  async getUsersByCompany(@Param('companyId') companyId: string, @Request() req: any) {
+    const tenantId = req.user.tenantId;
+    return this.usersService.findByCompany(companyId, tenantId);
   }
 
   @Get('stats')

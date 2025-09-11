@@ -104,3 +104,156 @@ export const validateCurrencyAmount = (
 
   return { isValid: true };
 };
+
+/**
+ * Indonesian-specific currency formatting
+ */
+
+/**
+ * Convert number to Indonesian local notation (juta, ribu)
+ */
+export const formatToLocalIDR = (amount: number): string => {
+  if (amount >= 1000000) {
+    const juta = Math.floor(amount / 1000000);
+    const remainder = amount % 1000000;
+    
+    if (remainder === 0) {
+      return `${amount.toLocaleString('id-ID')} RP (${juta} juta)`;
+    } else if (remainder >= 1000) {
+      const ribu = Math.floor(remainder / 1000);
+      const remainderRibu = remainder % 1000;
+      
+      if (remainderRibu === 0) {
+        return `${amount.toLocaleString('id-ID')} RP (${juta} juta ${ribu} ribu)`;
+      } else {
+        return `${amount.toLocaleString('id-ID')} RP (${juta} juta ${ribu} ribu ${remainderRibu})`;
+      }
+    } else {
+      return `${amount.toLocaleString('id-ID')} RP (${juta} juta ${remainder})`;
+    }
+  } else if (amount >= 1000) {
+    const ribu = Math.floor(amount / 1000);
+    const remainder = amount % 1000;
+    
+    if (remainder === 0) {
+      return `${amount.toLocaleString('id-ID')} RP (${ribu} ribu)`;
+    } else {
+      return `${amount.toLocaleString('id-ID')} RP (${ribu} ribu ${remainder})`;
+    }
+  } else {
+    return `${amount.toLocaleString('id-ID')} RP`;
+  }
+};
+
+/**
+ * Parse Indonesian local notation back to number
+ */
+export const parseLocalIDR = (input: string): number => {
+  // Remove RP and parentheses content
+  const cleaned = input.replace(/RP.*$/, '').replace(/[,.]/g, '');
+  return parseInt(cleaned) || 0;
+};
+
+/**
+ * Format currency by currency code with local preferences
+ */
+export const formatByCurrencyCode = (
+  amount: number,
+  currencyCode: CurrencyCode,
+  useLocalNotation = false
+): string => {
+  if (currencyCode === 'IDR' && useLocalNotation) {
+    return formatToLocalIDR(amount);
+  }
+  
+  return formatCurrency(amount, currencyCode);
+};
+
+/**
+ * Business trip expense formatter with currency and local notation
+ */
+export const businessTripFormatter = {
+  /**
+   * Format accommodation expense
+   */
+  accommodation: (amount: number, currencyCode: CurrencyCode = 'IDR'): string => {
+    return formatByCurrencyCode(amount, currencyCode, currencyCode === 'IDR');
+  },
+
+  /**
+   * Format meal expense
+   */
+  meal: (amount: number, currencyCode: CurrencyCode = 'IDR'): string => {
+    return formatByCurrencyCode(amount, currencyCode, currencyCode === 'IDR');
+  },
+
+  /**
+   * Format transportation expense
+   */
+  transportation: (amount: number, currencyCode: CurrencyCode = 'IDR'): string => {
+    return formatByCurrencyCode(amount, currencyCode, currencyCode === 'IDR');
+  },
+
+  /**
+   * Format miscellaneous expense
+   */
+  miscellaneous: (amount: number, currencyCode: CurrencyCode = 'IDR'): string => {
+    return formatByCurrencyCode(amount, currencyCode, currencyCode === 'IDR');
+  },
+
+  /**
+   * Format total expense with breakdown
+   */
+  total: (
+    expenses: {
+      accommodation: number;
+      meal: number;
+      transportation: number;
+      miscellaneous: number;
+    },
+    currencyCode: CurrencyCode = 'IDR'
+  ): { total: string; breakdown: string } => {
+    const total = expenses.accommodation + expenses.meal + expenses.transportation + expenses.miscellaneous;
+    
+    return {
+      total: formatByCurrencyCode(total, currencyCode, currencyCode === 'IDR'),
+      breakdown: [
+        `숙박비: ${formatByCurrencyCode(expenses.accommodation, currencyCode, currencyCode === 'IDR')}`,
+        `식비: ${formatByCurrencyCode(expenses.meal, currencyCode, currencyCode === 'IDR')}`,
+        `교통비: ${formatByCurrencyCode(expenses.transportation, currencyCode, currencyCode === 'IDR')}`,
+        `기타비용: ${formatByCurrencyCode(expenses.miscellaneous, currencyCode, currencyCode === 'IDR')}`
+      ].join(' | ')
+    };
+  }
+};
+
+/**
+ * Currency conversion utility (for future use with exchange rates)
+ */
+export const currencyConverter = {
+  /**
+   * Placeholder for currency conversion (requires exchange rate API)
+   */
+  convert: (
+    amount: number,
+    fromCurrency: CurrencyCode,
+    toCurrency: CurrencyCode,
+    exchangeRate: number
+  ): number => {
+    if (fromCurrency === toCurrency) return amount;
+    return amount * exchangeRate;
+  },
+
+  /**
+   * Format converted amount with both currencies
+   */
+  formatConverted: (
+    amount: number,
+    fromCurrency: CurrencyCode,
+    toCurrency: CurrencyCode,
+    exchangeRate: number
+  ): string => {
+    const converted = currencyConverter.convert(amount, fromCurrency, toCurrency, exchangeRate);
+    return `${formatCurrency(amount, fromCurrency)} (${formatCurrency(converted, toCurrency)})`;
+  }
+};

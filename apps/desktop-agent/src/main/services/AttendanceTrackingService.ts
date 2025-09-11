@@ -484,7 +484,7 @@ export class AttendanceTrackingService {
 
     console.log(`Syncing ${offlineRecords.length} offline attendance records...`)
 
-    const syncedRecords = []
+    const syncedRecords: any[] = []
     for (const record of offlineRecords) {
       try {
         if (record.type === 'check-in') {

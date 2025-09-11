@@ -1,6 +1,15 @@
 import Store from 'electron-store'
 import { powerMonitor } from 'electron'
-import { ApiService, ApiResponse } from './ApiService'
+import { ApiService } from './ApiService'
+
+export interface AppWhitelistItem {
+  id: string
+  app_name: string
+  category: string
+  is_productive: boolean
+  description?: string
+  company_id: string
+}
 
 export interface ApplicationUsage {
   appName: string
@@ -10,6 +19,7 @@ export interface ApplicationUsage {
   startTime: number
   endTime?: number
   duration: number
+  isProductive: boolean
   url?: string
   memoryUsage?: number
   cpuUsage?: number
@@ -53,7 +63,7 @@ export interface ActivityStats {
 
 export class ActivityMonitorService {
   private apiService: ApiService
-  private store: Store
+  private store: Store<any>
   private monitoringInterval: NodeJS.Timeout | null = null
   private currentSession: ActivitySession | null = null
   private currentApp: ApplicationUsage | null = null
@@ -61,8 +71,11 @@ export class ActivityMonitorService {
   private lastActivity = Date.now()
   private idleThreshold = 300000 // 5 minutes
   private uploadInterval = 30000 // 30 seconds
+  private appWhitelist: AppWhitelistItem[] = []
+  private lastWhitelistUpdate = 0
+  private whitelistUpdateInterval = 3600000 // 1 hour
 
-  constructor(apiService: ApiService, store: Store) {
+  constructor(apiService: ApiService, store: Store<any>) {
     this.apiService = apiService
     this.store = store
     this.setupPowerMonitor()
@@ -75,6 +88,10 @@ export class ActivityMonitorService {
     }
 
     console.log('Starting activity monitoring...')
+    
+    // Update app whitelist before starting monitoring
+    await this.updateAppWhitelist()
+    
     this.isMonitoring = true
     this.lastActivity = Date.now()
 
@@ -159,17 +176,17 @@ export class ActivityMonitorService {
           this.currentApp.appName !== win.owner.name ||
           this.currentApp.title !== win.title) {
         
-        const newApp: ApplicationUsage = {
-          appName: win.owner.name,
-          title: win.title,
-          execName: win.owner.path || win.owner.name,
-          pid: win.owner.pid,
-          startTime: currentTime,
-          duration: 0,
-          url: win.url,
-          memoryUsage: await this.getMemoryUsage(win.owner.pid),
-          cpuUsage: 0 // Would need additional monitoring for CPU usage
-        }
+        const newApp = this.createApplicationUsage(
+          win.owner.name,
+          win.title,
+          win.owner.path || win.owner.name,
+          win.owner.processId
+        )
+        
+        // Add additional properties
+        newApp.url = (win as any).url || ''
+        newApp.memoryUsage = await this.getMemoryUsage(win.owner.processId)
+        newApp.cpuUsage = 0 // Would need additional monitoring for CPU usage
 
         this.handleAppSwitch(newApp)
       }
@@ -263,9 +280,9 @@ export class ActivityMonitorService {
     })
   }
 
-  private async getMemoryUsage(pid: number): Promise<number> {
+  private async getMemoryUsage(_processId: number): Promise<number> {
     try {
-      const process = await import('process')
+      // const process = await import('process')
       // This would need platform-specific implementation
       // For now, return 0
       return 0
@@ -386,7 +403,7 @@ export class ActivityMonitorService {
     return this.store.get('activitySessions', []) as ActivitySession[]
   }
 
-  private storeSession(session: ActivitySession): void {
+  private _storeSession(session: ActivitySession): void {
     const sessions = this.getStoredSessions()
     sessions.push(session)
     
@@ -395,6 +412,7 @@ export class ActivityMonitorService {
     const recentSessions = sessions.filter(s => s.startTime > thirtyDaysAgo)
     
     this.store.set('activitySessions', recentSessions)
+    // const _storeSession = this.store.get('currentSession') as any
   }
 
   getCurrentSession(): ActivitySession | null {
@@ -461,5 +479,119 @@ export class ActivityMonitorService {
       topDistractingApps: ['Social Media', 'Entertainment', 'Games'],
       focusScore: 75
     }
+  }
+
+  // App Whitelist Management
+  async updateAppWhitelist(): Promise<boolean> {
+    try {
+      const currentTime = Date.now()
+      
+      // Check if we need to update (every hour or on first load)
+      if (currentTime - this.lastWhitelistUpdate < this.whitelistUpdateInterval && this.appWhitelist.length > 0) {
+        return true
+      }
+
+      console.log('Fetching app whitelist from server...')
+      const response = await this.apiService.getAppWhitelist()
+      
+      if (response.success && Array.isArray(response.data)) {
+        this.appWhitelist = response.data
+        this.lastWhitelistUpdate = currentTime
+        
+        // Cache whitelist locally
+        this.store.set('appWhitelist', this.appWhitelist)
+        this.store.set('lastWhitelistUpdate', this.lastWhitelistUpdate)
+        
+        console.log(`Updated app whitelist with ${this.appWhitelist.length} apps`)
+        return true
+      } else {
+        console.warn('Failed to fetch app whitelist:', response.error)
+        
+        // Try to load from local cache
+        const cachedWhitelist = this.store.get('appWhitelist', []) as AppWhitelistItem[]
+        if (cachedWhitelist.length > 0) {
+          this.appWhitelist = cachedWhitelist
+          this.lastWhitelistUpdate = this.store.get('lastWhitelistUpdate', 0) as number
+          console.log('Using cached app whitelist')
+          return true
+        }
+        
+        return false
+      }
+    } catch (error) {
+      console.error('Error updating app whitelist:', error)
+      
+      // Try to load from local cache
+      const cachedWhitelist = this.store.get('appWhitelist', []) as AppWhitelistItem[]
+      if (cachedWhitelist.length > 0) {
+        this.appWhitelist = cachedWhitelist
+        this.lastWhitelistUpdate = this.store.get('lastWhitelistUpdate', 0) as number
+        console.log('Using cached app whitelist due to error')
+        return true
+      }
+      
+      return false
+    }
+  }
+
+  private isAppProductive(appName: string, execName?: string): boolean {
+    if (this.appWhitelist.length === 0) {
+      // If no whitelist is available, default to false (unproductive)
+      return false
+    }
+
+    // Clean app name for comparison
+    const cleanAppName = this.cleanAppName(appName)
+    const cleanExecName = execName ? this.cleanAppName(execName) : ''
+
+    // Check if app is in whitelist
+    const whitelistItem = this.appWhitelist.find(item => {
+      const cleanWhitelistName = this.cleanAppName(item.app_name)
+      return cleanWhitelistName === cleanAppName || 
+             (cleanExecName && cleanWhitelistName === cleanExecName) ||
+             cleanWhitelistName.includes(cleanAppName) ||
+             cleanAppName.includes(cleanWhitelistName)
+    })
+
+    if (whitelistItem) {
+      console.log(`App "${appName}" found in whitelist as "${whitelistItem.app_name}" - Productive: ${whitelistItem.is_productive}`)
+      return whitelistItem.is_productive
+    }
+
+    console.log(`App "${appName}" not found in whitelist - Marking as unproductive`)
+    return false
+  }
+
+  private cleanAppName(appName: string): string {
+    return appName
+      .toLowerCase()
+      .replace(/\.exe$/i, '')
+      .replace(/[^\w\s]/g, '')
+      .trim()
+  }
+
+  private createApplicationUsage(appName: string, title: string, execName: string, pid: number): ApplicationUsage {
+    const isProductive = this.isAppProductive(appName, execName)
+    
+    return {
+      appName,
+      title,
+      execName,
+      pid,
+      startTime: Date.now(),
+      duration: 0,
+      isProductive,
+      memoryUsage: 0,
+      cpuUsage: 0
+    }
+  }
+
+  getAppWhitelist(): AppWhitelistItem[] {
+    return [...this.appWhitelist]
+  }
+
+  forceWhitelistUpdate(): Promise<boolean> {
+    this.lastWhitelistUpdate = 0
+    return this.updateAppWhitelist()
   }
 }

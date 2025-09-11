@@ -475,7 +475,7 @@ export const approvalApi = {
 
   // Stats
   getStats: (): Promise<ApprovalStats> =>
-    apiClient.get('/approval/stats').then(res => res.data),
+    apiClient.get('/approval/statistics').then(res => res.data),
 
   // Pending approvals count
   getPendingCount: (): Promise<{ count: number }> =>
