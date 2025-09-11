@@ -26,6 +26,7 @@ import {
   BookOutlined,
   CalendarFilled,
   MessageOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
