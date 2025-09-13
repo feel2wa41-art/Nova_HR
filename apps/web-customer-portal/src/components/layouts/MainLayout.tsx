@@ -39,15 +39,16 @@ const { Title } = Typography;
 // Helper function to get the correct logo URL
 const getLogoUrl = (logoUrl?: string): string | null => {
   if (!logoUrl) return null;
-  
+
   // If it's already a full URL, return as is
   if (logoUrl.startsWith('http://') || logoUrl.startsWith('https://')) {
     return logoUrl;
   }
-  
+
   // If it's a relative path, prepend the API base URL
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  const baseUrl = API_BASE_URL.replace('/api/v1', ''); // Remove /api/v1 if present
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+  // Extract base URL without /api/v1 for static file serving
+  const baseUrl = API_BASE_URL.replace('/api/v1', '');
   return `${baseUrl}${logoUrl}`;
 };
 
